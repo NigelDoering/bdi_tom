@@ -1,0 +1,31 @@
+# geospatial + network tools
+osmnx
+networkx
+geopandas
+shapely
+matplotlib
+
+# data utilities
+pandas
+numpy
+scipy
+
+# ML modeling (core libraries)
+scikit-learn
+torch
+torchvision
+lightning  # or 'pytorch-lightning' if not using torch >= 2.0
+tqdm
+
+# logging & experiment tracking
+rich
+wandb  # optional but useful
+
+# Jupyter + dev
+ipython
+notebook
+jupyterlab
+
+# code quality (optional dev)
+black
+pre-commit
