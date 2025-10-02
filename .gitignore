@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+
+# macOS
+.DS_Store
+
+# Python virtualenvs
+.venv/
+venv/
+
+# Ignore everything in data by default
+/data/**
+
+# But keep the raw folder and its contents
+!/data/raw/
+!/data/raw/**
+
+# Keep the processed folder so we can unignore a single file
+!/data/processed/
+
+# Only keep the one processed file we want tracked
+!/data/processed/ucsd_walk_full.graphml
+
+# End of .gitignore
