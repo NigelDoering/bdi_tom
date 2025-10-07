@@ -31,7 +31,7 @@ class Agent:
         current_path (list): list of nodes representing the planned path.
     """
 
-    def __init__(self, agent_id, G=None):
+    def __init__(self, agent_id, world_graph):
         """Create an Agent.
 
         Args:
@@ -52,8 +52,8 @@ class Agent:
 
         # Graph may be None at construction time. Assign early so setters
         # can use it if provided.
-        self.world_graph = WorldGraph(G) 
-        self.G = G
+        self.world_graph = world_graph
+        self.G = world_graph.G
         self.goal_nodes = self.world_graph.poi_nodes
 
         # Set the belief probabilities for all the goal nodes
