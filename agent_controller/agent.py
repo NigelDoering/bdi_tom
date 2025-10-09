@@ -1,7 +1,6 @@
 import uuid
 import numpy as np
 import haversine as hs
-from graph_controller.world_graph import WorldGraph
 
 
 """agent_controller.agent
@@ -339,17 +338,21 @@ class Agent:
         """Formal representation, calls __str__ for readable output."""
         return self.__str__()
 
-    def build_plan(self):
+    def to_dict(self):
         """
-        Placeholder for plan-building logic.
-        Step 1: sample category from category_preferences.
-        Step 2: sample a node from the corresponding node-level preferences.
-        Step 3: compute path to that node.
+        Returns a dictionary representation of the agent that can be saved to JSON.
+        Excludes dynamic state like current belief updates or paths.
         """
-        # TODO: implement planning/scheduling logic. A simple implementation
-        # could sample a target category using `self.category_preferences`,
-        # then select a target node from the corresponding
-        # `<category>_preferences` dict and call a path-finding routine on
-        # `self.G` (e.g., networkx.shortest_path) to populate
-        # `self.current_path`.
-        raise NotImplementedError("Agent.build_plan is a placeholder")
+        agent_data = {
+            "id": self.id,
+            "decay_rate": round(self.decay_rate, 4),  # round for readability
+            "category_preferences": self.category_preferences,
+        }
+
+        # Include subcategory (node-level) preferences
+        for category in ["home", "study", "food", "leisure", "errands", "health"]:
+            cat_attr = f"{category}_preferences"
+            if hasattr(self, cat_attr):
+                agent_data[cat_attr] = getattr(self, cat_attr)
+
+        return agent_data
