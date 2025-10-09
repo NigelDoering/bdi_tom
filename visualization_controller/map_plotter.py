@@ -42,6 +42,8 @@ def plot_static_map(
 
 
 import folium
+from folium import PolyLine
+
 
 def plot_interactive_graph_nodes(G, save_path=None, show_only_pois=True):
     """
@@ -97,5 +99,94 @@ def plot_interactive_graph_nodes(G, save_path=None, show_only_pois=True):
     if save_path:
         m.save(save_path)
         print(f"Interactive map saved to {save_path}")
+
+    return m
+
+
+def plot_graph_with_trajectory(G, trajectory, save_path=None, show_only_pois=True):
+    """
+    Plots the graph nodes and overlays a trajectory path on top.
+
+    Args:
+        G: The OSMnx graph.
+        trajectory: A dict with keys 'path', 'goal_node', and 'hour' from simulation.trajectory.
+        save_path: Optional path to save the HTML output.
+        show_only_pois: If True, only show POI-labeled nodes.
+    Returns:
+        folium.Map object
+    """
+    m = folium.Map(location=[32.8801, -117.2340], zoom_start=16)
+
+    # 1. Plot POI nodes
+    for node_id, data in G.nodes(data=True):
+        category = data.get("Category")
+        if category == "None" or category is None:
+            continue
+
+        if show_only_pois and "poi_names" not in data:
+            continue
+
+        lat = data["y"]
+        lon = data["x"]
+        poi_names = data.get("poi_names", "—")
+        poi_types = data.get("poi_types", "—")
+
+        # Format opening hours if available
+        opening_hours = data.get("opening_hours")
+        if isinstance(opening_hours, dict):
+            hours_str = f"{opening_hours['open']:02d}:00–{opening_hours['close']:02d}:00"
+        else:
+            hours_str = "—"
+
+        popup = folium.Popup(
+            html=f"<b>Node:</b> {node_id}<br>"
+                 f"<b>Category:</b> {category}<br>"
+                 f"<b>Opening Hours:</b> {hours_str}<br>"
+                 f"<b>POI Names:</b> {poi_names}<br>"
+                 f"<b>POI Types:</b> {poi_types}",
+            max_width=350
+        )
+
+        folium.CircleMarker(
+            location=(lat, lon),
+            radius=5,
+            color="blue",
+            fill=True,
+            fill_opacity=0.7,
+            popup=popup
+        ).add_to(m)
+
+    # 2. Overlay trajectory path if available
+    if trajectory and "path" in trajectory:
+        coords = [
+            (G.nodes[n]["y"], G.nodes[n]["x"]) for n in trajectory["path"]
+            if n in G.nodes
+        ]
+
+        PolyLine(
+            coords,
+            color="red",
+            weight=4,
+            opacity=0.8,
+            tooltip=f"Agent path at hour {trajectory['hour']}"
+        ).add_to(m)
+
+        # Mark start and goal nodes
+        if coords:
+            folium.Marker(
+                coords[0],
+                icon=folium.Icon(color="green", icon="play"),
+                popup="Start"
+            ).add_to(m)
+
+            folium.Marker(
+                coords[-1],
+                icon=folium.Icon(color="red", icon="flag"),
+                popup="Goal"
+            ).add_to(m)
+
+    if save_path:
+        m.save(save_path)
+        print(f"Map saved to {save_path}")
 
     return m
