@@ -167,7 +167,7 @@
       <data key="d8">['Oceanview Terrace']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 18}</data>
+      <data key="d11">{'open': 6, 'close': 16}</data>
     </node>
     <node id="356125178">
       <data key="d4">32.879273</data>
@@ -190,7 +190,7 @@
       <data key="d8">['Mandeville Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 22}</data>
     </node>
     <node id="356241612">
       <data key="d4">32.8824584</data>
@@ -205,7 +205,7 @@
       <data key="d8">['Mandell Weiss Forum']</data>
       <data key="d9">['theatre']</data>
       <data key="d10">leisure</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="356391658">
       <data key="d4">32.8829171</data>
@@ -344,7 +344,7 @@
       <data key="d8">['Fairbanks']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 14}</data>
     </node>
     <node id="445989099">
       <data key="d4">32.8754224</data>
@@ -425,7 +425,7 @@
       <data key="d8">['Solis Hall', 'Social Sciences Research Building']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="446132669">
       <data key="d4">32.8811569</data>
@@ -434,7 +434,7 @@
       <data key="d8">['Communications']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="446136019">
       <data key="d4">32.8765624</data>
@@ -506,7 +506,7 @@
       <data key="d8">['Biology']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="446647553">
       <data key="d4">32.8782644</data>
@@ -765,7 +765,7 @@
       <data key="d8">['Muir Coffee House']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 14}</data>
+      <data key="d11">{'open': 7, 'close': 14}</data>
     </node>
     <node id="471275046">
       <data key="d4">32.8781531</data>
@@ -780,7 +780,7 @@
       <data key="d8">['Mandler Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="471275268">
       <data key="d4">32.8857784</data>
@@ -1310,7 +1310,7 @@
       <data key="d8">['Fairbanks Coffee Company', 'Warren Mall']</data>
       <data key="d9">['cafe', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 16}</data>
+      <data key="d11">{'open': 7, 'close': 18}</data>
     </node>
     <node id="698283649">
       <data key="d4">32.880181</data>
@@ -1319,7 +1319,7 @@
       <data key="d8">['Warren Lecture Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="768264666">
       <data key="d4">32.8781562</data>
@@ -1328,7 +1328,7 @@
       <data key="d8">['Fairbanks']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 14}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="914043397">
       <data key="d4">32.8791006</data>
@@ -1349,7 +1349,7 @@
       <data key="d8">['Applied Physics and Mathematics']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="914043403">
       <data key="d4">32.8791726</data>
@@ -1451,7 +1451,7 @@
       <data key="d8">['Roots', 'Stewart Commons']</data>
       <data key="d9">['restaurant', 'university']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 6, 'close': 20}</data>
     </node>
     <node id="914259719">
       <data key="d4">32.8788506</data>
@@ -1485,7 +1485,7 @@
       <data key="d8">['Grafitti Art Park', 'Stage Room at the Pub']</data>
       <data key="d9">['unknown', 'pub']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 14}</data>
     </node>
     <node id="1146841843">
       <data key="d4">32.8775497</data>
@@ -1494,7 +1494,7 @@
       <data key="d8">['The Art of Espresso', 'International Center West']</data>
       <data key="d9">['cafe', 'university']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 14}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="1146859374">
       <data key="d4">32.8848733</data>
@@ -1529,7 +1529,7 @@
       <data key="d8">['Blue Pepper Asian Cuisine', 'KSDT']</data>
       <data key="d9">['restaurant', 'studio']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 14}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="1176646941">
       <data key="d4">32.8824679</data>
@@ -2003,7 +2003,7 @@
       <data key="d8">['Moores Cancer Center']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 15}</data>
     </node>
     <node id="1352176304">
       <data key="d4">32.8785211</data>
@@ -2128,7 +2128,7 @@
       <data key="d8">['Medical Genetics', 'Villa La Jolla Drive']</data>
       <data key="d9">['university', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="1361121320">
       <data key="d4">32.8787204</data>
@@ -2149,7 +2149,7 @@
       <data key="d8">['Medical Teaching']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="1361121334">
       <data key="d4">32.876436</data>
@@ -2359,7 +2359,7 @@
       <data key="d8">['University Art Gallery', 'The Basement']</data>
       <data key="d9">['unknown', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="1533639513">
       <data key="d4">32.8779199</data>
@@ -2394,7 +2394,7 @@
       <data key="d8">['WongAvery Library']</data>
       <data key="d9">['library']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="1533709584">
       <data key="d4">32.8748366</data>
@@ -2439,7 +2439,7 @@
       <data key="d8">['Cellular and Molecular Medicine']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="1534882350">
       <data key="d4">32.8760027</data>
@@ -2770,7 +2770,7 @@
       <data key="d8">["Ratner Children's Eye Center"]</data>
       <data key="d9">['doctors']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 15}</data>
+      <data key="d11">{'open': 10, 'close': 16}</data>
     </node>
     <node id="2183114714">
       <data key="d4">32.8797178</data>
@@ -2779,7 +2779,7 @@
       <data key="d8">['Shiley Optical Center', 'Shiley Eye Institute']</data>
       <data key="d9">['unknown', 'hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 8, 'close': 16}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="2183114717">
       <data key="d4">32.8798046</data>
@@ -2882,7 +2882,7 @@
       <data key="d8">['La Jolla Institute for Allergy and Immunology']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="2478669702">
       <data key="d4">32.8776841</data>
@@ -3225,7 +3225,7 @@
       <data key="d8">['School of Medicine Building 2']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="3333766414">
       <data key="d4">32.8775365</data>
@@ -3687,7 +3687,7 @@
       <data key="d8">['San Diego County Credit Union']</data>
       <data key="d9">['bank']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 11, 'close': 20}</data>
     </node>
     <node id="3687377786">
       <data key="d4">32.8933047</data>
@@ -3714,7 +3714,7 @@
       <data key="d8">['Scripps Research Translational Institute', 'Torrey Pines South Course']</data>
       <data key="d9">['research_institute', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="3687377809">
       <data key="d4">32.8939891</data>
@@ -3922,7 +3922,7 @@
       <data key="d8">['Brown Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="4416576247">
       <data key="d4">32.8853451</data>
@@ -4055,7 +4055,7 @@
       <data key="d8">['Middle Earth Lounge']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="4536669341">
       <data key="d4">32.8785817</data>
@@ -4079,7 +4079,7 @@
       <data key="d8">['Visual Arts Facility - Building 5', 'Lyman Lane']</data>
       <data key="d9">['university', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="4554611506">
       <data key="d4">32.8817877</data>
@@ -4724,7 +4724,7 @@
       <data key="d8">['The Wind Garden', 'Mandell Weiss Theatre']</data>
       <data key="d9">['unknown', 'theatre']</data>
       <data key="d10">leisure</data>
-      <data key="d11">{'open': 14, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 21}</data>
     </node>
     <node id="4868801823">
       <data key="d4">32.8717303</data>
@@ -4799,7 +4799,7 @@
       <data key="d8">['Medical Education and Telemedicine Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="5387846596">
       <data key="d4">32.8751999</data>
@@ -4887,7 +4887,7 @@
       <data key="d8">['ChargePoint']</data>
       <data key="d9">['charging_station']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 11, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="5388224292">
       <data key="d4">32.8757722</data>
@@ -5200,7 +5200,7 @@
       <data key="d8">['Club Med']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 14}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="5394745293">
       <data key="d4">32.8758135</data>
@@ -5223,7 +5223,7 @@
       <data key="d8">['Guava']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="5394745411">
       <data key="d4">32.8740588</data>
@@ -5232,7 +5232,7 @@
       <data key="d8">['Biomedical Research Facility II (BRF II)', 'Holly']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="5397915669">
       <data key="d4">32.8726299</data>
@@ -5353,7 +5353,7 @@
       <data key="d8">['Canyon Vista Administration building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="5404632939">
       <data key="d4">32.8844446</data>
@@ -5437,7 +5437,7 @@
       <data key="d8">['Residential Services Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="5404644404">
       <data key="d4">32.8737743</data>
@@ -5502,7 +5502,7 @@
       <data key="d8">['Canyon Vista Restaurant']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="5406225460">
       <data key="d4">32.8831047</data>
@@ -5682,7 +5682,7 @@
       <data key="d8">['Pepper Canyon Market']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="5432894231">
       <data key="d4">32.87877</data>
@@ -5748,7 +5748,7 @@
       <data key="d8">['Career Services Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="5457413137">
       <data key="d4">32.8785908</data>
@@ -5849,7 +5849,7 @@
       <data key="d8">['School of Medicine Building 1']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="5466043462">
       <data key="d4">32.8753716</data>
@@ -5864,7 +5864,7 @@
       <data key="d8">['Residential Services Office', 'Mission Brewing (fka Rough Draft)']</data>
       <data key="d9">['unknown', 'bar']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 20}</data>
+      <data key="d11">{'open': 6, 'close': 20}</data>
     </node>
     <node id="5466043464">
       <data key="d4">32.8754365</data>
@@ -6143,7 +6143,7 @@
       <data key="d8">['Urey Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="5538554955">
       <data key="d4">32.8752962</data>
@@ -6167,7 +6167,7 @@
       <data key="d8">['Natural Science Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="5538554959">
       <data key="d4">32.8747296</data>
@@ -6176,7 +6176,7 @@
       <data key="d8">['Revelle Commons', 'Housing Dining and Hospitality Administration Building']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="5538554960">
       <data key="d4">32.8747285</data>
@@ -6193,7 +6193,7 @@
       <data key="d8">['York Hall', 'Central Utilities Building']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="5538554970">
       <data key="d4">32.8752296</data>
@@ -6415,7 +6415,7 @@
       <data key="d8">['Cognitive Science Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 22}</data>
     </node>
     <node id="5546567892">
       <data key="d4">32.8798861</data>
@@ -6554,7 +6554,7 @@
       <data key="d8">['Jacobs Medical Center']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 15}</data>
     </node>
     <node id="5565187413">
       <data key="d4">32.877409</data>
@@ -6683,7 +6683,7 @@
       <data key="d8">['San Diego Supercomputer Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="5631461602">
       <data key="d4">32.8844263</data>
@@ -6864,7 +6864,7 @@
       <data key="d8">['Sulpizio Cardiovascular Center']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 16}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="5745765322">
       <data key="d4">32.8785324</data>
@@ -6979,7 +6979,7 @@
       <data key="d8">['Foodworx']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 14}</data>
+      <data key="d11">{'open': 6, 'close': 16}</data>
     </node>
     <node id="5811962760">
       <data key="d4">32.8788378</data>
@@ -7030,7 +7030,7 @@
       <data key="d8">['Beagle Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 22}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="5867286973">
       <data key="d4">32.8737458</data>
@@ -7045,7 +7045,7 @@
       <data key="d8">['Argo Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="5867286976">
       <data key="d4">32.8740697</data>
@@ -7054,7 +7054,7 @@
       <data key="d8">['Discovery Hall', 'Meteor Hall']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="5867286978">
       <data key="d4">32.8745732</data>
@@ -7194,7 +7194,7 @@
       <data key="d8">['Atlantis Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="5917533028">
       <data key="d4">32.8741117</data>
@@ -7461,7 +7461,7 @@
       <data key="d8">['High Bay Physics']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="5986666638">
       <data key="d4">32.8814163</data>
@@ -7482,7 +7482,7 @@
       <data key="d8">['Engineering II']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="5986666644">
       <data key="d4">32.8810037</data>
@@ -7497,7 +7497,7 @@
       <data key="d8">['Literature']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 22}</data>
     </node>
     <node id="5986666649">
       <data key="d4">32.881179</data>
@@ -7554,7 +7554,7 @@
       <data key="d8">['Student Health Services']</data>
       <data key="d9">['clinic']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 16}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="6059250359">
       <data key="d4">32.8802298</data>
@@ -7701,7 +7701,7 @@
       <data key="d8">['The John M and Sally B Thornton Hospital']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 9, 'close': 15}</data>
+      <data key="d11">{'open': 10, 'close': 15}</data>
     </node>
     <node id="6801459700">
       <data key="d4">32.8791677</data>
@@ -7768,7 +7768,7 @@
       <data key="d8">['Santorini Island Grill']</data>
       <data key="d9">['fast_food']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 16}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="6896256788">
       <data key="d4">32.8735082</data>
@@ -7895,7 +7895,7 @@
       <data key="d8">['McGill Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 22}</data>
     </node>
     <node id="7054523513">
       <data key="d4">32.8796745</data>
@@ -7912,7 +7912,7 @@
       <data key="d8">['Theatre District', 'La Jolla Playhouse']</data>
       <data key="d9">['unknown', 'arts_centre']</data>
       <data key="d10">leisure</data>
-      <data key="d11">{'open': 12, 'close': 21}</data>
+      <data key="d11">{'open': 12, 'close': 22}</data>
     </node>
     <node id="7153002858">
       <data key="d4">32.8758344</data>
@@ -8404,7 +8404,7 @@
       <data key="d8">['Hamilton Glaucoma and Jacobs Retina Center']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 8, 'close': 16}</data>
+      <data key="d11">{'open': 10, 'close': 15}</data>
     </node>
     <node id="7179658694">
       <data key="d4">32.8789236</data>
@@ -8554,7 +8554,7 @@
       <data key="d8">['U.S.E. Credit Union', 'Gilman Drive']</data>
       <data key="d9">['bank', 'unknown']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 9, 'close': 16}</data>
+      <data key="d11">{'open': 11, 'close': 16}</data>
     </node>
     <node id="7179685074">
       <data key="d4">32.8769066</data>
@@ -8624,7 +8624,7 @@
       <data key="d8">['University of California, San Diego']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="7179725211">
       <data key="d4">32.8793928</data>
@@ -8750,7 +8750,7 @@
       <data key="d8">['Canyonview Recreation &amp; Athletics Administration', 'Voigt Drive', 'Voigt Drive']</data>
       <data key="d9">['college', 'unknown', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="7180450272">
       <data key="d4">32.88136</data>
@@ -8870,7 +8870,7 @@
       <data key="d8">['Atkinson Hall (Calit2)']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="7180458178">
       <data key="d4">32.8824213</data>
@@ -9323,7 +9323,7 @@
       <data key="d8">['Peterson Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="7316852640">
       <data key="d4">32.8801688</data>
@@ -9356,7 +9356,7 @@
       <data key="d8">['Taco Villa']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 6, 'close': 18}</data>
     </node>
     <node id="7644787987">
       <data key="d4">32.8743431</data>
@@ -9403,7 +9403,7 @@
       <data key="d8">['Tata Hall for the Sciences']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="7667900854">
       <data key="d4">32.8767034</data>
@@ -9469,7 +9469,7 @@
       <data key="d8">['ChargePoint', 'Porton']</data>
       <data key="d9">['charging_station', 'apartments']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="7738294596">
       <data key="d4">32.874836</data>
@@ -9869,7 +9869,7 @@
       <data key="d8">['East Campus Office Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="7990587609">
       <data key="d4">32.8766149</data>
@@ -10487,7 +10487,7 @@
       <data key="d8">['Birch Aquarium gift shop', 'Birch Aquarium', 'Visitor Services &amp; Membership', 'Limu', 'Nori', 'Kelp', 'P017', 'Birch Aquarium', 'Downwind Way', 'P002', 'P003', 'Coralina', 'Eelgrass', 'Rockweed', 'Sverdrup Hall', 'J. Craig Venter Institute', 'Capricorn Lane', 'La Jolla Shores Drive', 'Splash Cafe', 'Shark Shores', 'Little Blue Penguins', 'Nigella Hillgarth Education Center', 'Tide Pool', 'Tide Pool', 'Tide Pool', 'Robert Smargon Exhibit Court']</data>
       <data key="d9">['unknown', 'unknown', 'unknown', 'yes', 'yes', 'warehouse', 'parking', 'yes', 'unknown', 'parking', 'parking', 'warehouse', 'warehouse', 'yes', 'university', 'university', 'unknown', 'unknown', 'fast_food', 'yes', 'unknown', 'school', 'unknown', 'unknown', 'unknown', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="8851759239">
       <data key="d4">32.8714389</data>
@@ -10580,7 +10580,7 @@
       <data key="d8">['Amazon Hub Locker']</data>
       <data key="d9">['parcel_locker']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 11, 'close': 17}</data>
+      <data key="d11">{'open': 11, 'close': 18}</data>
     </node>
     <node id="8905639854">
       <data key="d4">32.8821575</data>
@@ -10915,7 +10915,7 @@
       <data key="d8">['Vices and Virtues', 'Charles Lee Powell Structural Systems Laboratory']</data>
       <data key="d9">['unknown', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="8994595964">
       <data key="d4">32.8808756</data>
@@ -10942,7 +10942,7 @@
       <data key="d8">['Fallen Star']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="8994595988">
       <data key="d4">32.8815362</data>
@@ -11187,7 +11187,7 @@
       <data key="d8">['UC San Diego School of Medicine']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 20}</data>
     </node>
     <node id="9408642089">
       <data key="d4">32.8745434</data>
@@ -11216,7 +11216,7 @@
       <data key="d8">['Skaggs School of Pharmacy and Pharmaceutical Sciences', 'Pharmacy Lane']</data>
       <data key="d9">['university', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 22}</data>
     </node>
     <node id="9408642105">
       <data key="d4">32.8747395</data>
@@ -11389,7 +11389,7 @@
       <data key="d8">['Villa La Jolla Drive', 'Veterans Affairs San Diego Healthcare System']</data>
       <data key="d9">['unknown', 'hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 16}</data>
     </node>
     <node id="9545680356">
       <data key="d4">32.8810664</data>
@@ -11496,7 +11496,7 @@
       <data key="d8">['CVS Pharmacy']</data>
       <data key="d9">['pharmacy']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 16}</data>
     </node>
     <node id="9552931552">
       <data key="d4">32.8798185</data>
@@ -11505,7 +11505,7 @@
       <data key="d8">["Rubio's", 'Panda Express', 'Curry Up Now', 'Lemongrass', 'Price Center']</data>
       <data key="d9">['fast_food', 'fast_food', 'fast_food', 'fast_food', 'university']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 7, 'close': 20}</data>
     </node>
     <node id="9552931562">
       <data key="d4">32.8801933</data>
@@ -11520,7 +11520,7 @@
       <data key="d8">['Subway', 'Starbucks']</data>
       <data key="d9">['fast_food', 'cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 14}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="9552931566">
       <data key="d4">32.8802321</data>
@@ -11529,7 +11529,7 @@
       <data key="d8">['Chase', 'Bank of America', 'Wells Fargo']</data>
       <data key="d9">['atm', 'atm', 'atm']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 11, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="9552931569">
       <data key="d4">32.8803044</data>
@@ -11544,7 +11544,7 @@
       <data key="d8">['Burger King', 'Another']</data>
       <data key="d9">['fast_food', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 16}</data>
+      <data key="d11">{'open': 8, 'close': 14}</data>
     </node>
     <node id="9552931572">
       <data key="d4">32.8800636</data>
@@ -11626,7 +11626,7 @@
       <data key="d8">['Visual Arts Facility - Building 3', 'Visual Arts Facility - Building 2', 'Russell Lane']</data>
       <data key="d9">['university', 'university', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="9611588639">
       <data key="d4">32.8794727</data>
@@ -11635,7 +11635,7 @@
       <data key="d8">['Visual Arts Facility - Building 1']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="9611821086">
       <data key="d4">32.8737853</data>
@@ -11839,7 +11839,7 @@
       <data key="d8">['Tuolumne Apartments']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="9612217702">
       <data key="d4">32.8797002</data>
@@ -12140,7 +12140,7 @@
       <data key="d8">['TEC Cafe', 'Shake Smart']</data>
       <data key="d9">['cafe', 'fast_food']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 14}</data>
+      <data key="d11">{'open': 7, 'close': 14}</data>
     </node>
     <node id="9630910075">
       <data key="d4">32.8849441</data>
@@ -12210,7 +12210,7 @@
       <data key="d8">['Powell-Focht Bioengineering Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 22}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="9641821983">
       <data key="d4">32.881903</data>
@@ -12262,7 +12262,7 @@
       <data key="d8">['Perlman Ambulatory Care Center']</data>
       <data key="d9">['clinic']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 15}</data>
     </node>
     <node id="9642608254">
       <data key="d4">32.87782</data>
@@ -12361,7 +12361,7 @@
       <data key="d8">['The Cove']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 7, 'close': 16}</data>
     </node>
     <node id="9642608300">
       <data key="d4">32.8780089</data>
@@ -12370,7 +12370,7 @@
       <data key="d8">['Outpatient Pavilion']</data>
       <data key="d9">['hospital']</data>
       <data key="d10">health</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 15}</data>
     </node>
     <node id="9642608302">
       <data key="d4">32.877676</data>
@@ -12437,7 +12437,7 @@
       <data key="d8">['Keck Center for Functional Magnetic Resonance Imaging']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="9675655162">
       <data key="d4">32.8763932</data>
@@ -12464,7 +12464,7 @@
       <data key="d8">['Terrace', 'Cellular and Molecular Medicine West']</data>
       <data key="d9">['unknown', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="9675671131">
       <data key="d4">32.8757593</data>
@@ -12479,7 +12479,7 @@
       <data key="d8">['Center for Molecular Genetics']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="9675671137">
       <data key="d4">32.8752461</data>
@@ -12713,7 +12713,7 @@
       <data key="d8">['Computer Science &amp; Engineering', 'Lobby', 'Warren Writing TA Offices']</data>
       <data key="d9">['university', 'unknown', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 22}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="9815476367">
       <data key="d4">32.8814892</data>
@@ -12742,7 +12742,7 @@
       <data key="d8">['Structural and Mechanical Engineering']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="9840480984">
       <data key="d4">32.8797201</data>
@@ -12801,7 +12801,7 @@
       <data key="d8">['Spanos Athletic Performance Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 22}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="9842899670">
       <data key="d4">32.8895592</data>
@@ -12822,7 +12822,7 @@
       <data key="d8">['Spanos Athletic Performance Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="9842899677">
       <data key="d4">32.8899562</data>
@@ -12939,7 +12939,7 @@
       <data key="d8">['Mayer Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="9863143441">
       <data key="d4">32.8835195</data>
@@ -13393,7 +13393,7 @@
       <data key="d8">['School of Global Policy and Strategy']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="9880108362">
       <data key="d4">32.8844094</data>
@@ -13669,7 +13669,7 @@
       <data key="d8">['Fairbanks Coffee Stand', 'Ridge Walk', 'Ridge Walk']</data>
       <data key="d9">['cafe', 'unknown', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 14}</data>
+      <data key="d11">{'open': 9, 'close': 16}</data>
     </node>
     <node id="10133683641">
       <data key="d4">32.8930216</data>
@@ -13764,7 +13764,7 @@
       <data key="d8">['Rec Gym']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="10241316982">
       <data key="d4">32.8773058</data>
@@ -13867,7 +13867,7 @@
       <data key="d8">['Café Ventanas']</data>
       <data key="d9">['restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 14}</data>
     </node>
     <node id="10266029527">
       <data key="d4">32.8860251</data>
@@ -14309,7 +14309,7 @@
       <data key="d8">['Great Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="10273923943">
       <data key="d4">32.8760464</data>
@@ -14318,7 +14318,7 @@
       <data key="d8">['Bonner Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="10273923944">
       <data key="d4">32.8760081</data>
@@ -14577,7 +14577,7 @@
       <data key="d8">['Ridgewalk Social', 'Ridge Walk']</data>
       <data key="d9">['restaurant', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 7, 'close': 14}</data>
     </node>
     <node id="10282604894">
       <data key="d4">32.8856168</data>
@@ -14666,7 +14666,7 @@
       <data key="d8">['RIMAC Annex']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="10282667143">
       <data key="d4">32.8862329</data>
@@ -14748,7 +14748,7 @@
       <data key="d8">['Fairbanks']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 16}</data>
+      <data key="d11">{'open': 6, 'close': 20}</data>
     </node>
     <node id="10285438400">
       <data key="d4">32.8836994</data>
@@ -15029,7 +15029,7 @@
       <data key="d8">['Otterson Hall Rady School of Management']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="10290488404">
       <data key="d4">32.887108</data>
@@ -15086,7 +15086,7 @@
       <data key="d8">['Triton Esports Center']</data>
       <data key="d9">['internet_cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 14}</data>
+      <data key="d11">{'open': 7, 'close': 20}</data>
     </node>
     <node id="10291727357">
       <data key="d4">32.8860398</data>
@@ -15175,7 +15175,7 @@
       <data key="d8">['The Bistro at the Strand', 'Village East Building 4']</data>
       <data key="d9">['restaurant', 'dormitory']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 18}</data>
+      <data key="d11">{'open': 7, 'close': 18}</data>
     </node>
     <node id="10295637744">
       <data key="d4">32.8833959</data>
@@ -15281,7 +15281,7 @@
       <data key="d8">['Oceanview Terrace Lounge']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="10295648348">
       <data key="d4">32.8831834</data>
@@ -15588,7 +15588,7 @@
       <data key="d8">['Leichtag Family Foundation Biomedical Research Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="10296088704">
       <data key="d4">32.8766105</data>
@@ -15623,7 +15623,7 @@
       <data key="d8">["Chancellor's Complex"]</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="10296096675">
       <data key="d4">32.878616</data>
@@ -15688,7 +15688,7 @@
       <data key="d8">['Stein Clinical Research']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="10296110183">
       <data key="d4">32.8757711</data>
@@ -15781,7 +15781,7 @@
       <data key="d8">['Jacobs Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 17}</data>
     </node>
     <node id="10297059264">
       <data key="d4">32.8812849</data>
@@ -15843,7 +15843,7 @@
       <data key="d8">['Jamba', 'Shogun']</data>
       <data key="d9">['fast_food', 'restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="10299192807">
       <data key="d4">32.8797405</data>
@@ -15869,7 +15869,7 @@
       <data key="d8">['The Trove']</data>
       <data key="d9">['post_office']</data>
       <data key="d10">errands</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="10299244146">
       <data key="d4">32.8779399</data>
@@ -15878,7 +15878,7 @@
       <data key="d8">['Center Hall', 'Student Health and Well-Being Building']</data>
       <data key="d9">['university', 'construction']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="10299258484">
       <data key="d4">32.8787932</data>
@@ -15917,7 +15917,7 @@
       <data key="d8">['Student Services Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 17}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="10299258503">
       <data key="d4">32.8787796</data>
@@ -15932,7 +15932,7 @@
       <data key="d8">['Yogurt World', 'Lyman Lane']</data>
       <data key="d9">['cafe', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 18}</data>
+      <data key="d11">{'open': 8, 'close': 14}</data>
     </node>
     <node id="10299258506">
       <data key="d4">32.8784605</data>
@@ -15941,7 +15941,7 @@
       <data key="d8">['Croutons']</data>
       <data key="d9">['fast_food']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 18}</data>
+      <data key="d11">{'open': 7, 'close': 14}</data>
     </node>
     <node id="10299258507">
       <data key="d4">32.8787243</data>
@@ -16050,7 +16050,7 @@
       <data key="d8">['Visual Arts Facility - Building 3']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="10299560224">
       <data key="d4">32.878001</data>
@@ -16079,7 +16079,7 @@
       <data key="d8">['Conrad Prebys Music Center']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="10299560294">
       <data key="d4">32.8775924</data>
@@ -16106,7 +16106,7 @@
       <data key="d8">['Tapioca Express']</data>
       <data key="d9">['fast_food']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 16}</data>
+      <data key="d11">{'open': 7, 'close': 18}</data>
     </node>
     <node id="10301347697">
       <data key="d4">32.8810034</data>
@@ -16159,7 +16159,7 @@
       <data key="d8">['Science and Engineering Research Facility']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 22}</data>
     </node>
     <node id="10301407425">
       <data key="d4">32.8800806</data>
@@ -16217,7 +16217,7 @@
       <data key="d8">['Center for Magnetic Recording Research']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 17}</data>
     </node>
     <node id="10309785017">
       <data key="d4">32.8817287</data>
@@ -16258,7 +16258,7 @@
       <data key="d8">['Cups Coffee Cart']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 7, 'close': 14}</data>
+      <data key="d11">{'open': 9, 'close': 16}</data>
     </node>
     <node id="10309785025">
       <data key="d4">32.8812932</data>
@@ -16385,7 +16385,7 @@
       <data key="d8">['Franklin Antonio Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 22}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="10312101760">
       <data key="d4">32.8835465</data>
@@ -16475,7 +16475,7 @@
       <data key="d8">['Design &amp; Innovation Building']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 20}</data>
+      <data key="d11">{'open': 10, 'close': 22}</data>
     </node>
     <node id="10602674227">
       <data key="d4">32.8808463</data>
@@ -16551,7 +16551,7 @@
       <data key="d8">['Ché Café']</data>
       <data key="d9">['cafe']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 8, 'close': 14}</data>
+      <data key="d11">{'open': 6, 'close': 14}</data>
     </node>
     <node id="10768068864">
       <data key="d4">32.8730695</data>
@@ -16634,7 +16634,7 @@
       <data key="d8">['Humanities &amp; Social Sciences']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 20}</data>
+      <data key="d11">{'open': 9, 'close': 18}</data>
     </node>
     <node id="10825141105">
       <data key="d4">32.8783759</data>
@@ -16785,7 +16785,7 @@
       <data key="d8">['Tenaya Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 22}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="10825625205">
       <data key="d4">32.8809391</data>
@@ -16848,7 +16848,7 @@
       <data key="d8">['Sixth Market', 'Makai', 'Crave', 'Noodles', 'Wolftown', 'Rooftop']</data>
       <data key="d9">['unknown', 'restaurant', 'restaurant', 'restaurant', 'restaurant', 'restaurant']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 6, 'close': 20}</data>
+      <data key="d11">{'open': 6, 'close': 14}</data>
     </node>
     <node id="10825625228">
       <data key="d4">32.8805986</data>
@@ -17300,7 +17300,7 @@
       <data key="d8">['Ida and Cecil Green Faculty Club']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 17}</data>
     </node>
     <node id="11750864589">
       <data key="d4">32.8794102</data>
@@ -17498,7 +17498,7 @@
       <data key="d8">['Tioga Hall']</data>
       <data key="d9">['university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="11972409287">
       <data key="d4">32.8788047</data>
@@ -17549,7 +17549,7 @@
       <data key="d8">['Villa La Jolla Drive', 'Jacaranda', 'Kalmia']</data>
       <data key="d9">['unknown', 'university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 8, 'close': 17}</data>
+      <data key="d11">{'open': 10, 'close': 20}</data>
     </node>
     <node id="12059861212">
       <data key="d4">32.8737563</data>
@@ -17596,7 +17596,7 @@
       <data key="d8">['Visual Arts Facility - Building 6', 'Visual Arts Facility - Building 4']</data>
       <data key="d9">['university', 'university']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="12072377542">
       <data key="d4">32.8788569</data>
@@ -17661,7 +17661,7 @@
       <data key="d8">['Epstein Family Amphitheater']</data>
       <data key="d9">['theatre']</data>
       <data key="d10">leisure</data>
-      <data key="d11">{'open': 13, 'close': 22}</data>
+      <data key="d11">{'open': 13, 'close': 20}</data>
     </node>
     <node id="12072393883">
       <data key="d4">32.8790958</data>
@@ -17980,7 +17980,7 @@
       <data key="d8">['Geisel Library']</data>
       <data key="d9">['library']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 10, 'close': 20}</data>
+      <data key="d11">{'open': 8, 'close': 18}</data>
     </node>
     <node id="12316437965">
       <data key="d4">32.8809509</data>
@@ -18001,7 +18001,7 @@
       <data key="d8">['Altman Clinical and Translational Research Institute', 'Medical Center Drive', 'Medical Center Drive']</data>
       <data key="d9">['university', 'unknown', 'unknown']</data>
       <data key="d10">study</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 10, 'close': 18}</data>
     </node>
     <node id="12509079874">
       <data key="d4">32.8739517</data>
@@ -18259,7 +18259,7 @@
       <data key="d8">['North Torrey Pines Road &amp; Revelle College Drive', "Caroline's Seaside Café by Giuseppe", 'Southwest Fisheries', 'NOAA Corps', 'U.S. Coast Guard', 'Pinpoint Cafe', 'SIO Forum / Beach', 'Vaughan Hall', 'Eckart/Hubbs', 'Nierenberg Hall', 'IGPP', 'Coast Apartments (West)', 'Coast Apartments South Side', 'Capricorn Way', 'Scripps Coastal Reserve', 'Scripps Pier', 'Discovery Way', 'Naga Way', 'Redwood Drive', 'Biological Grade', 'Vaughan Hall', 'Hubbs Hall', 'Isaacs Hall', 'Eckart Building', 'Center for Coastal Studies', 'IGPP, Revelle Lab Building 2000', 'IGPP, Munk Laboratory', 'IGPP, Revelle Lab Building 4000', 'Deep Sea Drilling East', 'Ritter Hall', 'Spiess Hall', 'Keck OAR Building 3', 'Scholander Hall', 'New Scripps Building / Administration', 'Hydraulics Laboratory', 'Deep Sea Drilling West', 'Nierenberg Hall', 'MSDC Building A', 'MSDC Building D', 'Kaplan Lab / Experimental Aquarium', 'IGPP, Revelle Lab Building 1000', 'Deep Sea Drilling Building C', 'Expedition Way', 'Scripps Crossing Pedestrian Bridge', 'Expedition Way', 'Expedition Way', 'Expedition Way', 'Downwind Way', 'Shellback Way', 'Shellback Way', 'Shellback Way', 'Kennel Way', 'Kennel Way', 'Kennel Way', 'Naga Way', 'Naga Lane', 'North Torrey Pines Road', 'La Jolla Shores Drive', 'Scripps Seaside Forum', 'Shellback Way', 'Marine Ecosystem Sensing, Observation and Modeling Laboratory (MESOM)', 'NOAA - Southwest Fisheries Science Center Laboratory', 'P012', 'T-31', 'Martin Johnson House (T-29)', 'P008', 'P010', 'P011', 'T-30', 'P013', 'Hubbs Hall Confrence Center', 'MSDC Building C', 'MSDC Building B', 'SIO Marine Science Development Center', 'P007', 'ODP Core Building', 'IGPP, Revelle Lab Building 3000', 'T-25', 'Keck OAR Building 1', 'Keck OAR Building 2', 'W.M. Keck Foundation Center for Ocean Atmosphere Research', 'P004', "Old Director's House/T-16", 'Sumner Auditorium', 'Surfside', 'P001', 'Old Scripps Building', "Scripps Director's Office", 'P005', 'Scripps Seaside Forum', 'Naga Way', 'Kennel Way', 'Coast Apartments', 'Theatre District Drive', 'Theatre District Drive', 'Downwind Way', 'La Jolla Shores Drive', 'Expedition Way', 'Expedition Way', 'Expedition Way', 'SIO Test Pool', 'Shellback Way', 'La Jolla Shores Drive', 'La Jolla Shores Drive', 'La Jolla Shores Drive']</data>
       <data key="d9">['unknown', 'cafe', 'unknown', 'unknown', 'unknown', 'cafe', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'university', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'university', 'unknown', 'university', 'yes', 'parking', 'university', 'university', 'parking', 'parking', 'parking', 'university', 'parking', 'university', 'university', 'university', 'unknown', 'parking', 'university', 'university', 'university', 'university', 'university', 'unknown', 'parking', 'university', 'university', 'university', 'parking', 'university', 'university', 'parking', 'university', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown', 'unknown']</data>
       <data key="d10">food</data>
-      <data key="d11">{'open': 9, 'close': 18}</data>
+      <data key="d11">{'open': 9, 'close': 20}</data>
     </node>
     <node id="12777137785">
       <data key="d4">32.8716645</data>
@@ -18769,7 +18769,7 @@
       <data key="d8">['Theodore and Adele Shank Theatre', 'Theatre District Drive', 'Theatre District Drive']</data>
       <data key="d9">['theatre', 'unknown', 'unknown']</data>
       <data key="d10">leisure</data>
-      <data key="d11">{'open': 13, 'close': 22}</data>
+      <data key="d11">{'open': 13, 'close': 21}</data>
     </node>
     <node id="13041963756">
       <data key="d4">32.8729682</data>
