@@ -41,7 +41,7 @@ class Simulation:
         goal_node = sample_goal_node(agent, current_hour)
 
         # 2. Sample a start node that is reasonably far from the goal
-        start_node = sample_start_node(agent, goal_node)
+        start_node = sample_start_node(agent, goal_node, current_hour=current_hour)
   
 
         # 3. Plan a stochastic path from start to goal
