@@ -3,14 +3,16 @@ from agent_controller.agent import Agent
 from agent_controller.planning_utils import plan_path
 
 class Simulation:
-    def __init__(self, world_graph):
+    def __init__(self, world_graph, verbose=True):
         """
         Args:
             world_graph (WorldGraph): The world graph wrapper.
+            verbose (bool): Whether to print status messages during simulation.
         """
         self.G = world_graph.G
         self.agents = {}  # {agent_id: Agent}
         self.trajectories = {}  # {agent_id: list of paths}
+        self.verbose = verbose
 
     def register_agent(self, agent):
         """
@@ -34,14 +36,16 @@ class Simulation:
         """
         agent = self.agents.get(agent_id)
         if not agent:
-            print(f"Agent {agent_id} not found.")
+            if self.verbose:
+                print(f"Agent {agent_id} not found.")
             return
 
         # Plan a path with retry logic for closed goals
         try:
             plan_result = plan_path(agent, current_hour, temperature=path_temp)
         except RuntimeError as e:
-            print(f"Error planning path for agent {agent_id}: {e}")
+            if self.verbose:
+                print(f"Error planning path for agent {agent_id}: {e}")
             return
         
         # Extract plan details
@@ -74,10 +78,11 @@ class Simulation:
                     distance=belief_update_dist
                 )
         
-        path_len = len(annotated_path)
-        attempts_str = f"{attempts} attempt(s)"
-        home_str = " (returned home)" if returned_home else ""
-        print(f"Agent {agent_id}: path length {path_len}, {attempts_str}{home_str}")
+        if self.verbose:
+            path_len = len(annotated_path)
+            attempts_str = f"{attempts} attempt(s)"
+            home_str = " (returned home)" if returned_home else ""
+            print(f"Agent {agent_id}: path length {path_len}, {attempts_str}{home_str}")
 
 
 

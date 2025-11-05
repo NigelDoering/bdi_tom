@@ -83,8 +83,10 @@ def run_simulation():
     n_agents = args.num_agents
     m_trajectories = args.num_trajectories
     run_id = args.run_id
+    quiet = args.quiet
 
-    print(f"Running simulation: {n_agents} agents, {m_trajectories} trajectories each, run ID = {run_id}")
+    if not quiet:
+        print(f"Running simulation: {n_agents} agents, {m_trajectories} trajectories each, run ID = {run_id}")
     # Paths
     base_dir = f"data/simulation_data/run_{run_id}"
     agents_dir = os.path.join(base_dir, "agents")
@@ -102,7 +104,7 @@ def run_simulation():
     agents_metadata = {}
     for i in range(n_agents):
         agent_id = f"agent_{i:03d}"
-        agent = Agent(agent_id=agent_id, world_graph=world_graph)
+        agent = Agent(agent_id=agent_id, world_graph=world_graph, verbose=not quiet)
         agents.append(agent)
         agents_metadata[agent_id] = agent.to_dict()
 
@@ -111,29 +113,44 @@ def run_simulation():
         json.dump(agents_metadata, f, indent=2, ensure_ascii=False)
 
     # Initialize simulation
-    sim = Simulation(world_graph)
+    sim = Simulation(world_graph, verbose=not quiet)
     for agent in agents:
         sim.register_agent(agent)
 
     # Run simulation for each agent
-    print(f"Running simulation: {n_agents} agents × {m_trajectories} trajectories")
-
-    for agent in tqdm(agents, desc="Simulating Agents"):
-        for _ in range(m_trajectories):
-            hour = sample_simulation_hour()  # Sample using bell-curve distribution
-            sim.step(
-                agent_id=agent.id,
-                current_hour=hour,
-                path_temp=30.0,
-                belief_update_dist=100
-            )
+    total_trajectories = n_agents * m_trajectories
+    if quiet:
+        # Use tqdm with minimal output
+        with tqdm(total=total_trajectories, desc="Simulating", ncols=80, 
+                  bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}') as pbar:
+            for agent in agents:
+                for _ in range(m_trajectories):
+                    hour = sample_simulation_hour()
+                    sim.step(
+                        agent_id=agent.id,
+                        current_hour=hour,
+                        path_temp=30.0,
+                        belief_update_dist=100
+                    )
+                    pbar.update(1)
+    else:
+        print(f"Running simulation: {n_agents} agents × {m_trajectories} trajectories")
+        for agent in tqdm(agents, desc="Simulating Agents"):
+            for _ in range(m_trajectories):
+                hour = sample_simulation_hour()
+                sim.step(
+                    agent_id=agent.id,
+                    current_hour=hour,
+                    path_temp=30.0,
+                    belief_update_dist=100
+                )
 
     # Save all trajectories to single JSON
     with open(os.path.join(traj_dir, "all_trajectories.json"), "w") as f:
-        json.dump(sim.trajectories, f, indent=2, ensure_ascii=False
-        )
+        json.dump(sim.trajectories, f, indent=2, ensure_ascii=False)
 
-    print(f"\n✅ Simulation complete. Data saved to: {base_dir}")
+    if not quiet:
+        print(f"\n✅ Simulation complete. Data saved to: {base_dir}")
 
 
 def parse_args():
@@ -151,6 +168,10 @@ def parse_args():
     parser.add_argument(
         "-x", "--run_id", type=int, required=True,
         help="Run identifier to store outputs under data/simulation_data/run_<X>/"
+    )
+    parser.add_argument(
+        "-q", "--quiet", action="store_true",
+        help="Quiet mode: suppress verbose output, only show progress bar."
     )
     return parser.parse_args()
 

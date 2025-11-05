@@ -30,7 +30,7 @@ class Agent:
         current_path (list): list of nodes representing the planned path.
     """
 
-    def __init__(self, agent_id, world_graph):
+    def __init__(self, agent_id, world_graph, verbose=False):
         """Create an Agent.
 
         Args:
@@ -41,8 +41,10 @@ class Agent:
                 preference dicts are initialized empty and can be filled
                 later by calling the corresponding setters after assigning
                 `agent.G`.
+            verbose (bool): Whether to print initialization messages.
         """
-        print("Initializing Agent...")
+        if verbose:
+            print("Initializing Agent...")
         # Identifier
         self.id = agent_id if agent_id else str(uuid.uuid4())[:8]
 
