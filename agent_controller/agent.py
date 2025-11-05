@@ -203,6 +203,24 @@ class Agent:
             cat: float(round(w, 4)) for cat, w in zip(categories, weights)
         }
 
+    def get_category_preferences(self, hour):
+        """
+        Returns the agent's category preferences for a given hour.
+        
+        For now, returns the same preferences regardless of hour.
+        This can be extended to support time-dependent preferences in the future.
+        
+        Args:
+            hour (int): The current hour (0-23).
+            
+        Returns:
+            dict: Category preferences mapping category names to probabilities.
+        """
+        if not hasattr(self, 'category_preferences'):
+            raise ValueError("Category preferences have not been initialized for this agent.")
+        
+        return self.category_preferences
+
     def set_home_preferences(self):
         # Mostly one node (e.g., your residence)
         def alpha_fn(n): 
