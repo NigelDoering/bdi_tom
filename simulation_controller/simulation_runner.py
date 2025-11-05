@@ -18,6 +18,65 @@ from agent_controller.agent import Agent
 from simulation_controller.simulation import Simulation
 
 
+def sample_simulation_hour():
+    """
+    Sample an hour for simulation using a bell-curve-like distribution with a flat peak.
+    
+    Distribution characteristics:
+    - Hours 6-8am: Uncommon (low probability, ramping up)
+    - Hours 11am-3pm: Peak (flat, high probability)
+    - Hours after 8pm: Uncommon (low probability, tapering down)
+    - Supports hours from 6am to 2am (wraps past midnight)
+    
+    Returns:
+        int: Hour in 24-hour format (6-23 or 0-2)
+    """
+    # Define the hours we want to sample from
+    hours = list(range(6, 24)) + list(range(0, 3))  # 06:00 to 02:00
+    
+    # Create a probability distribution
+    # We'll use a piecewise function:
+    # - 6-8am (6,7,8): Ramp up (weights: 0.3, 0.5, 0.7)
+    # - 9-10am (9,10): Transition (weights: 0.9, 1.0)
+    # - 11am-3pm (11,12,13,14,15): Peak plateau (weights: 1.2)
+    # - 4-7pm (16,17,18,19): Transition down (weights: 1.0, 0.9, 0.7, 0.5)
+    # - 8pm-2am (20,21,22,23,0,1,2): Taper off (weights: 0.4, 0.3, 0.2, 0.15, 0.1, 0.08, 0.05)
+    
+    weights = {
+        6: 0.3,   # 6am - uncommon
+        7: 0.5,   # 7am - ramping up
+        8: 0.7,   # 8am
+        9: 0.9,   # 9am - approaching peak
+        10: 1.0,  # 10am
+        11: 1.2,  # 11am - peak starts
+        12: 1.2,  # 12pm - peak
+        13: 1.2,  # 1pm - peak
+        14: 1.2,  # 2pm - peak
+        15: 1.2,  # 3pm - peak ends
+        16: 1.0,  # 4pm - transition down
+        17: 0.9,  # 5pm
+        18: 0.7,  # 6pm
+        19: 0.5,  # 7pm
+        20: 0.4,  # 8pm - uncommon
+        21: 0.3,  # 9pm
+        22: 0.2,  # 10pm
+        23: 0.15, # 11pm
+        0: 0.1,   # 12am
+        1: 0.08,  # 1am
+        2: 0.05,  # 2am - very uncommon
+    }
+    
+    # Get weights in the same order as hours
+    probs = [weights[h] for h in hours]
+    
+    # Normalize to create a probability distribution
+    total = sum(probs)
+    probs = [p / total for p in probs]
+    
+    # Sample an hour using the weighted distribution
+    return random.choices(hours, weights=probs, k=1)[0]
+
+
 def run_simulation():
     # Parse command-line arguments
     args = parse_args()
@@ -58,11 +117,10 @@ def run_simulation():
 
     # Run simulation for each agent
     print(f"Running simulation: {n_agents} agents × {m_trajectories} trajectories")
-    simulation_hours = list(range(6, 24)) + list(range(0, 3))  # 06:00 to 02:00
 
     for agent in tqdm(agents, desc="Simulating Agents"):
         for _ in range(m_trajectories):
-            hour = random.choice(simulation_hours)
+            hour = sample_simulation_hour()  # Sample using bell-curve distribution
             sim.step(
                 agent_id=agent.id,
                 current_hour=hour,

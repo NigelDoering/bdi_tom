@@ -1,12 +1,12 @@
 import random
 from agent_controller.agent import Agent
-from agent_controller.planning_utils import sample_start_node, sample_goal_node, plan_stochastic_path
+from agent_controller.planning_utils import plan_path
 
 class Simulation:
     def __init__(self, world_graph):
         """
         Args:
-            G (networkx.Graph): The annotated graph.
+            world_graph (WorldGraph): The world graph wrapper.
         """
         self.G = world_graph.G
         self.agents = {}  # {agent_id: Agent}
@@ -23,8 +23,8 @@ class Simulation:
         """
         Executes one full planning and traversal step for a single agent.
 
-        This involves sampling a goal, planning a path, traversing it, and
-        updating beliefs along the way.
+        This involves planning a path (with retry logic for closed goals),
+        traversing it, and updating beliefs along the way.
 
         Args:
             agent_id (str): The ID of the agent to step.
@@ -37,30 +37,35 @@ class Simulation:
             print(f"Agent {agent_id} not found.")
             return
 
-        # 1. Sample a goal for the agent
-        goal_node = sample_goal_node(agent, current_hour)
-
-        # 2. Sample a start node that is reasonably far from the goal
-        start_node = sample_start_node(agent, goal_node, current_hour=current_hour)
-  
-
-        # 3. Plan a stochastic path from start to goal
+        # Plan a path with retry logic for closed goals
         try:
-            path = plan_stochastic_path(agent, start_node, goal_node, temperature=path_temp)
+            plan_result = plan_path(agent, current_hour, temperature=path_temp)
         except RuntimeError as e:
             print(f"Error planning path for agent {agent_id}: {e}")
             return
         
-        # Store the generated trajectory
+        # Extract plan details
+        annotated_path = plan_result['path']  # List of (node, goal) tuples
+        goal_node = plan_result['goal_node']
+        start_node = plan_result['start_node']
+        attempts = plan_result['attempts']
+        returned_home = plan_result['returned_home']
+        attempted_goals = plan_result['attempted_goals']
+        
+        # Store the generated trajectory with new format
         trajectory_data = {
-            "path": path,
+            "path": annotated_path,  # List of (node_id, goal_node) tuples
             "goal_node": goal_node,
-            "hour": current_hour
+            "start_node": start_node,
+            "hour": current_hour,
+            "attempts": attempts,
+            "returned_home": returned_home,
+            "attempted_goals": attempted_goals
         }
         self.trajectories[agent_id].append(trajectory_data)
 
-        # 4. Traverse the path and update beliefs periodically
-        for i, node in enumerate(path):
+        # Traverse the path and update beliefs periodically
+        for i, (node, _) in enumerate(annotated_path):
             # Update beliefs every 5 nodes along the path
             if i % 5 == 0:
                 agent.update_beliefs(
@@ -69,7 +74,10 @@ class Simulation:
                     distance=belief_update_dist
                 )
         
-        print(f"Agent {agent_id} completed a path of length {len(path)} from {start_node} to {goal_node}.")
+        path_len = len(annotated_path)
+        attempts_str = f"{attempts} attempt(s)"
+        home_str = " (returned home)" if returned_home else ""
+        print(f"Agent {agent_id}: path length {path_len}, {attempts_str}{home_str}")
 
 
 
