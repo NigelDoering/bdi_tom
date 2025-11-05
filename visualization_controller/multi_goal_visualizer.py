@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import random
 import argparse
 import networkx as nx
 import folium
@@ -103,7 +104,7 @@ def visualize_multi_goal_trajectories(G, trajectories, save_path=None, show_pois
         color_idx += 1
         
         hour = traj.get("hour", "?")
-        attempts = traj.get("planning_attempts", 1)
+        attempts = traj.get("attempts", 1)  # Fixed: was "planning_attempts"
         tooltip = f"{agent_id} @ hour {hour} | {attempts} attempts"
         
         PolyLine(
@@ -115,35 +116,21 @@ def visualize_multi_goal_trajectories(G, trajectories, save_path=None, show_pois
         ).add_to(m)
 
         # Mark start node
+        start_hour = traj.get("hour", "?")
         folium.Marker(
             coords[0],
             icon=folium.Icon(color="green", icon="play"),
-            popup=f"{agent_id} Start"
+            popup=f"{agent_id} Start",
+            tooltip=f"{agent_id} Start @ {start_hour}:00"
         ).add_to(m)
 
-        # Mark final goal node
-        final_goal = traj.get("goal_node")
-        if final_goal and final_goal in G.nodes:
-            goal_data = G.nodes[final_goal]
-            goal_lat = goal_data.get("y")
-            goal_lon = goal_data.get("x")
-            if goal_lat is not None and goal_lon is not None:
-                folium.Marker(
-                    (goal_lat, goal_lon),
-                    icon=folium.Icon(color="red", icon="flag"),
-                    popup=f"{agent_id} Final Goal"
-                ).add_to(m)
-        else:
-            # Fallback to last coordinate
-            folium.Marker(
-                coords[-1],
-                icon=folium.Icon(color="red", icon="flag"),
-                popup=f"{agent_id} Final Goal"
-            ).add_to(m)
-
         # Mark attempted goals along the path
+        # Note: The final goal will be marked here too, so no need for duplicate marking
         attempted_goals = traj.get("attempted_goals", [])
-        if len(attempted_goals) > 1:  # Only show if multiple attempts
+        final_goal = traj.get("goal_node")
+        
+        # Always show attempted goals if they exist (even if just 1)
+        if attempted_goals:
             for idx, goal_node in enumerate(attempted_goals, start=1):
                 if goal_node not in G.nodes:
                     continue
@@ -167,11 +154,11 @@ def visualize_multi_goal_trajectories(G, trajectories, save_path=None, show_pois
                 if is_final:
                     icon_color = "red"
                     icon_name = "flag"
-                    status = "Final Goal"
+                    status = "Final Goal (Reached)"
                 else:
                     icon_color = "orange"
-                    icon_name = "remove"
-                    status = "Failed Attempt"
+                    icon_name = "times"  # X mark - better than "remove"
+                    status = "Failed Attempt (Closed)"
 
                 popup_html = (
                     f"<b>{agent_id} - Attempt {idx}</b><br>"
@@ -182,12 +169,16 @@ def visualize_multi_goal_trajectories(G, trajectories, save_path=None, show_pois
                     f"<b>Hour:</b> {traj.get('hour', '?')}:00<br>"
                     f"<b>Node ID:</b> {goal_node}"
                 )
+                
+                # Create tooltip with hour and category
+                hour_display = traj.get('hour', '?')
+                tooltip_text = f"Attempt {idx} @ {hour_display}:00 | {category} | {poi_names}"
 
                 folium.Marker(
                     (goal_lat, goal_lon),
                     icon=folium.Icon(color=icon_color, icon=icon_name),
                     popup=folium.Popup(popup_html, max_width=300),
-                    tooltip=f"Attempt {idx}: {poi_names}"
+                    tooltip=tooltip_text
                 ).add_to(m)
 
     if save_path:
@@ -241,10 +232,10 @@ def main():
     for agent_id, agent_trajs in all_trajectories.items():
         for traj in agent_trajs:
             attempted_goals = traj.get("attempted_goals", [])
-            planning_attempts = traj.get("planning_attempts", 1)
+            attempts = traj.get("attempts", 1)  # Fixed: was "planning_attempts"
             
             # Include if multiple attempts or multiple attempted goals
-            if len(attempted_goals) > 1 or planning_attempts > 1:
+            if len(attempted_goals) > 1 or attempts > 1:
                 multi_goal_trajectories.append((agent_id, traj))
 
     if not multi_goal_trajectories:
@@ -253,9 +244,12 @@ def main():
 
     print(f"✅ Found {len(multi_goal_trajectories)} trajectories with multiple goal attempts")
 
-    # Select subset to display
-    selected = multi_goal_trajectories[:num_to_show]
-    print(f"📊 Visualizing {len(selected)} trajectories...")
+    # Select subset to display (randomly sample)
+    if len(multi_goal_trajectories) <= num_to_show:
+        selected = multi_goal_trajectories
+    else:
+        selected = random.sample(multi_goal_trajectories, num_to_show)
+    print(f"📊 Visualizing {len(selected)} randomly selected trajectories...")
 
     # Plot the selected trajectories
     output_dir = os.path.join(base_dir, "visualizations")
