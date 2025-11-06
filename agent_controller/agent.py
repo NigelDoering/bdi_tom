@@ -30,7 +30,7 @@ class Agent:
         current_path (list): list of nodes representing the planned path.
     """
 
-    def __init__(self, agent_id, world_graph):
+    def __init__(self, agent_id, world_graph, verbose=False):
         """Create an Agent.
 
         Args:
@@ -41,13 +41,15 @@ class Agent:
                 preference dicts are initialized empty and can be filled
                 later by calling the corresponding setters after assigning
                 `agent.G`.
+            verbose (bool): Whether to print initialization messages.
         """
-        print("Initializing Agent...")
+        if verbose:
+            print("Initializing Agent...")
         # Identifier
         self.id = agent_id if agent_id else str(uuid.uuid4())[:8]
 
         # Random decay rate for memory (exponential forgetting)
-        self.decay_rate = np.random.uniform(0.90, 0.99)
+        self.decay_rate = np.random.uniform(0.00005, 0.00015)
 
         # Graph may be None at construction time. Assign early so setters
         # can use it if provided.
@@ -81,11 +83,15 @@ class Agent:
         Initializes the agent's belief state for each goal node as a Beta(2,2)
         distribution over each hour of the day (00 to 23). Assumes self.goal_nodes
         has been set and contains all relevant node IDs.
+        
+        Also stores the initial prior for each node so that decay can move beliefs
+        back toward the original prior rather than a uniform distribution.
         """
         if not hasattr(self, "goal_nodes"):
             raise ValueError("Agent must have self.goal_nodes defined before initializing beliefs.")
 
         self.belief_state = {}  # Clear any existing beliefs
+        self.belief_prior = {}  # Store initial priors for decay
 
         for node_id in self.goal_nodes:
             alpha = np.full(24, 2.0)
@@ -99,9 +105,15 @@ class Agent:
             temporal_belief = alpha / (alpha + beta)
 
             self.belief_state[node_id] = {
-                "alpha": alpha,
-                "beta": beta,
+                "alpha": alpha.copy(),  # Current beliefs
+                "beta": beta.copy(),
                 "temporal_belief": temporal_belief
+            }
+            
+            # Store a copy of the initial prior for decay
+            self.belief_prior[node_id] = {
+                "alpha": alpha.copy(),
+                "beta": beta.copy()
             }
 
     def update_beliefs(self, current_node, hour, distance=100):
@@ -127,33 +139,58 @@ class Agent:
             target_lon = target_data['x']
 
             # Compute haversine distance (in meters)
-            dist = hs.haversine((node_lat, node_lon), (target_lat, target_lon))
-            if dist > distance:
-                continue
-
-            # Check whether the goal node is expected to be open at the current hour
-            hours = target_data.get("opening_hours")
-            if hours is None:
-                continue  # No info, skip
-
-            is_open = (hours["open"] <= hour < hours["close"])
-
+            dist = hs.haversine((node_lat, node_lon), (target_lat, target_lon), unit=hs.Unit.METERS)
+            
             alpha = self.belief_state[node_id]["alpha"]
             beta = self.belief_state[node_id]["beta"]
-
-            # Apply exponential decay to all hours first
-            alpha[hour] *= self.decay_rate
-            beta[hour] *= self.decay_rate
-
-            # Update Beta parameters based on observation
-            if is_open:
-                alpha[hour] += 1
+            
+            if dist <= distance:
+                # POI is SEEN - update based on observation, NO decay
+                hours = target_data.get("opening_hours")
+                if hours is None:
+                    continue  # No opening hours info, skip
+                
+                is_open = self._is_node_open(node_id, hour)
+                
+                # Update Beta parameters based on observation (no decay)
+                if is_open:
+                    alpha[hour] += 1
+                else:
+                    beta[hour] += 1
             else:
-                beta[hour] += 1
+                # POI is NOT SEEN - decay toward original prior for all 24 hours
+                # This gradually moves beliefs back to the agent's initial beliefs
+                prior_alpha = self.belief_prior[node_id]["alpha"]
+                prior_beta = self.belief_prior[node_id]["beta"]
+                
+                # Exponential moving average toward prior
+                # decay_rate controls how fast we forget (higher = faster forgetting)
+                alpha[:] = (1 - self.decay_rate) * alpha + self.decay_rate * prior_alpha
+                beta[:] = (1 - self.decay_rate) * beta + self.decay_rate * prior_beta
 
-            # Update cached temporal belief at this hour
-            a, b = alpha[hour], beta[hour]
-            self.belief_state[node_id]["temporal_belief"][hour] = np.clip(a / (a + b), 0.01, 0.99)
+            # Update cached temporal belief for all hours (since decay affects all hours)
+            self.belief_state[node_id]["temporal_belief"] = np.clip(
+                alpha / (alpha + beta), 0.01, 0.99
+            )
+
+    def _is_node_open(self, node_id, hour):
+        """Helper to determine whether a POI is open at a given hour."""
+        node_data = self.G.nodes[node_id]
+        hours = node_data.get("opening_hours")
+        if hours is None:
+            return True
+
+        open_time = hours.get("open", 0)
+        close_time = hours.get("close", 24)
+
+        # Support hours that end at or past midnight by normalizing the range.
+        if close_time < open_time:
+            close_time += 24
+            hour_check = hour if hour >= open_time else hour + 24
+        else:
+            hour_check = hour
+
+        return open_time <= hour_check < close_time
 
     def _set_preferences(self, category_name, concentration_func):
         """
