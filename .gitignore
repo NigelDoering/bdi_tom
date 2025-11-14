@@ -10,6 +10,15 @@ __pycache__/
 .venv/
 venv/
 
+# Weights & Biases
+wandb/
+*.wandb
+
+# Model checkpoints (ignore all except keepers)
+checkpoints/*
+!checkpoints/keepers/
+!checkpoints/.gitkeep
+
 # Ignore everything in data by default
 /data/**
 
