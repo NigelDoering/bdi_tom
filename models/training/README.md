@@ -100,6 +100,92 @@ chmod +x scripts/train_baseline_transformer_model.sh
 - `--checkpoint_dir`: Directory to save checkpoints (default: `checkpoints/baseline_transformer`)
 - `--seed`: Random seed for reproducibility (default: 42)
 
+### W&B Arguments (Experiment Tracking)
+- `--use_wandb`: Enable Weights & Biases tracking (flag, default: False)
+- `--wandb_project`: W&B project name (default: `bdi-tom-goal-prediction`)
+- `--wandb_run_name`: W&B run name (auto-generated if not provided)
+- `--wandb_tags`: Comma-separated W&B tags (e.g., `baseline,transformer,v1`)
+
+## Experiment Tracking with W&B
+
+The training script supports [Weights & Biases](https://wandb.ai/) for experiment tracking.
+
+### Setup
+
+1. Install wandb:
+```bash
+pip install wandb
+```
+
+2. Login to W&B:
+```bash
+wandb login
+```
+
+### Usage
+
+Enable W&B tracking with the `--use_wandb` flag:
+
+```bash
+python models/training/train_baseline_transformer.py \
+    --run_dir data/simulation_data/run_8 \
+    --graph_path data/processed/ucsd_walk_full.graphml \
+    --use_wandb \
+    --wandb_tags baseline,transformer,lr0.001
+```
+
+### What Gets Tracked
+
+W&B automatically tracks:
+- **Training metrics**: loss, top-1/top-5 accuracy per epoch
+- **Validation metrics**: loss, top-1/top-5 accuracy per epoch
+- **Incremental validation**: Performance at 25%, 50%, 75% trajectory observation
+- **Test metrics**: Final performance on test set
+- **Hyperparameters**: All model and training configuration
+- **System metrics**: GPU/CPU usage, memory
+- **Model artifacts**: Best model checkpoint with metadata
+
+### Custom Run Names
+
+Runs are auto-named based on key hyperparameters:
+```
+baseline_bs32_lr0.001_tr1_h4_fd64_td128
+```
+
+Override with `--wandb_run_name`:
+```bash
+--use_wandb --wandb_run_name my_custom_experiment_v2
+```
+
+### Comparing Experiments
+
+All runs in the same project are automatically comparable in the W&B dashboard. View:
+- Metric trends across epochs
+- Hyperparameter correlations
+- Model performance distributions
+- Incremental validation curves
+
+### Example: Training Multiple Models
+
+```bash
+# Baseline model
+python models/training/train_baseline_transformer.py \
+    --use_wandb --wandb_tags baseline,v1
+
+# Increased capacity
+python models/training/train_baseline_transformer.py \
+    --transformer_dim 256 --num_transformer_layers 2 \
+    --use_wandb --wandb_tags high-capacity,v1
+
+# Different learning rate
+python models/training/train_baseline_transformer.py \
+    --learning_rate 0.0005 \
+    --use_wandb --wandb_tags low-lr,v1
+```
+
+All three experiments will appear in your W&B project dashboard for easy comparison.
+- `--seed`: Random seed for reproducibility (default: 42)
+
 ## Output
 
 ### Checkpoints

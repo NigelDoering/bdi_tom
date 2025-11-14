@@ -33,6 +33,10 @@ from models.training.utils import (
 from models.training.data_loader import (
     load_simulation_data, split_data, create_dataloaders
 )
+from models.training.wandb_config import (
+    init_wandb, log_metrics, log_incremental_validation,
+    save_model_artifact, watch_model, WandBConfig
+)
 from models.transformer_predictor import GoalPredictionModel
 from models.encoders.trajectory_encoder import TrajectoryDataPreparator
 from models.encoders.map_encoder import GraphDataPreparator
@@ -402,6 +406,27 @@ def main(args):
     # Metrics tracker
     metrics = MetricsTracker()
     
+    # Initialize W&B if enabled
+    wandb_run = None
+    if args.use_wandb:
+        config = vars(args).copy()
+        config['num_poi_nodes'] = len(world_graph.poi_nodes)
+        config['num_graph_nodes'] = graph.number_of_nodes()
+        config['num_train_samples'] = len(train_loader.dataset)
+        config['num_val_samples'] = len(val_loader.dataset)
+        config['num_test_samples'] = len(test_loader.dataset)
+        
+        wandb_run = init_wandb(
+            project_name=args.wandb_project,
+            run_name=args.wandb_run_name,
+            config=config,
+            tags=args.wandb_tags.split(',') if args.wandb_tags else None
+        )
+        
+        # Watch model gradients and parameters
+        if wandb_run is not None:
+            watch_model(model)
+    
     # Create checkpoint directory
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     
@@ -452,6 +477,23 @@ def main(args):
             train_top5, val_top5
         )
         
+        # Log to W&B
+        if wandb_run is not None:
+            # Log main training metrics
+            log_metrics({
+                'epoch': epoch,
+                'train/loss': train_loss,
+                'train/top1_accuracy': train_top1,
+                'train/top5_accuracy': train_top5,
+                'val/loss': val_loss,
+                'val/top1_accuracy': val_top1,
+                'val/top5_accuracy': val_top5,
+                'learning_rate': optimizer.param_groups[0]['lr']
+            })
+            
+            # Log incremental validation results
+            log_incremental_validation(val_results, epoch)
+        
         # Print epoch summary
         print(f"\n📊 Epoch {epoch} Summary:")
         print(f"   Train - Loss: {train_loss:.4f}, Top-1: {train_top1:.2f}%, Top-5: {train_top5:.2f}%")
@@ -489,6 +531,20 @@ def main(args):
     metrics_path = os.path.join(args.checkpoint_dir, 'metrics.json')
     metrics.save(metrics_path)
     
+    # Save best model as W&B artifact
+    if wandb_run is not None:
+        best_checkpoint = os.path.join(args.checkpoint_dir, 'best_model.pt')
+        save_model_artifact(
+            model_path=best_checkpoint,
+            name=f'best_model_epoch_{epoch}',
+            artifact_type='model',
+            metadata={
+                'best_val_top1': best_val_acc,
+                'epochs_trained': epoch,
+                'final_val_loss': val_loss
+            }
+        )
+    
     # Print training summary
     metrics.print_summary()
     
@@ -510,6 +566,17 @@ def main(args):
     print(f"   Loss: {test_loss:.4f}")
     print(f"   Top-1 Accuracy: {test_top1:.2f}%")
     print(f"   Top-5 Accuracy: {test_top5:.2f}%")
+    
+    # Log test results to W&B
+    if wandb_run is not None:
+        log_metrics({
+            'test/loss': test_loss,
+            'test/top1_accuracy': test_top1,
+            'test/top5_accuracy': test_top5
+        })
+        wandb_run.finish()
+        print("📊 W&B run finished")
+    
     print("\n" + "=" * 80 + "\n")
 
 
@@ -557,6 +624,16 @@ if __name__ == '__main__':
     # Checkpoint arguments
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/baseline_transformer',
                         help='Directory to save checkpoints')
+    
+    # W&B arguments
+    parser.add_argument('--use_wandb', action='store_true', default=False,
+                        help='Enable Weights & Biases tracking')
+    parser.add_argument('--wandb_project', type=str, default=WandBConfig.PROJECT_NAME,
+                        help='W&B project name')
+    parser.add_argument('--wandb_run_name', type=str, default=None,
+                        help='W&B run name (auto-generated if not provided)')
+    parser.add_argument('--wandb_tags', type=str, default=None,
+                        help='Comma-separated W&B tags')
     
     # Other arguments
     parser.add_argument('--seed', type=int, default=42,
