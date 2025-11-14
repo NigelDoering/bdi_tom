@@ -8,6 +8,7 @@ echo "=========================================="
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 # Run training with default parameters
+# Add --use_wandb to enable experiment tracking
 python models/training/train_baseline_transformer.py \
     --run_dir data/simulation_data/run_8 \
     --graph_path data/processed/ucsd_walk_full.graphml \
