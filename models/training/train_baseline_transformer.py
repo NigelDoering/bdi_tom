@@ -35,7 +35,7 @@ from models.training.data_loader import (
 )
 from models.training.wandb_config import (
     init_wandb, log_metrics, log_incremental_validation,
-    save_model_artifact, watch_model, WandBConfig
+    save_model_artifact, watch_model, WandBConfig, get_run_name_from_config
 )
 from models.transformer_predictor import GoalPredictionModel
 from models.encoders.trajectory_encoder import TrajectoryDataPreparator
@@ -410,15 +410,22 @@ def main(args):
     wandb_run = None
     if args.use_wandb:
         config = vars(args).copy()
+        config['model_name'] = 'baseline_transformer'  # Identifier for this model type
         config['num_poi_nodes'] = len(world_graph.poi_nodes)
         config['num_graph_nodes'] = graph.number_of_nodes()
-        config['num_train_samples'] = len(train_loader.dataset)
-        config['num_val_samples'] = len(val_loader.dataset)
-        config['num_test_samples'] = len(test_loader.dataset)
+        config['num_train_samples'] = len(train_loader.dataset) # type: ignore
+        config['num_val_samples'] = len(val_loader.dataset) # type: ignore
+        config['num_test_samples'] = len(test_loader.dataset) # type: ignore
+        
+        # Generate descriptive run name if not provided
+        run_name = args.wandb_run_name
+        if run_name is None:
+            run_name = get_run_name_from_config(config)
+            print(f"📊 Auto-generated W&B run name: {run_name}")
         
         wandb_run = init_wandb(
             project_name=args.wandb_project,
-            run_name=args.wandb_run_name,
+            run_name=run_name,
             config=config,
             tags=args.wandb_tags.split(',') if args.wandb_tags else None
         )

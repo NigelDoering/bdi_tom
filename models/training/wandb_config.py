@@ -141,19 +141,35 @@ def get_run_name_from_config(config: Dict[str, Any]) -> str:
     """
     Generate a descriptive run name from configuration.
     
+    Format: baseline_transformer_lr{lr}_bs{bs}_fd{fusion_dim}_td{transformer_dim}
+    
     Args:
         config: Configuration dictionary
     
     Returns:
-        Generated run name
+        Generated run name (e.g., "baseline_transformer_lr0.001_bs32_fd64_td128")
     """
+    # Base model name
     model_name = config.get('model_name', 'baseline_transformer')
+    
+    # Key hyperparameters
     lr = config.get('learning_rate', 0.001)
     bs = config.get('batch_size', 32)
-    hidden = config.get('transformer_dim', 128)
-    layers = config.get('num_transformer_layers', 1)
+    fusion_dim = config.get('fusion_dim', 64)
+    transformer_dim = config.get('transformer_dim', 128)
+    n_layers = config.get('num_transformer_layers', 1)
+    n_heads = config.get('num_heads', 4)
     
-    return f"{model_name}_lr{lr}_bs{bs}_h{hidden}_l{layers}"
+    # Generate compact name
+    name = f"{model_name}_lr{lr}_bs{bs}_fd{fusion_dim}_td{transformer_dim}"
+    
+    # Add layers and heads if non-default
+    if n_layers != 1:
+        name += f"_l{n_layers}"
+    if n_heads != 4:
+        name += f"_h{n_heads}"
+    
+    return name
 
 
 class WandBConfig:
