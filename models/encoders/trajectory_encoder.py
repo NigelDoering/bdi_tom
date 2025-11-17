@@ -143,8 +143,13 @@ class TrajectoryDataPreparator:
         hour = trajectory['hour']
         goal_node = trajectory['goal_node']
         
-        # Convert node IDs to indices
-        node_indices = [self.node_to_idx.get(node, 0) for node in path]
+        node_indices = []
+        for entry in path:
+            if isinstance(entry, (list, tuple)) and entry:
+                node_id = entry[0]
+            else:
+                node_id = entry
+            node_indices.append(self.node_to_idx.get(node_id, 0))
         
         # Truncate if too long
         if len(node_indices) > max_seq_len:
@@ -163,9 +168,9 @@ class TrajectoryDataPreparator:
         
         return (
             torch.tensor(node_indices, dtype=torch.long),
-            torch.tensor(hour, dtype=torch.long),  # Single hour value
+            torch.tensor(hour, dtype=torch.long),
             torch.tensor(mask, dtype=torch.float32),
-            torch.tensor(goal_idx, dtype=torch.long)  # Goal for training
+            torch.tensor(goal_idx, dtype=torch.long)
         )
     
     def prepare_batch(self, trajectories, max_seq_len=50):
@@ -212,7 +217,7 @@ def main():
     
     # Load sample trajectory data
     print("\nLoading trajectory data...")
-    data_path = os.path.join("data", "simulation_data", "run_1", "trajectories", "all_trajectories.json")
+    data_path = os.path.join("data", "simulation_data", "run_8", "trajectories", "all_trajectories.json")
     
     if not os.path.exists(data_path):
         print(f"❌ Trajectory data not found at {data_path}")
@@ -232,7 +237,9 @@ def main():
     all_nodes = set()
     for agent_trajs in all_trajectories.values():
         for traj in agent_trajs:
-            all_nodes.update(traj['path'])
+            for entry in traj['path']:
+                node_id = entry[0] if isinstance(entry, (list, tuple)) else entry
+                all_nodes.add(node_id)
             all_nodes.add(traj['goal_node'])  # Also include goal nodes
     
     node_to_idx = {node: idx + 1 for idx, node in enumerate(sorted(all_nodes))}  # Start from 1 (0 is padding)

@@ -1,0 +1,2 @@
+# This file ensures the checkpoints directory is tracked in git
+# All other files in checkpoints/ are ignored except those in keepers/

@@ -58,9 +58,18 @@ def plot_graph_with_multiple_trajectories(G, trajectories, save_path=None, show_
 
     for agent_id, agent_trajs in trajectories.items():
         for traj in agent_trajs:
+            # Extract node IDs from path (handling tuple format: [(node_id, goal_id), ...])
+            path_nodes = []
+            for entry in traj["path"]:
+                if isinstance(entry, (list, tuple)):
+                    node_id = entry[0]  # Extract node_id from tuple
+                else:
+                    node_id = entry  # Backward compatibility
+                path_nodes.append(node_id)
+            
             coords = [
                 (G.nodes[n]["y"], G.nodes[n]["x"])
-                for n in traj["path"]
+                for n in path_nodes
                 if n in G.nodes
             ]
             if not coords:
