@@ -149,12 +149,27 @@ W&B automatically tracks:
 
 Runs are auto-named based on key hyperparameters:
 ```
-baseline_bs32_lr0.001_tr1_h4_fd64_td128
+baseline_transformer_lr0.001_bs32_fd64_td128
 ```
+
+This includes:
+- Model type: `baseline_transformer`
+- Learning rate: `lr0.001`
+- Batch size: `bs32`
+- Fusion dim: `fd64`
+- Transformer dim: `td128`
+- Layers/heads (if non-default): `l2_h8`
 
 Override with `--wandb_run_name`:
 ```bash
 --use_wandb --wandb_run_name my_custom_experiment_v2
+```
+
+**Example auto-generated names:**
+```
+baseline_transformer_lr0.001_bs32_fd64_td128       # Default settings
+baseline_transformer_lr0.0005_bs64_fd64_td256      # Higher capacity
+baseline_transformer_lr0.001_bs32_fd64_td128_l2_h8 # More layers/heads
 ```
 
 ### Comparing Experiments
