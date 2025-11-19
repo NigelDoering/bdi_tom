@@ -265,6 +265,7 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             traj_path = sample['trajectory']
             hour = sample['hour']
             goal_idx = sample['goal_idx']
+            goal_node = sample['goal_node']
             
             # Extract node IDs from path (handle both list and tuple formats)
             node_ids = []
@@ -274,6 +275,13 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
                 else:
                     node_id = entry
                 node_ids.append(node_id)
+            
+            # **CRITICAL FIX**: Remove goal node if it's at the end
+            # The model should PREDICT the goal, not just read it from the input!
+            if node_ids[-1] == goal_node:
+                node_ids = node_ids[:-1]
+            
+ 
             
             # Truncate if too long
             if len(node_ids) > max_seq_len:
