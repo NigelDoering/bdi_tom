@@ -18,7 +18,7 @@ class TrajectoryEncoder(nn.Module):
     
     Also incorporates the hour of day as trajectory-level context.
     """
-    def __init__(self, node_emb_dim, hidden_dim, output_dim, n_layers=2, n_heads=4, dropout=0.1):
+    def __init__(self, node_emb_dim, hidden_dim, output_dim, n_layers=2, n_heads=4, dropout=0.1, max_seq_len=50):
         """
         Args:
             node_emb_dim (int): Dimension of pre-computed node embeddings (from Node2Vec)
@@ -27,11 +27,17 @@ class TrajectoryEncoder(nn.Module):
             n_layers (int): Number of transformer encoder layers
             n_heads (int): Number of attention heads
             dropout (float): Dropout rate
+            max_seq_len (int): Maximum sequence length for positional encoding
         """
         super().__init__()
         self.node_emb_dim = node_emb_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
+        
+        # Positional encoding (learnable) - CRITICAL for sequence order!
+        self.positional_encoding = nn.Parameter(
+            torch.randn(1, max_seq_len, node_emb_dim) * 0.02
+        )
         
         # Hour embedding (24 hours in a day)
         self.hour_embedding = nn.Embedding(24, node_emb_dim)
@@ -74,9 +80,14 @@ class TrajectoryEncoder(nn.Module):
             # Assume padding is all zeros
             mask = (node_embeddings.sum(dim=-1) != 0).float()
         
+        # Add positional encoding to preserve sequence order
+        # This is CRITICAL - without it, the model can't distinguish [A,B,C] from [C,B,A]!
+        pos_enc = self.positional_encoding[:, :seq_len, :]  # (1, seq_len, node_emb_dim)
+        node_embeddings_with_pos = node_embeddings + pos_enc  # (batch_size, seq_len, node_emb_dim)
+        
         # Apply transformer
         transformer_out = self.transformer(
-            node_embeddings, 
+            node_embeddings_with_pos, 
             src_key_padding_mask=(mask == 0)
         )  # (batch_size, seq_len, node_emb_dim)
         
