@@ -38,10 +38,48 @@ from models.training.wandb_config import (
     save_model_artifact, watch_model, WandBConfig, get_run_name_from_config
 )
 from models.transformer_predictor import GoalPredictionModel
-from models.encoders.trajectory_encoder import TrajectoryDataPreparator
-from models.encoders.map_encoder import GraphDataPreparator
 from models.encoders.fusion_encoder import ToMGraphEncoder
+from models.data.node_embeddings import get_or_create_embeddings, Node2VecEmbeddings
 from graph_controller.world_graph import WorldGraph
+import networkx as nx
+
+
+# -----------------------------
+# Data Preparation Utilities
+# -----------------------------
+def prepare_graph_data(graph, node_embeddings):
+    """
+    Prepare graph data using Node2Vec embeddings.
+    
+    Args:
+        graph: NetworkX graph
+        node_embeddings: Node2VecEmbeddings instance
+    
+    Returns:
+        Dict with graph data ready for model input
+    """
+    # Get embeddings for all nodes (already in correct order)
+    node_emb_matrix = node_embeddings.embedding_matrix
+    
+    # Use existing node-to-index mapping from node_embeddings
+    node_to_idx = node_embeddings.node_to_idx
+    
+    # Manually create edge_index from graph edges
+    edge_list = []
+    for u, v in graph.edges():
+        u_idx = node_to_idx[u]
+        v_idx = node_to_idx[v]
+        # Add both directions for undirected graph
+        edge_list.append([u_idx, v_idx])
+        edge_list.append([v_idx, u_idx])
+    
+    # Convert to tensor
+    edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()
+    
+    return {
+        'node_embeddings': node_emb_matrix,
+        'edge_index': edge_index
+    }
 
 
 def train_epoch(
@@ -49,7 +87,6 @@ def train_epoch(
     train_loader: DataLoader,
     optimizer: optim.Optimizer,
     criterion: nn.Module,
-    trajectory_prep: TrajectoryDataPreparator,
     graph_data: dict,
     device: torch.device,
     epoch: int
@@ -69,23 +106,12 @@ def train_epoch(
     progress_bar = tqdm(train_loader, desc=f'Epoch {epoch}')
     
     for batch_idx, batch in enumerate(progress_bar):
-        # Prepare trajectory data
-        # Convert batch format to what trajectory_prep expects
-        traj_dicts = []
-        for i in range(len(batch['trajectories'])):
-            traj_dicts.append({
-                'path': batch['trajectories'][i],
-                'hour': batch['hours'][i],
-                'goal_node': batch['goal_nodes'][i]
-            })
-        
-        traj_batch = trajectory_prep.prepare_batch(traj_dicts)
-        
-        # Move to device
-        for key in traj_batch:
-            if isinstance(traj_batch[key], torch.Tensor):
-                traj_batch[key] = traj_batch[key].to(device)
-        
+        # Prepare trajectory batch - move embeddings to device
+        traj_batch = {
+            'node_embeddings': batch['node_embeddings'].to(device),
+            'hour': batch['hour'].to(device),
+            'mask': batch['mask'].to(device)
+        }
         targets = batch['goal_indices'].to(device)
         
         # Forward pass
@@ -106,7 +132,7 @@ def train_epoch(
         top5_acc = compute_accuracy(logits, targets, k=5)
         
         # Update meters
-        batch_size = len(batch['trajectories'])
+        batch_size = targets.size(0)  # Get batch size from targets tensor
         loss_meter.update(loss.item(), batch_size)
         top1_meter.update(top1_acc, batch_size)
         top5_meter.update(top5_acc, batch_size)
@@ -126,7 +152,6 @@ def validate(
     model: nn.Module,
     val_loader: DataLoader,
     criterion: nn.Module,
-    trajectory_prep: TrajectoryDataPreparator,
     graph_data: dict,
     device: torch.device,
     split_name: str = 'Val'
@@ -146,23 +171,12 @@ def validate(
     progress_bar = tqdm(val_loader, desc=split_name)
     
     for batch in progress_bar:
-        # Prepare trajectory data
-        # Convert batch format to what trajectory_prep expects
-        traj_dicts = []
-        for i in range(len(batch['trajectories'])):
-            traj_dicts.append({
-                'path': batch['trajectories'][i],
-                'hour': batch['hours'][i],
-                'goal_node': batch['goal_nodes'][i]
-            })
-        
-        traj_batch = trajectory_prep.prepare_batch(traj_dicts)
-        
-        # Move to device
-        for key in traj_batch:
-            if isinstance(traj_batch[key], torch.Tensor):
-                traj_batch[key] = traj_batch[key].to(device)
-        
+        # Prepare trajectory batch - move embeddings to device
+        traj_batch = {
+            'node_embeddings': batch['node_embeddings'].to(device),
+            'hour': batch['hour'].to(device),
+            'mask': batch['mask'].to(device)
+        }
         targets = batch['goal_indices'].to(device)
         
         # Forward pass
@@ -174,7 +188,7 @@ def validate(
         top5_acc = compute_accuracy(logits, targets, k=5)
         
         # Update meters
-        batch_size = len(batch['trajectories'])
+        batch_size = targets.size(0)  # Get batch size from targets tensor
         loss_meter.update(loss.item(), batch_size)
         top1_meter.update(top1_acc, batch_size)
         top5_meter.update(top5_acc, batch_size)
@@ -194,7 +208,6 @@ def validate_incremental(
     model: nn.Module,
     val_loader: DataLoader,
     criterion: nn.Module,
-    trajectory_prep: TrajectoryDataPreparator,
     graph_data: dict,
     device: torch.device,
     truncation_ratios: list = [0.25, 0.5, 0.75]
@@ -231,46 +244,50 @@ def validate_incremental(
     for batch in tqdm(val_loader, desc='Incremental Val'):
         # For each truncation ratio
         for ratio in truncation_ratios:
-            # Truncate trajectories
-            truncated_trajs = []
-            for i in range(len(batch['trajectories'])):
-                path = batch['trajectories'][i]
-                if len(path) > 2:
-                    truncate_idx = max(1, int(len(path) * ratio))
-                    truncated_path = path[:truncate_idx]
-                else:
-                    truncated_path = path[:1] if len(path) > 0 else path
-                
-                # Track length for first batch (debugging)
-                if len(traj_lengths[ratio]) < 5:
-                    traj_lengths[ratio].append((len(path), len(truncated_path)))
-                
-                truncated_trajs.append({
-                    'path': truncated_path,
-                    'hour': batch['hours'][i],
-                    'goal_node': batch['goal_nodes'][i]
-                })
+            # Truncate embeddings based on valid sequence lengths (using mask)
+            node_embeddings_full = batch['node_embeddings']  # (batch, max_seq_len, emb_dim)
+            mask_full = batch['mask']  # (batch, max_seq_len)
             
-            # Prepare batch
-            traj_batch = trajectory_prep.prepare_batch(truncated_trajs)
+            # Get actual sequence lengths from mask
+            seq_lens = mask_full.sum(dim=1).long()  # (batch,)
             
-            # Move to device
-            for key in traj_batch:
-                if isinstance(traj_batch[key], torch.Tensor):
-                    traj_batch[key] = traj_batch[key].to(device)
+            # Calculate truncated lengths
+            truncated_lens = torch.maximum(
+                torch.ones_like(seq_lens),
+                (seq_lens.float() * ratio).long()
+            )
             
+            # Track lengths for debugging
+            if len(traj_lengths[ratio]) < 5:
+                for orig_len, trunc_len in zip(seq_lens.tolist(), truncated_lens.tolist()):
+                    if len(traj_lengths[ratio]) < 5:
+                        traj_lengths[ratio].append((orig_len, trunc_len))
+            
+            # Create truncated mask
+            mask_truncated = torch.zeros_like(mask_full)
+            for i, trunc_len in enumerate(truncated_lens):
+                mask_truncated[i, :trunc_len] = 1.0
+            
+            # Prepare truncated batch
+            traj_batch = {
+                'node_embeddings': node_embeddings_full.to(device),  # Keep full embeddings, mask handles truncation
+                'hour': batch['hour'].to(device),
+                'mask': mask_truncated.to(device)
+            }
             targets = batch['goal_indices'].to(device)
             
             # Forward pass
             logits = model(traj_batch, graph_data, return_logits=True)
             loss = criterion(logits, targets)
+
+            
             
             # Compute metrics
             top1_acc = compute_accuracy(logits, targets, k=1)
             top5_acc = compute_accuracy(logits, targets, k=5)
             
             # Update meters
-            batch_size = len(batch['trajectories'])
+            batch_size = targets.size(0)  # Get batch size from targets tensor
             results[ratio]['loss'].update(loss.item(), batch_size)
             results[ratio]['top1'].update(top1_acc, batch_size)
             results[ratio]['top5'].update(top5_acc, batch_size)
@@ -320,42 +337,54 @@ def main(args):
         seed=args.seed
     )
     
-    # Create dataloaders
-    train_loader, val_loader, test_loader = create_dataloaders(
-        train_trajs, val_trajs, test_trajs,
-        graph, poi_nodes,
-        batch_size=args.batch_size,
-        num_workers=0  # Keep 0 for MPS compatibility
-    )
-    
-    # Initialize data preparators
-    print("\n🔧 Initializing encoders...")
+    # Initialize Node2Vec embeddings (before creating dataloaders)
+    print("\n🎯 Initializing Node2Vec embeddings...")
     
     # Create WorldGraph wrapper
     world_graph = WorldGraph(graph)
-    
-    # Create node-to-index mapping for trajectory encoder
-    all_nodes = list(graph.nodes())
-    node_to_idx = {node: idx for idx, node in enumerate(all_nodes)}
-    
-    trajectory_prep = TrajectoryDataPreparator(node_to_idx)
-    graph_prep = GraphDataPreparator(world_graph)
-    graph_data_dict = graph_prep.prepare_graph_data()
-    
-    # Get node feature dimensions
     num_nodes = len(graph.nodes())
-    graph_node_feat_dim = graph_data_dict['x'].shape[1]  # 12 features per node
+    
+    # Get or create Node2Vec embeddings (cached to avoid retraining)
+    node_emb_cache_path = os.path.join('data', 'processed', 'node2vec_embeddings.pkl')
+    node_embeddings = get_or_create_embeddings(
+        graph,
+        node_emb_cache_path,
+        embedding_dim=args.node_emb_dim,
+        walk_length=80,
+        num_walks=10,
+        p=1.0,
+        q=1.0,
+        window_size=10,
+        num_workers=4,
+        seed=args.seed,
+        force_retrain=False  # Set to True to retrain embeddings
+    )
+    
+    print(f"   ✅ Node2Vec embeddings ready: {node_embeddings.num_nodes} nodes, {node_embeddings.embedding_dim} dims")
+    
+    # Create dataloaders with embedding conversion
+    print("\n📦 Creating dataloaders with Node2Vec preprocessing...")
+    train_loader, val_loader, test_loader = create_dataloaders(
+        train_trajs, val_trajs, test_trajs,
+        graph, poi_nodes,
+        node_embeddings=node_embeddings,  # Pass embeddings for preprocessing
+        batch_size=args.batch_size,
+        num_workers=0,  # Keep 0 for MPS compatibility
+        max_seq_len=50
+    )
+    
+    # Prepare graph data using Node2Vec embeddings
+    print("\n🔧 Preparing graph data...")
+    graph_data_dict = prepare_graph_data(graph, node_embeddings)
     
     # Initialize fusion encoder
     print(f"\n🏗️  Building model...")
     print(f"   Number of nodes: {num_nodes}")
-    print(f"   Graph feature dim: {graph_node_feat_dim}")
+    print(f"   Node embedding dim: {args.node_emb_dim}")
     print(f"   Number of POI nodes: {len(poi_nodes)}")
     
     fusion_encoder = ToMGraphEncoder(
-        num_nodes=num_nodes,
-        graph_node_feat_dim=graph_node_feat_dim,
-        traj_node_emb_dim=32,
+        node_emb_dim=args.node_emb_dim,
         hidden_dim=64,
         output_dim=args.fusion_dim,
         n_layers=2,
@@ -377,7 +406,7 @@ def main(args):
     
     # Prepare graph data as dict (kept on device)
     graph_data = {
-        'x': graph_data_dict['x'].to(device),
+        'node_embeddings': graph_data_dict['node_embeddings'].to(device),
         'edge_index': graph_data_dict['edge_index'].to(device)
     }
     
@@ -451,14 +480,14 @@ def main(args):
         # Train
         train_loss, train_top1, train_top5 = train_epoch(
             model, train_loader, optimizer, criterion,
-            trajectory_prep, graph_data, device, epoch
+            graph_data, device, epoch
         )
         
         # Validate with incremental truncation
         print(f"\n📊 Incremental Validation (at different trajectory portions):")
         val_results = validate_incremental(
             model, val_loader, criterion,
-            trajectory_prep, graph_data, device,
+            graph_data, device,
             truncation_ratios=[0.25, 0.5, 0.75]
         )
         
@@ -566,7 +595,7 @@ def main(args):
     
     test_loss, test_top1, test_top5 = validate(
         model, test_loader, criterion,
-        trajectory_prep, graph_data, device, 'Test'
+        graph_data, device, 'Test'
     )
     
     print(f"\n🎯 Test Results:")
@@ -617,6 +646,8 @@ if __name__ == '__main__':
                         help='Early stopping patience')
     
     # Model arguments
+    parser.add_argument('--node_emb_dim', type=int, default=128,
+                        help='Node2Vec embedding dimension')
     parser.add_argument('--fusion_dim', type=int, default=64,
                         help='Fusion layer dimension')
     parser.add_argument('--transformer_dim', type=int, default=128,

@@ -16,6 +16,8 @@ torch
 torchvision
 lightning  # or 'pytorch-lightning' if not using torch >= 2.0
 tqdm
+node2vec  # for graph node embeddings
+gensim  # required by node2vec
 
 # logging & experiment tracking
 rich

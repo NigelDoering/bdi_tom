@@ -203,7 +203,7 @@ def split_data(
 
 def collate_trajectories(batch: List[Dict]) -> Dict:
     """
-    Collate function for batching trajectories.
+    Collate function for batching trajectories (raw version - no embeddings).
     
     This is needed because trajectories have variable lengths.
     The collation will be handled by TrajectoryDataPreparator in the encoder.
@@ -231,14 +231,106 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
     }
 
 
+def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
+    """
+    Create a collate function that converts trajectories to Node2Vec embeddings.
+    
+    Args:
+        node_embeddings: Node2VecEmbeddings instance for converting node IDs to embeddings
+        max_seq_len: Maximum sequence length for padding/truncation
+    
+    Returns:
+        Collate function for DataLoader
+    """
+    def collate_fn(batch: List[Dict]) -> Dict:
+        """
+        Collate function that converts trajectories to Node2Vec embeddings.
+        
+        Args:
+            batch: List of samples from TrajectoryDataset
+        
+        Returns:
+            Dict with:
+            - 'node_embeddings': (batch_size, max_seq_len, emb_dim) tensor
+            - 'hour': (batch_size,) tensor
+            - 'mask': (batch_size, max_seq_len) tensor (1 = valid, 0 = padding)
+            - 'goal_indices': (batch_size,) tensor (POI indices for targets)
+        """
+        batch_node_embs = []
+        batch_hours = []
+        batch_masks = []
+        batch_goal_indices = []
+        
+        for sample in batch:
+            traj_path = sample['trajectory']
+            hour = sample['hour']
+            goal_idx = sample['goal_idx']
+            goal_node = sample['goal_node']
+            
+            # Extract node IDs from path (handle both list and tuple formats)
+            node_ids = []
+            for entry in traj_path:
+                if isinstance(entry, (list, tuple)) and entry:
+                    node_id = entry[0]
+                else:
+                    node_id = entry
+                node_ids.append(node_id)
+            
+            # **CRITICAL FIX**: Remove goal node if it's at the end
+            # The model should PREDICT the goal, not just read it from the input!
+            if node_ids[-1] == goal_node:
+                node_ids = node_ids[:-1]
+            
+ 
+            
+            # Truncate if too long
+            if len(node_ids) > max_seq_len:
+                node_ids = node_ids[:max_seq_len]
+            
+            # Get embeddings for nodes
+            seq_len = len(node_ids)
+            node_embs = node_embeddings.trajectory_to_embeddings(node_ids)
+            
+            # Pad if too short
+            if seq_len < max_seq_len:
+                padding = torch.zeros(
+                    max_seq_len - seq_len,
+                    node_embeddings.embedding_dim,
+                    dtype=torch.float32
+                )
+                node_embs = torch.cat([node_embs, padding], dim=0)
+            
+            # Create mask (1 = valid token, 0 = padding)
+            mask = torch.cat([
+                torch.ones(seq_len, dtype=torch.float32),
+                torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
+            ])
+            
+            batch_node_embs.append(node_embs)
+            batch_hours.append(hour)
+            batch_masks.append(mask)
+            batch_goal_indices.append(goal_idx)
+        
+        return {
+            'node_embeddings': torch.stack(batch_node_embs),
+            'hour': torch.tensor(batch_hours, dtype=torch.long),
+            'mask': torch.stack(batch_masks),
+            'goal_indices': torch.tensor(batch_goal_indices, dtype=torch.long)
+        }
+    
+    return collate_fn
+
+
 def create_dataloaders(
     train_trajectories: List[Dict],
     val_trajectories: List[Dict],
     test_trajectories: List[Dict],
     graph: nx.Graph,
     poi_nodes: List[str],
+    node_embeddings=None,
     batch_size: int = 32,
-    num_workers: int = 0
+    num_workers: int = 0,
+    max_seq_len: int = 50
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
@@ -249,8 +341,10 @@ def create_dataloaders(
         test_trajectories: Test trajectories
         graph: NetworkX graph
         poi_nodes: List of POI node IDs
+        node_embeddings: Node2VecEmbeddings instance (if None, returns raw trajectories)
         batch_size: Batch size for training
         num_workers: Number of workers for data loading (0 for Mac MPS)
+        max_seq_len: Maximum sequence length for trajectory padding
     
     Returns:
         Tuple of (train_loader, val_loader, test_loader)
@@ -259,11 +353,17 @@ def create_dataloaders(
     val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes)
     test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes)
     
+    # Choose collate function based on whether embeddings are provided
+    if node_embeddings is not None:
+        collate_fn = create_collate_fn_with_embeddings(node_embeddings, max_seq_len)
+    else:
+        collate_fn = collate_trajectories
+    
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False  # Set to False for MPS compatibility
     )
@@ -272,7 +372,7 @@ def create_dataloaders(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False
     )
@@ -281,7 +381,7 @@ def create_dataloaders(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False
     )
