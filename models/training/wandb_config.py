@@ -13,6 +13,7 @@ from typing import Dict, Any, Optional
 
 def init_wandb(
     project_name: str = "bdi-tom-goal-prediction",
+    entity: Optional[str] = "nigeldoering-uc-san-diego",
     run_name: Optional[str] = None,
     config: Optional[Dict[str, Any]] = None,
     tags: Optional[list] = None,
@@ -24,6 +25,7 @@ def init_wandb(
     
     Args:
         project_name: W&B project name
+        entity: W&B entity (user or team)
         run_name: Name for this specific run (auto-generated if None)
         config: Dictionary of hyperparameters and configuration
         tags: List of tags for categorizing runs (e.g., ['baseline', 'transformer'])
@@ -40,6 +42,7 @@ def init_wandb(
     # Initialize W&B
     run = wandb.init(
         project=project_name,
+        entity=entity,
         name=run_name,
         config=config,
         tags=tags,

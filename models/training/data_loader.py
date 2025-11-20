@@ -143,6 +143,10 @@ def load_simulation_data(
         for agent_id, agent_trajs in data.items():
             trajectories.extend(agent_trajs)
         print(f"🚶 Loaded {len(trajectories)} trajectories from {len(data)} agents")
+        # print an example trajectory
+        if len(trajectories) > 0:
+            print(f"   Example trajectory: {trajectories[0]}")
+            print(f"Len of Trajectory variable: {len(trajectories)}")
     elif isinstance(data, list):
         # Format: [traj1, traj2, traj3, ...]
         trajectories = data

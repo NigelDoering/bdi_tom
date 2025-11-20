@@ -51,3 +51,13 @@ class WorldGraph:
 
     def get_node_data(self, node_id):
         return self.G.nodes[node_id]
+    
+
+if __name__ == "__main__":
+    G = nx.read_graphml("data/processed/ucsd_walk_full.graphml")
+    world_graph = WorldGraph(G)
+    print(f"Total nodes in relevant categories: {len(world_graph.poi_nodes)}")
+    if len(world_graph.poi_nodes) > 0:
+        example_node = world_graph.poi_nodes[0]
+        print(f"Example node ID: {example_node}, Data: {world_graph.get_node_data(example_node)}")
+
