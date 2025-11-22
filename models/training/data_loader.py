@@ -1,12 +1,3 @@
-"""
-Data loading utilities for BDI-ToM goal prediction training.
-
-This module provides:
-- TrajectoryDataset: PyTorch Dataset for trajectory data
-- Data splitting utilities (train/val/test)
-- Collate functions for batching variable-length trajectories
-"""
-
 import torch
 from torch.utils.data import Dataset, DataLoader
 import json
@@ -19,6 +10,7 @@ import sys
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from graph_controller.world_graph import WorldGraph
+from models.training.temporal_feature_enricher import TemporalFeatureEnricher, EnrichedTrajectoryDataset as ToMEnrichedDataset
 
 
 class TrajectoryDataset(Dataset):
@@ -145,7 +137,7 @@ def load_simulation_data(
         print(f"🚶 Loaded {len(trajectories)} trajectories from {len(data)} agents")
         # print an example trajectory
         if len(trajectories) > 0:
-            print(f"   Example trajectory: {trajectories[0]}")
+            # print(f"   Example trajectory: {trajectories[0]}")
             print(f"Len of Trajectory variable: {len(trajectories)}")
     elif isinstance(data, list):
         # Format: [traj1, traj2, traj3, ...]
@@ -235,6 +227,50 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
     }
 
 
+def collate_enriched_trajectories(batch: List[Dict]) -> Dict:
+    """
+    Collate function for enriched trajectories with temporal features.
+    
+    Handles variable-length trajectories and temporal features (days, deltas, velocities).
+    
+    Theory of Mind Benefits:
+    - Day of week patterns reveal habitual behavior
+    - Temporal deltas show deliberation and planning
+    - Velocities indicate confidence in navigation
+    
+    Args:
+        batch: List of enriched samples from EnrichedTrajectoryDataset
+    
+    Returns:
+        Dict with batched data including temporal features:
+        - 'trajectories': List of trajectory paths
+        - 'hours': List of hours (circadian)
+        - 'days': List of day-of-week values
+        - 'temporal_deltas': List of numpy arrays (variable length)
+        - 'velocities': List of numpy arrays (variable length)
+        - 'goal_indices': Tensor of goal indices
+        - 'goal_nodes': List of goal node IDs
+    """
+    trajectories = [sample['trajectory'] for sample in batch]
+    hours = [sample['circadian_hour'] for sample in batch]
+    days = [sample['day_of_week'] for sample in batch]
+    goal_indices = torch.tensor([sample['goal_idx'] for sample in batch], dtype=torch.long)
+    goal_nodes = [sample['goal_node'] for sample in batch]
+    
+    temporal_deltas = [sample['temporal_deltas'] for sample in batch]
+    velocities = [sample['velocities'] for sample in batch]
+    
+    return {
+        'trajectories': trajectories,
+        'hours': hours,
+        'days': days,
+        'temporal_deltas': temporal_deltas,  # Variable length per trajectory
+        'velocities': velocities,  # Variable length per trajectory
+        'goal_indices': goal_indices,
+        'goal_nodes': goal_nodes
+    }
+
+
 def create_dataloaders(
     train_trajectories: List[Dict],
     val_trajectories: List[Dict],
@@ -242,7 +278,8 @@ def create_dataloaders(
     graph: nx.Graph,
     poi_nodes: List[str],
     batch_size: int = 32,
-    num_workers: int = 0
+    num_workers: int = 0,
+    use_enriched: bool = False
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
@@ -255,19 +292,42 @@ def create_dataloaders(
         poi_nodes: List of POI node IDs
         batch_size: Batch size for training
         num_workers: Number of workers for data loading (0 for Mac MPS)
+        use_enriched: If True, use enriched trajectories with temporal features
     
     Returns:
         Tuple of (train_loader, val_loader, test_loader)
     """
-    train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes)
-    val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes)
-    test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes)
+    if use_enriched:
+        # Check if trajectories have temporal features
+        has_temporal_features = (
+            train_trajectories and 
+            'temporal_deltas' in train_trajectories[0] and 
+            'day_of_week' in train_trajectories[0]
+        )
+        
+        if not has_temporal_features:
+            raise ValueError(
+                "use_enriched=True but trajectories lack temporal features. "
+                "Use enrich_and_load_data() or enrich_trajectories() first."
+            )
+        
+        train_dataset = ToMEnrichedDataset(train_trajectories, graph, poi_nodes)
+        val_dataset = ToMEnrichedDataset(val_trajectories, graph, poi_nodes)
+        test_dataset = ToMEnrichedDataset(test_trajectories, graph, poi_nodes)
+        
+        collate_fn = collate_enriched_trajectories
+    else:
+        train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes)
+        val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes)
+        test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes)
+        
+        collate_fn = collate_trajectories
     
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False  # Set to False for MPS compatibility
     )
@@ -276,7 +336,7 @@ def create_dataloaders(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False
     )
@@ -285,7 +345,7 @@ def create_dataloaders(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=collate_trajectories,
+        collate_fn=collate_fn,
         num_workers=num_workers,
         pin_memory=False
     )
@@ -295,8 +355,111 @@ def create_dataloaders(
     print(f"   Train batches: {len(train_loader)}")
     print(f"   Val batches:   {len(val_loader)}")
     print(f"   Test batches:  {len(test_loader)}")
+    if use_enriched:
+        print(f"   ⭐ Using enriched trajectories with temporal features")
     
     return train_loader, val_loader, test_loader
+
+
+def enrich_and_load_data(
+    run_dir: str,
+    graph_path: str,
+    train_ratio: float = 0.7,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+    batch_size: int = 32,
+    num_workers: int = 0,
+    seed: int = 42,
+    save_enriched: bool = True
+) -> Tuple[DataLoader, DataLoader, DataLoader, Dict]:
+    """
+    Convenience function: Load, enrich with temporal features, and create dataloaders.
+    
+    This is the EXPERT-LEVEL recommended approach for BDI-Theory of Mind training.
+    
+    Theory of Mind Features Automatically Added:
+    1. Day of week: Captures weekly behavioral patterns
+    2. Temporal deltas: Time between steps shows deliberation
+    3. Velocities: Movement speed indicates confidence/uncertainty
+    4. Circadian patterns: Hour-based activity clustering
+    
+    Args:
+        run_dir: Path to simulation run directory
+        graph_path: Path to graph file
+        train_ratio: Training split ratio
+        val_ratio: Validation split ratio
+        test_ratio: Test split ratio
+        batch_size: Batch size for dataloaders
+        num_workers: Number of workers (0 for MPS)
+        seed: Random seed for reproducibility
+        save_enriched: Whether to save enriched trajectories to disk
+        
+    Returns:
+        Tuple of (train_loader, val_loader, test_loader, enrichment_stats)
+    """
+    print("\n" + "=" * 80)
+    print("EXPERT-LEVEL BDI-ToM DATA LOADING WITH TEMPORAL ENRICHMENT")
+    print("=" * 80)
+    
+    # Load base data
+    print("\n📂 Step 1: Loading simulation data...")
+    trajectories, graph, poi_nodes = load_simulation_data(run_dir, graph_path)
+    
+    # Create enricher
+    print("\n🔧 Step 2: Creating temporal feature enricher...")
+    enricher = TemporalFeatureEnricher(graph, simulation_duration_days=14, seed=seed)
+    print(f"   ✅ Enricher ready (base walking speed: 1.4 m/s)")
+    
+    # Build agent map for enrichment
+    print("\n💡 Step 3: Computing Theory-of-Mind temporal features...")
+    enriched_trajectories = enricher.enrich_trajectories(
+        trajectories, 
+        agent_map=None,
+        base_speed_mps=1.4,
+        show_progress=True
+    )
+    
+    # Get enrichment statistics
+    enrichment_stats = enricher._compute_statistics(enriched_trajectories)
+    print(f"\n📊 Enrichment Statistics:")
+    print(f"   Total trajectories: {enrichment_stats['total_trajectories']}")
+    print(f"   Avg trajectory length: {enrichment_stats['avg_trajectory_length']:.1f} steps")
+    print(f"   Avg temporal delta: {enrichment_stats.get('overall_avg_delta', 0):.4f} hours")
+    print(f"   Avg velocity: {enrichment_stats.get('overall_avg_velocity', 0):.2f} units/hour")
+    print(f"   Day distribution: {enrichment_stats['day_distribution']}")
+    
+    # Save enriched trajectories if requested
+    if save_enriched:
+        enriched_save_path = os.path.join(run_dir, 'enriched_trajectories.json')
+        os.makedirs(os.path.dirname(enriched_save_path), exist_ok=True)
+        with open(enriched_save_path, 'w') as f:
+            json.dump(enriched_trajectories, f, indent=2)
+        print(f"\n💾 Saved enriched trajectories to {enriched_save_path}")
+    
+    # Split data
+    print("\n📊 Step 4: Splitting data into train/val/test...")
+    train_trajs, val_trajs, test_trajs = split_data(
+        enriched_trajectories,
+        train_ratio=train_ratio,
+        val_ratio=val_ratio,
+        test_ratio=test_ratio,
+        seed=seed
+    )
+    
+    # Create enriched dataloaders
+    print("\n🔌 Step 5: Creating enriched dataloaders...")
+    train_loader, val_loader, test_loader = create_dataloaders(
+        train_trajs, val_trajs, test_trajs,
+        graph, poi_nodes,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        use_enriched=True
+    )
+    
+    print("\n✅ Data loading complete! Ready for Theory-of-Mind training.")
+    print("=" * 80 + "\n")
+    
+    return train_loader, val_loader, test_loader, enrichment_stats
 
 
 if __name__ == '__main__':
@@ -311,24 +474,25 @@ if __name__ == '__main__':
         print(f"   Please run a simulation first")
         exit(1)
     
-    # Load data
-    trajectories, graph, poi_nodes = load_simulation_data(run_dir, graph_path)
+    print("\n" + "=" * 80)
+    print("TESTING ENRICHED DATA LOADING")
+    print("=" * 80)
     
-    # Split data
-    train_trajs, val_trajs, test_trajs = split_data(trajectories)
-    
-    # Create dataloaders
-    train_loader, val_loader, test_loader = create_dataloaders(
-        train_trajs, val_trajs, test_trajs, graph, poi_nodes, batch_size=16
+    # Use convenience function for enriched loading
+    train_loader, val_loader, test_loader, stats = enrich_and_load_data(
+        run_dir, graph_path, batch_size=16, save_enriched=True
     )
     
     # Test loading a batch
-    print("\n🧪 Testing batch loading...")
+    print("\n🧪 Testing enriched batch loading...")
     for batch in train_loader:
         print(f"   Trajectories: {len(batch['trajectories'])}")
         print(f"   Hours: {batch['hours'][:5]}")
+        print(f"   Days: {batch['days'][:5]}")
         print(f"   Goal indices shape: {batch['goal_indices'].shape}")
         print(f"   Sample trajectory length: {len(batch['trajectories'][0])}")
+        print(f"   Sample temporal deltas: {batch['temporal_deltas'][0][:5]}")
+        print(f"   Sample velocities: {batch['velocities'][0][:5]}")
         break
     
-    print("\n✅ Data loading test passed!")
+    print("\n✅ Enriched data loading test passed!")

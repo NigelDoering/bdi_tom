@@ -14,6 +14,7 @@ scipy
 scikit-learn
 torch
 torchvision
+torch-geometric
 lightning  # or 'pytorch-lightning' if not using torch >= 2.0
 tqdm
 

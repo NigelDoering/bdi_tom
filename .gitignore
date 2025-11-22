@@ -32,4 +32,7 @@ checkpoints/*
 # Only keep the one processed file we want tracked
 !/data/processed/ucsd_walk_full.graphml
 
+docs/
+.legacy/
+
 # End of .gitignore

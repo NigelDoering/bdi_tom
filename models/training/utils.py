@@ -1,19 +1,8 @@
-"""
-Training utilities for BDI-ToM models.
-
-This module provides utility functions for:
-- Device detection (CUDA → MPS → CPU)
-- Data loading and batching
-- Metrics computation
-- Model checkpointing
-"""
-
 import torch
 import os
 import json
 import numpy as np
 from typing import Dict, List, Tuple, Optional
-
 
 def get_device() -> torch.device:
     """
@@ -142,12 +131,38 @@ class AverageMeter:
         self.avg = 0
         self.sum = 0
         self.count = 0
+        self.metrics = {}  # For storing multiple metrics
     
     def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
+        """Update with single value or dict of values."""
+        if isinstance(val, dict):
+            # Update multiple metrics
+            for key, value in val.items():
+                if key not in self.metrics:
+                    self.metrics[key] = {'sum': 0, 'count': 0}
+                self.metrics[key]['sum'] += value * n
+                self.metrics[key]['count'] += n
+        else:
+            # Update single value
+            self.val = val
+            self.sum += val * n
+            self.count += n
+            self.avg = self.sum / self.count if self.count > 0 else 0
+    
+    def avg(self, key: str = None) -> float:
+        """Get average of a specific metric or overall average."""
+        if key is not None:
+            if key in self.metrics:
+                return self.metrics[key]['sum'] / max(self.metrics[key]['count'], 1)
+            return 0.0
+        return self.avg
+    
+    def get_averages(self) -> Dict:
+        """Get all metric averages as dict."""
+        result = {}
+        for key, metric in self.metrics.items():
+            result[key] = metric['sum'] / max(metric['count'], 1)
+        return result
 
 
 class MetricsTracker:
