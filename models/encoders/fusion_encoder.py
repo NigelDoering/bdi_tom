@@ -49,7 +49,8 @@ class ToMGraphEncoder(nn.Module):
     def __init__(
         self, 
         node_emb_dim,         # Dimension of Node2Vec embeddings (shared by both encoders)
-        hidden_dim, 
+        hidden_dim,
+        num_agents,           # Number of unique agents in the dataset
         output_dim=64,
         n_layers=2, 
         n_heads=4, 
@@ -61,6 +62,7 @@ class ToMGraphEncoder(nn.Module):
         Args:
             node_emb_dim (int): Dimension of Node2Vec embeddings (e.g., 128)
             hidden_dim (int): Hidden dimension for both encoders
+            num_agents (int): Total number of unique agents in the dataset
             output_dim (int): Final output dimension after fusion (default: 64)
             n_layers (int): Number of layers in both encoders (default: 2)
             n_heads (int): Number of attention heads (default: 4)
@@ -70,13 +72,15 @@ class ToMGraphEncoder(nn.Module):
         
         self.node_emb_dim = node_emb_dim
         self.hidden_dim = hidden_dim
+        self.num_agents = num_agents
         self.output_dim = output_dim
         
-        # Trajectory encoder (Transformer-based)
+        # Trajectory encoder (Transformer-based with agent embeddings)
         self.trajectory_encoder = TrajectoryEncoder(
             node_emb_dim=node_emb_dim,
             hidden_dim=hidden_dim,
             output_dim=output_dim,
+            num_agents=num_agents,
             n_layers=n_layers,
             n_heads=n_heads,
             dropout=dropout
@@ -108,6 +112,7 @@ class ToMGraphEncoder(nn.Module):
             trajectory_data (dict): Dictionary containing:
                 - 'node_embeddings': (batch_size, seq_len, node_emb_dim) - Node2Vec embeddings for trajectory
                 - 'hour': (batch_size,) - Hour of day (0-23) when trajectory occurred
+                - 'agent_id': (batch_size,) - Agent ID for each trajectory
                 - 'mask': (batch_size, seq_len) - Padding mask (optional)
                 
             graph_data (dict): Dictionary containing:
@@ -118,10 +123,11 @@ class ToMGraphEncoder(nn.Module):
         Returns:
             torch.Tensor: Fused encoding of shape (batch_size, output_dim)
         """
-        # Encode trajectory using Transformer
+        # Encode trajectory using Transformer (with agent embeddings)
         traj_encoding = self.trajectory_encoder(
             trajectory_data['node_embeddings'],
             trajectory_data['hour'],
+            trajectory_data['agent_id'],
             trajectory_data.get('mask', None)
         )  # (batch_size, output_dim)
         

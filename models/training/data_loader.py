@@ -35,17 +35,20 @@ class TrajectoryDataset(Dataset):
         self,
         trajectories: List[Dict],
         graph: nx.Graph,
-        poi_nodes: List[str]
+        poi_nodes: List[str],
+        agent_to_idx: Optional[Dict[str, int]] = None
     ):
         """
         Args:
             trajectories: List of trajectory dictionaries from simulation
             graph: NetworkX graph of the world
             poi_nodes: List of POI node IDs (for goal indexing)
+            agent_to_idx: Optional mapping from agent_id (string) to integer index
         """
         self.trajectories = trajectories
         self.graph = graph
         self.poi_nodes = poi_nodes
+        self.agent_to_idx = agent_to_idx or {}
         
         # Create mapping from node_id to goal index
         self.goal_to_idx = {node_id: idx for idx, node_id in enumerate(poi_nodes)}
@@ -57,6 +60,8 @@ class TrajectoryDataset(Dataset):
                 self.valid_indices.append(idx)
         
         print(f"📊 Dataset: {len(self.valid_indices)} / {len(trajectories)} trajectories with valid POI goals")
+        if self.agent_to_idx:
+            print(f"👥 Using {len(self.agent_to_idx)} unique agents")
     
     def __len__(self) -> int:
         return len(self.valid_indices)
@@ -69,6 +74,7 @@ class TrajectoryDataset(Dataset):
             Dict with keys:
             - 'trajectory': List of (node_id, goal_id) tuples
             - 'hour': int (0-23)
+            - 'agent_id': int (agent index, or 0 if not available)
             - 'goal_idx': int (index in poi_nodes list)
             - 'goal_node': str (node ID of the goal)
         """
@@ -78,9 +84,14 @@ class TrajectoryDataset(Dataset):
         goal_node = traj['goal_node']
         goal_idx = self.goal_to_idx[goal_node]
         
+        # Get agent_id from trajectory data, default to 0 if not present
+        agent_id_str = traj.get('agent_id', 'agent_000')
+        agent_id = self.agent_to_idx.get(agent_id_str, 0)
+        
         return {
             'trajectory': traj['path'],
             'hour': traj['hour'],
+            'agent_id': agent_id,
             'goal_idx': goal_idx,
             'goal_node': goal_node
         }
@@ -138,10 +149,14 @@ def load_simulation_data(
     # Handle different trajectory file formats
     if isinstance(data, dict) and all(isinstance(v, list) for v in data.values()):
         # Format: {"agent_000": [traj1, traj2, ...], "agent_001": [...], ...}
-        # Flatten all agent trajectories into a single list
+        # Flatten all agent trajectories into a single list and add agent_id to each trajectory
         trajectories = []
         for agent_id, agent_trajs in data.items():
-            trajectories.extend(agent_trajs)
+            for traj in agent_trajs:
+                # Add agent_id to trajectory if not already present
+                if 'agent_id' not in traj:
+                    traj['agent_id'] = agent_id
+                trajectories.append(traj)
         print(f"🚶 Loaded {len(trajectories)} trajectories from {len(data)} agents")
     elif isinstance(data, list):
         # Format: [traj1, traj2, traj3, ...]
@@ -215,17 +230,20 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
         Dict with batched data:
         - 'trajectories': List of trajectory paths
         - 'hours': List of hours
+        - 'agent_ids': List of agent IDs
         - 'goal_indices': Tensor of goal indices
         - 'goal_nodes': List of goal node IDs
     """
     trajectories = [sample['trajectory'] for sample in batch]
     hours = [sample['hour'] for sample in batch]
+    agent_ids = [sample['agent_id'] for sample in batch]
     goal_indices = torch.tensor([sample['goal_idx'] for sample in batch], dtype=torch.long)
     goal_nodes = [sample['goal_node'] for sample in batch]
     
     return {
         'trajectories': trajectories,
         'hours': hours,
+        'agent_ids': agent_ids,
         'goal_indices': goal_indices,
         'goal_nodes': goal_nodes
     }
@@ -253,17 +271,20 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             Dict with:
             - 'node_embeddings': (batch_size, max_seq_len, emb_dim) tensor
             - 'hour': (batch_size,) tensor
+            - 'agent_id': (batch_size,) tensor
             - 'mask': (batch_size, max_seq_len) tensor (1 = valid, 0 = padding)
             - 'goal_indices': (batch_size,) tensor (POI indices for targets)
         """
         batch_node_embs = []
         batch_hours = []
+        batch_agent_ids = []
         batch_masks = []
         batch_goal_indices = []
         
         for sample in batch:
             traj_path = sample['trajectory']
             hour = sample['hour']
+            agent_id = sample['agent_id']
             goal_idx = sample['goal_idx']
             goal_node = sample['goal_node']
             
@@ -308,12 +329,14 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             
             batch_node_embs.append(node_embs)
             batch_hours.append(hour)
+            batch_agent_ids.append(agent_id)
             batch_masks.append(mask)
             batch_goal_indices.append(goal_idx)
         
         return {
             'node_embeddings': torch.stack(batch_node_embs),
             'hour': torch.tensor(batch_hours, dtype=torch.long),
+            'agent_id': torch.tensor(batch_agent_ids, dtype=torch.long),
             'mask': torch.stack(batch_masks),
             'goal_indices': torch.tensor(batch_goal_indices, dtype=torch.long)
         }
@@ -331,7 +354,7 @@ def create_dataloaders(
     batch_size: int = 32,
     num_workers: int = 0,
     max_seq_len: int = 50
-) -> Tuple[DataLoader, DataLoader, DataLoader]:
+) -> Tuple[DataLoader, DataLoader, DataLoader, int]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
     
@@ -347,11 +370,18 @@ def create_dataloaders(
         max_seq_len: Maximum sequence length for trajectory padding
     
     Returns:
-        Tuple of (train_loader, val_loader, test_loader)
+        Tuple of (train_loader, val_loader, test_loader, num_agents)
     """
-    train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes)
-    val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes)
-    test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes)
+    # Create agent_to_idx mapping from all trajectories
+    all_trajectories = train_trajectories + val_trajectories + test_trajectories
+    unique_agents = sorted(set(traj.get('agent_id', 'agent_000') for traj in all_trajectories))
+    agent_to_idx = {agent_id: idx for idx, agent_id in enumerate(unique_agents)}
+    
+    print(f"👥 Found {len(unique_agents)} unique agents")
+    
+    train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes, agent_to_idx)
+    val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes, agent_to_idx)
+    test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes, agent_to_idx)
     
     # Choose collate function based on whether embeddings are provided
     if node_embeddings is not None:
@@ -392,7 +422,8 @@ def create_dataloaders(
     print(f"   Val batches:   {len(val_loader)}")
     print(f"   Test batches:  {len(test_loader)}")
     
-    return train_loader, val_loader, test_loader
+    # Return dataloaders and number of agents
+    return train_loader, val_loader, test_loader, len(unique_agents)
 
 
 if __name__ == '__main__':
@@ -414,9 +445,10 @@ if __name__ == '__main__':
     train_trajs, val_trajs, test_trajs = split_data(trajectories)
     
     # Create dataloaders
-    train_loader, val_loader, test_loader = create_dataloaders(
+    train_loader, val_loader, test_loader, num_agents = create_dataloaders(
         train_trajs, val_trajs, test_trajs, graph, poi_nodes, batch_size=16
     )
+    print(f"   Number of agents: {num_agents}")
     
     # Test loading a batch
     print("\n🧪 Testing batch loading...")

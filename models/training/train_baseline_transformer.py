@@ -110,6 +110,7 @@ def train_epoch(
         traj_batch = {
             'node_embeddings': batch['node_embeddings'].to(device),
             'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
             'mask': batch['mask'].to(device)
         }
         targets = batch['goal_indices'].to(device)
@@ -175,6 +176,7 @@ def validate(
         traj_batch = {
             'node_embeddings': batch['node_embeddings'].to(device),
             'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
             'mask': batch['mask'].to(device)
         }
         targets = batch['goal_indices'].to(device)
@@ -272,6 +274,7 @@ def validate_incremental(
             traj_batch = {
                 'node_embeddings': node_embeddings_full.to(device),  # Keep full embeddings, mask handles truncation
                 'hour': batch['hour'].to(device),
+                'agent_id': batch['agent_id'].to(device),
                 'mask': mask_truncated.to(device)
             }
             targets = batch['goal_indices'].to(device)
@@ -364,7 +367,7 @@ def main(args):
     
     # Create dataloaders with embedding conversion
     print("\n📦 Creating dataloaders with Node2Vec preprocessing...")
-    train_loader, val_loader, test_loader = create_dataloaders(
+    train_loader, val_loader, test_loader, num_agents = create_dataloaders(
         train_trajs, val_trajs, test_trajs,
         graph, poi_nodes,
         node_embeddings=node_embeddings,  # Pass embeddings for preprocessing
@@ -382,10 +385,12 @@ def main(args):
     print(f"   Number of nodes: {num_nodes}")
     print(f"   Node embedding dim: {args.node_emb_dim}")
     print(f"   Number of POI nodes: {len(poi_nodes)}")
+    print(f"   Number of agents: {num_agents}")
     
     fusion_encoder = ToMGraphEncoder(
         node_emb_dim=args.node_emb_dim,
         hidden_dim=64,
+        num_agents=num_agents,
         output_dim=args.fusion_dim,
         n_layers=2,
         n_heads=4,
