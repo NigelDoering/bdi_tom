@@ -20,7 +20,7 @@ class TrajectoryEncoder(nn.Module):
     - Hour of day as trajectory-level temporal context
     - Agent ID to capture agent-specific preferences and behavioral patterns
     """
-    def __init__(self, node_emb_dim, hidden_dim, output_dim, num_agents, n_layers=2, n_heads=4, dropout=0.1, max_seq_len=50):
+    def __init__(self, node_emb_dim, hidden_dim, output_dim, num_agents, n_layers=2, n_heads=4, dropout=0.1, max_seq_len=60):
         """
         Args:
             node_emb_dim (int): Dimension of pre-computed node embeddings (from Node2Vec)
@@ -47,8 +47,10 @@ class TrajectoryEncoder(nn.Module):
         self.hour_embedding = nn.Embedding(24, node_emb_dim)
         
         # Agent embedding - learns agent-specific behavioral patterns
-        # Each agent gets a unique learned vector capturing their preferences
-        self.agent_embedding = nn.Embedding(num_agents, node_emb_dim)
+        # Reduced dimension to prevent agent ID from dominating the representation
+        self.agent_emb_dim = node_emb_dim // 2  # Half the size of node embeddings
+        self.agent_embedding = nn.Embedding(num_agents, self.agent_emb_dim)
+        self.agent_proj = nn.Linear(self.agent_emb_dim, node_emb_dim)  # Project to match other dims
         
         # Transformer encoder (processes node embedding sequences)
         encoder_layer = nn.TransformerEncoderLayer(
@@ -109,7 +111,9 @@ class TrajectoryEncoder(nn.Module):
         hour_emb = self.hour_embedding(hour)  # (batch_size, node_emb_dim)
         
         # Embed agent ID (agent-specific behavioral patterns)
-        agent_emb = self.agent_embedding(agent_id)  # (batch_size, node_emb_dim)
+        # Use smaller embedding and project to match dimensions
+        agent_emb = self.agent_embedding(agent_id)  # (batch_size, agent_emb_dim)
+        agent_emb = self.agent_proj(agent_emb)  # (batch_size, node_emb_dim)
         
         # Concatenate trajectory, hour, and agent embeddings
         combined = torch.cat([traj_emb, hour_emb, agent_emb], dim=-1)  # (batch_size, node_emb_dim * 3)

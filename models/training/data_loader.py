@@ -249,7 +249,52 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
     }
 
 
-def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
+def preprocess_trajectory_length(node_ids: List[str], max_seq_len: int = 60) -> List[str]:
+    """
+    Preprocess trajectory to handle variable lengths intelligently.
+    
+    Strategy:
+    - If len <= max_seq_len: Return as-is (will be padded later)
+    - If len > max_seq_len: Downsample to max_seq_len nodes while preserving:
+        1. Start node (trajectory beginning)
+        2. End nodes (trajectory conclusion - important for goal prediction)
+        3. Evenly spaced intermediate nodes (maintain trajectory coverage)
+    
+    Args:
+        node_ids: List of node IDs in trajectory
+        max_seq_len: Maximum sequence length
+    
+    Returns:
+        List of node IDs with length <= max_seq_len
+    """
+    if len(node_ids) <= max_seq_len:
+        return node_ids
+    
+    # For long trajectories, intelligently downsample
+    # Strategy: Keep more nodes at the end (important for goal prediction)
+    # Allocation: 40% beginning, 60% end
+    
+    n_start = int(max_seq_len * 0.4)  # Keep 40% from start
+    n_end = max_seq_len - n_start      # Keep 60% from end
+    
+    # Sample indices from start portion
+    start_indices = np.linspace(0, len(node_ids) // 2, n_start, dtype=int)
+    
+    # Sample indices from end portion (keep final nodes for goal context)
+    end_indices = np.linspace(len(node_ids) // 2, len(node_ids) - 1, n_end, dtype=int)
+    
+    # Combine and ensure unique, sorted indices
+    all_indices = np.unique(np.concatenate([start_indices, end_indices]))
+    
+    # Take exactly max_seq_len nodes
+    if len(all_indices) > max_seq_len:
+        print("PROBLEM: More indices than max_seq_len after sampling!")
+        all_indices = all_indices[:max_seq_len]
+    
+    return [node_ids[i] for i in all_indices]
+
+
+def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 60):
     """
     Create a collate function that converts trajectories to Node2Vec embeddings.
     
@@ -299,14 +344,17 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             
             # **CRITICAL FIX**: Remove goal node if it's at the end
             # The model should PREDICT the goal, not just read it from the input!
-            if node_ids[-1] == goal_node:
+            if len(node_ids) > 0 and node_ids[-1] == goal_node:
                 node_ids = node_ids[:-1]
             
- 
+            # Handle empty trajectory edge case
+            if len(node_ids) == 0:
+                # If trajectory is empty after removing goal, use a dummy node
+                # This shouldn't happen in practice but provides safety
+                node_ids = [list(traj_path[0])[0] if isinstance(traj_path[0], (list, tuple)) else traj_path[0]]
             
-            # Truncate if too long
-            if len(node_ids) > max_seq_len:
-                node_ids = node_ids[:max_seq_len]
+            # Preprocess trajectory length: downsample if too long, will pad if too short
+            node_ids = preprocess_trajectory_length(node_ids, max_seq_len)
             
             # Get embeddings for nodes
             seq_len = len(node_ids)
@@ -353,7 +401,7 @@ def create_dataloaders(
     node_embeddings=None,
     batch_size: int = 32,
     num_workers: int = 0,
-    max_seq_len: int = 50
+    max_seq_len: int = 60
 ) -> Tuple[DataLoader, DataLoader, DataLoader, int]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
