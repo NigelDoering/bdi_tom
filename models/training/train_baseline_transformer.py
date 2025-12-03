@@ -33,6 +33,7 @@ from models.training.utils import (
 from models.training.data_loader import (
     load_simulation_data, split_data, create_dataloaders
 )
+from models.training.data_diagnostics import analyze_data_distribution
 from models.training.wandb_config import (
     init_wandb, log_metrics, log_incremental_validation,
     save_model_artifact, watch_model, WandBConfig, get_run_name_from_config
@@ -340,6 +341,9 @@ def main(args):
         seed=args.seed
     )
     
+    # Analyze data distribution to identify potential issues
+    #analyze_data_distribution(train_trajs, val_trajs, test_trajs)
+    
     # Initialize Node2Vec embeddings (before creating dataloaders)
     print("\n🎯 Initializing Node2Vec embeddings...")
     
@@ -373,7 +377,7 @@ def main(args):
         node_embeddings=node_embeddings,  # Pass embeddings for preprocessing
         batch_size=args.batch_size,
         num_workers=0,  # Keep 0 for MPS compatibility
-        max_seq_len=50
+        max_seq_len=60
     )
     
     # Prepare graph data using Node2Vec embeddings
@@ -389,11 +393,11 @@ def main(args):
     
     fusion_encoder = ToMGraphEncoder(
         node_emb_dim=args.node_emb_dim,
-        hidden_dim=64,
+        hidden_dim=args.encoder_hidden_dim,
         num_agents=num_agents,
         output_dim=args.fusion_dim,
-        n_layers=2,
-        n_heads=4,
+        n_layers=args.num_encoder_layers,
+        n_heads=args.num_heads,
         dropout=args.dropout
     )
     
@@ -402,7 +406,7 @@ def main(args):
         fusion_encoder=fusion_encoder,
         num_poi_nodes=len(poi_nodes),
         fusion_dim=args.fusion_dim,
-        hidden_dim=args.transformer_dim,
+        hidden_dim=args.predictor_hidden_dim,
         n_transformer_layers=args.num_transformer_layers,
         n_heads=args.num_heads,
         dropout=args.dropout
@@ -658,10 +662,16 @@ if __name__ == '__main__':
     parser.add_argument('--transformer_dim', type=int, default=128,
                         help='Transformer dimension')
     parser.add_argument('--num_transformer_layers', type=int, default=1,
-                        help='Number of transformer layers')
+                        help='Number of transformer layers in goal prediction head')
+    parser.add_argument('--num_encoder_layers', type=int, default=1,
+                        help='Number of layers in trajectory/graph encoders')
+    parser.add_argument('--encoder_hidden_dim', type=int, default=64,
+                        help='Hidden dimension for trajectory/graph encoders')
+    parser.add_argument('--predictor_hidden_dim', type=int, default=64,
+                        help='Hidden dimension for goal prediction model')
     parser.add_argument('--num_heads', type=int, default=4,
                         help='Number of attention heads')
-    parser.add_argument('--dropout', type=float, default=0.1,
+    parser.add_argument('--dropout', type=float, default=0.3,
                         help='Dropout rate')
     
     # Checkpoint arguments
