@@ -186,7 +186,7 @@ def main():
     # Load data
     print(f"\n📂 Loading data...")
     trajectories, graph, poi_nodes = load_simulation_data(run_dir, graph_path)
-    train_trajs, val_trajs, test_trajs = split_data(trajectories, seed=42)
+    train_trajs, val_trajs, test_trajs = split_data(trajectories, seed=42, run_dir=run_dir)
     print(f"  Test: {len(test_trajs)} trajectories")
     
     # Load Node2Vec embeddings

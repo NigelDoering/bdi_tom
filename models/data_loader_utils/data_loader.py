@@ -173,10 +173,15 @@ def split_data(
     train_ratio: float = 0.7,
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
-    seed: int = 42
+    seed: int = 42,
+    run_dir: Optional[str] = None,
+    force_new_split: bool = False
 ) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     """
     Split trajectories into train/val/test sets.
+    
+    If run_dir is provided, will try to load existing split from 
+    {run_dir}/split_data/. If not found, creates new split and saves it.
     
     Args:
         trajectories: List of trajectory dictionaries
@@ -184,11 +189,48 @@ def split_data(
         val_ratio: Fraction for validation set
         test_ratio: Fraction for test set
         seed: Random seed for reproducibility
+        run_dir: Optional path to simulation run directory (e.g., 'data/simulation_data/run_8')
+        force_new_split: If True, ignore existing split and create new one
     
     Returns:
         Tuple of (train_trajectories, val_trajectories, test_trajectories)
     """
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "Ratios must sum to 1.0"
+    
+    # Try to load existing split if run_dir provided
+    if run_dir and not force_new_split:
+        split_dir = os.path.join(run_dir, 'split_data')
+        split_file = os.path.join(split_dir, f'split_indices_seed{seed}.json')
+        
+        if os.path.exists(split_file):
+            print(f"\n📂 Loading existing data split from {split_file}")
+            with open(split_file, 'r') as f:
+                split_data_dict = json.load(f)
+            
+            train_indices = split_data_dict['train_indices']
+            val_indices = split_data_dict['val_indices']
+            test_indices = split_data_dict['test_indices']
+            
+            # Verify split matches current data
+            expected_total = len(train_indices) + len(val_indices) + len(test_indices)
+            if expected_total != len(trajectories):
+                print(f"   ⚠️  Warning: Saved split has {expected_total} trajectories but dataset has {len(trajectories)}")
+                print(f"   Creating new split...")
+            else:
+                # Create splits from saved indices
+                train_trajs = [trajectories[i] for i in train_indices]
+                val_trajs = [trajectories[i] for i in val_indices]
+                test_trajs = [trajectories[i] for i in test_indices]
+                
+                print(f"   ✓ Loaded split:")
+                print(f"     Train: {len(train_trajs)} ({len(train_trajs)/len(trajectories)*100:.0f}%)")
+                print(f"     Val:   {len(val_trajs)} ({len(val_trajs)/len(trajectories)*100:.0f}%)")
+                print(f"     Test:  {len(test_trajs)} ({len(test_trajs)/len(trajectories)*100:.0f}%)")
+                
+                return train_trajs, val_trajs, test_trajs
+    
+    # Create new split
+    print(f"\n📊 Creating new data split (seed={seed})...")
     
     # Shuffle trajectories
     np.random.seed(seed)
@@ -199,19 +241,40 @@ def split_data(
     n_val = int(len(trajectories) * val_ratio)
     
     # Split indices
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:n_train + n_val]
-    test_indices = indices[n_train + n_val:]
+    train_indices = indices[:n_train].tolist()
+    val_indices = indices[n_train:n_train + n_val].tolist()
+    test_indices = indices[n_train + n_val:].tolist()
     
     # Create splits
     train_trajs = [trajectories[i] for i in train_indices]
     val_trajs = [trajectories[i] for i in val_indices]
     test_trajs = [trajectories[i] for i in test_indices]
     
-    print(f"\n📊 Data Split:")
     print(f"   Train: {len(train_trajs)} ({train_ratio*100:.0f}%)")
     print(f"   Val:   {len(val_trajs)} ({val_ratio*100:.0f}%)")
     print(f"   Test:  {len(test_trajs)} ({test_ratio*100:.0f}%)")
+    
+    # Save split indices if run_dir provided
+    if run_dir:
+        split_dir = os.path.join(run_dir, 'split_data')
+        os.makedirs(split_dir, exist_ok=True)
+        
+        split_file = os.path.join(split_dir, f'split_indices_seed{seed}.json')
+        split_data_dict = {
+            'train_indices': train_indices,
+            'val_indices': val_indices,
+            'test_indices': test_indices,
+            'train_ratio': train_ratio,
+            'val_ratio': val_ratio,
+            'test_ratio': test_ratio,
+            'seed': seed,
+            'total_trajectories': len(trajectories)
+        }
+        
+        with open(split_file, 'w') as f:
+            json.dump(split_data_dict, f, indent=2)
+        
+        print(f"   ✓ Saved split to {split_file}")
     
     return train_trajs, val_trajs, test_trajs
 

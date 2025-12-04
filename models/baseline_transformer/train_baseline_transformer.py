@@ -295,13 +295,14 @@ def main(args):
     print("\n📂 Loading data...")
     trajectories, graph, poi_nodes = load_simulation_data(args.run_dir, args.graph_path)
     
-    # Split data
+    # Split data (will load existing split if available, otherwise create and save new one)
     train_trajs, val_trajs, test_trajs = split_data(
         trajectories,
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
         test_ratio=args.test_ratio,
-        seed=args.seed
+        seed=args.seed,
+        run_dir=args.run_dir  # Save/load split from run directory
     )
     
     # Analyze data distribution to identify potential issues
