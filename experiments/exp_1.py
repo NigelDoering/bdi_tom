@@ -28,12 +28,11 @@ from typing import Dict, List, Tuple
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.training.utils import get_device, load_checkpoint, compute_accuracy
-from models.training.data_loader import load_simulation_data, split_data, create_dataloaders
-from models.transformer_predictor import GoalPredictionModel
-from models.encoders.trajectory_encoder import TrajectoryDataPreparator
-from models.encoders.map_encoder import GraphDataPreparator
-from models.encoders.fusion_encoder import ToMGraphEncoder
+from models.utils.utils import get_device, load_checkpoint, compute_accuracy
+from models.data_loader_utils.data_loader import load_simulation_data, split_data, create_dataloaders
+from models.baseline_transformer.transformer_predictor import GoalPredictionModel
+from models.fusion_encoders_preprocessing.fusion_encoder import ToMGraphEncoder
+from models.node2vec_preprocessing.node_embeddings import Node2VecEmbeddings
 from graph_controller.world_graph import WorldGraph
 
 
@@ -68,7 +67,6 @@ def compute_brier_score(logits: torch.Tensor, targets: torch.Tensor) -> float:
 def evaluate_at_proportion(
     model: torch.nn.Module,
     test_loader,
-    trajectory_prep: TrajectoryDataPreparator,
     graph_data: dict,
     device: torch.device,
     proportion: float
@@ -78,8 +76,7 @@ def evaluate_at_proportion(
     
     Args:
         model: Trained model
-        test_loader: Test data loader
-        trajectory_prep: Trajectory preparator
+        test_loader: Test data loader (with Node2Vec embeddings)
         graph_data: Graph data
         device: Device to run on
         proportion: Proportion of trajectory to observe (e.g., 0.15 for 15%)
@@ -93,29 +90,31 @@ def evaluate_at_proportion(
     all_targets = []
     
     for batch in tqdm(test_loader, desc=f'{int(proportion*100)}% trajectory', leave=False):
-        # Truncate trajectories to proportion
-        truncated_trajs = []
-        for i in range(len(batch['trajectories'])):
-            path = batch['trajectories'][i]
-            if len(path) > 2:
-                truncate_idx = max(1, int(len(path) * proportion))
-                truncated_path = path[:truncate_idx]
-            else:
-                truncated_path = path[:1] if len(path) > 0 else path
-            
-            truncated_trajs.append({
-                'path': truncated_path,
-                'hour': batch['hours'][i],
-                'goal_node': batch['goal_nodes'][i]
-            })
+        # Get node embeddings and mask
+        node_embeddings = batch['node_embeddings']  # (batch, max_seq_len, emb_dim)
+        mask = batch['mask']  # (batch, max_seq_len)
         
-        # Prepare batch
-        traj_batch = trajectory_prep.prepare_batch(truncated_trajs)
+        # Get actual sequence lengths
+        seq_lens = mask.sum(dim=1).long()  # (batch,)
         
-        # Move to device
-        for key in traj_batch:
-            if isinstance(traj_batch[key], torch.Tensor):
-                traj_batch[key] = traj_batch[key].to(device)
+        # Calculate truncated lengths based on proportion
+        truncated_lens = torch.maximum(
+            torch.ones_like(seq_lens),
+            (seq_lens.float() * proportion).long()
+        )
+        
+        # Create truncated mask
+        mask_truncated = torch.zeros_like(mask)
+        for i, trunc_len in enumerate(truncated_lens):
+            mask_truncated[i, :trunc_len] = 1.0
+        
+        # Prepare batch with truncated mask
+        traj_batch = {
+            'node_embeddings': node_embeddings.to(device),
+            'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
+            'mask': mask_truncated.to(device)
+        }
         
         targets = batch['goal_indices'].to(device)
         
@@ -144,8 +143,8 @@ def evaluate_at_proportion(
 def load_model_from_checkpoint(
     checkpoint_path: str,
     num_poi_nodes: int,
-    num_nodes: int,
-    graph_node_feat_dim: int,
+    node_emb_dim: int,
+    num_agents: int,
     device: torch.device
 ) -> torch.nn.Module:
     """
@@ -154,33 +153,34 @@ def load_model_from_checkpoint(
     Args:
         checkpoint_path: Path to checkpoint file
         num_poi_nodes: Number of POI nodes
-        num_nodes: Total number of graph nodes
-        graph_node_feat_dim: Dimension of graph node features
+        node_emb_dim: Node2Vec embedding dimension (typically 128)
+        num_agents: Number of agents in the simulation
         device: Device to load model on
     
     Returns:
         Loaded model
     """
-    # Load checkpoint to get model hyperparameters
+    # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
-    # Extract hyperparameters from checkpoint (stored during training)
-    # Default values match baseline configuration
+    # Extract hyperparameters from checkpoint or use defaults
+    # These match the typical training configuration
     fusion_dim = 64
-    transformer_dim = 128
-    num_transformer_layers = 1
+    encoder_hidden_dim = 64
+    predictor_hidden_dim = 32
+    num_encoder_layers = 1
+    num_transformer_layers = 0  # Typically 0 in current config
     num_heads = 4
-    dropout = 0.1
+    dropout = 0.3
     
-    # Initialize fusion encoder
+    # Initialize fusion encoder with new API
     fusion_encoder = ToMGraphEncoder(
-        num_nodes=num_nodes,
-        graph_node_feat_dim=graph_node_feat_dim,
-        traj_node_emb_dim=32,
-        hidden_dim=64,
+        node_emb_dim=node_emb_dim,
+        hidden_dim=encoder_hidden_dim,
+        num_agents=num_agents,
         output_dim=fusion_dim,
-        n_layers=2,
-        n_heads=4,
+        n_layers=num_encoder_layers,
+        n_heads=num_heads,
         dropout=dropout
     )
     
@@ -189,7 +189,7 @@ def load_model_from_checkpoint(
         fusion_encoder=fusion_encoder,
         num_poi_nodes=num_poi_nodes,
         fusion_dim=fusion_dim,
-        hidden_dim=transformer_dim,
+        hidden_dim=predictor_hidden_dim,
         n_transformer_layers=num_transformer_layers,
         n_heads=num_heads,
         dropout=dropout
@@ -199,6 +199,11 @@ def load_model_from_checkpoint(
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.to(device)
     model.eval()
+    
+    print(f"  ✓ Loaded checkpoint from epoch {checkpoint.get('epoch', '?')}")
+    if 'metrics' in checkpoint:
+        metrics = checkpoint['metrics']
+        print(f"  ✓ Checkpoint metrics: Val Top-1={metrics.get('val_top1', '?'):.2f}%")
     
     return model
 
@@ -335,7 +340,7 @@ def main():
     # Configuration
     run_dir = "data/simulation_data/run_8"
     graph_path = "data/processed/ucsd_walk_full.graphml"
-    keepers_dir = "checkpoints/keepers"
+    keepers_dir = "checkpoints/incremental_training"  # Directory containing trained models
     output_dir = "data/simulation_data/run_8/visualizations/exp_1"
     
     # Trajectory proportions to evaluate
@@ -367,36 +372,60 @@ def main():
     
     print(f"  Train: {len(train_trajs)}, Val: {len(val_trajs)}, Test: {len(test_trajs)}")
     
-    # Create test dataloader
-    _, _, test_loader = create_dataloaders(
+    # Load pre-computed Node2Vec embeddings (same ones used during training)
+    print(f"\n🔢 Loading Node2Vec embeddings...")
+    embeddings_path = Path("data/processed/node2vec_embeddings.pkl")
+    
+    if not embeddings_path.exists():
+        print(f"\n❌ Error: Node2Vec embeddings not found at {embeddings_path}")
+        print(f"   These embeddings should have been created during training.")
+        print(f"   Please ensure the model was trained with the correct embeddings.")
+        return
+    
+    print(f"  Loading from: {embeddings_path}")
+    node_emb_manager = Node2VecEmbeddings(embedding_dim=128)
+    node_emb_manager.load(str(embeddings_path))
+    node_embeddings: torch.Tensor = node_emb_manager.embedding_matrix  # type: ignore
+    node_emb_dim = node_embeddings.shape[1]
+    
+    print(f"  ✓ Node embeddings: {node_embeddings.shape}")
+    
+    # Create test dataloader with Node2Vec embeddings manager (not just the matrix)
+    _, _, test_loader, num_agents = create_dataloaders(
         train_trajs, val_trajs, test_trajs,
         graph, poi_nodes,
         batch_size=32,
-        num_workers=0
+        num_workers=0,
+        node_embeddings=node_emb_manager,  # Pass the manager, not the matrix
+        incremental_training=True
     )
     
-    # Initialize data preparators
+    # Prepare world graph for evaluation
     world_graph = WorldGraph(graph)
+    
+    # Create node to index mapping (should match the Node2Vec embedding order)
     all_nodes = list(graph.nodes())
     node_to_idx = {node: idx for idx, node in enumerate(all_nodes)}
     
-    trajectory_prep = TrajectoryDataPreparator(node_to_idx)
-    graph_prep = GraphDataPreparator(world_graph)
-    graph_data_dict = graph_prep.prepare_graph_data()
+    # Extract edge connectivity from graph and convert to indices
+    edge_list = list(graph.edges())
+    edge_index = torch.tensor([
+        [node_to_idx[e[0]] for e in edge_list],
+        [node_to_idx[e[1]] for e in edge_list]
+    ], dtype=torch.long)
     
-    # Prepare graph data for device
+    # Prepare graph data structure (node embeddings + edge connectivity)
     graph_data = {
-        'x': graph_data_dict['x'].to(device),
-        'edge_index': graph_data_dict['edge_index'].to(device)
+        'node_embeddings': node_embeddings.to(device),
+        'edge_index': edge_index.to(device)
     }
     
-    # Get model configuration details
-    num_nodes = len(graph.nodes())
+    # Model configuration
     num_poi_nodes = len(poi_nodes)
-    graph_node_feat_dim = graph_data_dict['x'].shape[1]
     
     print(f"  POI nodes: {num_poi_nodes}")
-    print(f"  Total nodes: {num_nodes}")
+    print(f"  Total agents: {num_agents}")
+    print(f"  Node embedding dim: {node_emb_dim}")
     
     # Find all model checkpoints in keepers directory
     keepers_path = Path(keepers_dir)
@@ -429,8 +458,8 @@ def main():
         model = load_model_from_checkpoint(
             str(model_file),
             num_poi_nodes,
-            num_nodes,
-            graph_node_feat_dim,
+            node_emb_dim,
+            num_agents,
             device
         )
         
@@ -440,7 +469,7 @@ def main():
         
         for proportion in proportions:
             metrics = evaluate_at_proportion(
-                model, test_loader, trajectory_prep,
+                model, test_loader,
                 graph_data, device, proportion
             )
             model_results[proportion] = metrics

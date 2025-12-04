@@ -18,8 +18,8 @@ spatial environmental structure.
 import torch
 import torch.nn as nn
 
-from models.encoders.trajectory_encoder import TrajectoryEncoder
-from models.encoders.map_encoder import WorldGraphEncoder
+from models.fusion_encoders_preprocessing.trajectory_encoder import TrajectoryEncoder
+from models.fusion_encoders_preprocessing.map_encoder import WorldGraphEncoder
 
 
 # -----------------------------

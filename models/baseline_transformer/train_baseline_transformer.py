@@ -26,21 +26,21 @@ import argparse
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from models.training.utils import (
+from models.utils.utils import (
     get_device, set_seed, save_checkpoint, load_checkpoint,
     compute_accuracy, AverageMeter, MetricsTracker
 )
-from models.training.data_loader import (
+from models.data_loader_utils.data_loader import (
     load_simulation_data, split_data, create_dataloaders
 )
-from models.training.data_diagnostics import analyze_data_distribution
-from models.training.wandb_config import (
+from models.data_loader_utils.data_diagnostics import analyze_data_distribution
+from models.utils.wandb_config import (
     init_wandb, log_metrics,
     save_model_artifact, watch_model, WandBConfig, get_run_name_from_config
 )
-from models.transformer_predictor import GoalPredictionModel
-from models.encoders.fusion_encoder import ToMGraphEncoder
-from models.data.node_embeddings import get_or_create_embeddings, Node2VecEmbeddings
+from models.baseline_transformer.transformer_predictor import GoalPredictionModel
+from models.fusion_encoders_preprocessing.fusion_encoder import ToMGraphEncoder
+from models.node2vec_preprocessing.node_embeddings import get_or_create_embeddings, Node2VecEmbeddings
 from graph_controller.world_graph import WorldGraph
 import networkx as nx
 
