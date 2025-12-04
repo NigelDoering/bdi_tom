@@ -294,13 +294,15 @@ def preprocess_trajectory_length(node_ids: List[str], max_seq_len: int = 60) -> 
     return [node_ids[i] for i in all_indices]
 
 
-def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 60):
+def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 60, incremental_training: bool = False):
     """
     Create a collate function that converts trajectories to Node2Vec embeddings.
     
     Args:
         node_embeddings: Node2VecEmbeddings instance for converting node IDs to embeddings
         max_seq_len: Maximum sequence length for padding/truncation
+        incremental_training: If True, creates multiple samples per trajectory by incrementally
+                            revealing nodes (node1 -> goal, node1-2 -> goal, etc.)
     
     Returns:
         Collate function for DataLoader
@@ -356,30 +358,65 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 60):
             # Preprocess trajectory length: downsample if too long, will pad if too short
             node_ids = preprocess_trajectory_length(node_ids, max_seq_len)
             
-            # Get embeddings for nodes
-            seq_len = len(node_ids)
-            node_embs = node_embeddings.trajectory_to_embeddings(node_ids)
-            
-            # Pad if too short
-            if seq_len < max_seq_len:
-                padding = torch.zeros(
-                    max_seq_len - seq_len,
-                    node_embeddings.embedding_dim,
-                    dtype=torch.float32
-                )
-                node_embs = torch.cat([node_embs, padding], dim=0)
-            
-            # Create mask (1 = valid token, 0 = padding)
-            mask = torch.cat([
-                torch.ones(seq_len, dtype=torch.float32),
-                torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
-            ])
-            
-            batch_node_embs.append(node_embs)
-            batch_hours.append(hour)
-            batch_agent_ids.append(agent_id)
-            batch_masks.append(mask)
-            batch_goal_indices.append(goal_idx)
+            if incremental_training:
+                # INCREMENTAL TRAINING: Create multiple samples from this trajectory
+                # For trajectory [n1, n2, n3, n4] → create 4 samples:
+                #   [n1] -> goal, [n1, n2] -> goal, [n1, n2, n3] -> goal, [n1, n2, n3, n4] -> goal
+                
+                for i in range(1, len(node_ids) + 1):
+                    # Take first i nodes
+                    partial_node_ids = node_ids[:i]
+                    seq_len = len(partial_node_ids)
+                    
+                    # Get embeddings
+                    node_embs = node_embeddings.trajectory_to_embeddings(partial_node_ids)
+                    
+                    # Pad to max_seq_len
+                    if seq_len < max_seq_len:
+                        padding = torch.zeros(
+                            max_seq_len - seq_len,
+                            node_embeddings.embedding_dim,
+                            dtype=torch.float32
+                        )
+                        node_embs = torch.cat([node_embs, padding], dim=0)
+                    
+                    # Create mask
+                    mask = torch.cat([
+                        torch.ones(seq_len, dtype=torch.float32),
+                        torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
+                    ])
+                    
+                    # Add to batch (same goal for all incremental steps)
+                    batch_node_embs.append(node_embs)
+                    batch_hours.append(hour)
+                    batch_agent_ids.append(agent_id)
+                    batch_masks.append(mask)
+                    batch_goal_indices.append(goal_idx)
+            else:
+                # STANDARD TRAINING: Use full trajectory
+                seq_len = len(node_ids)
+                node_embs = node_embeddings.trajectory_to_embeddings(node_ids)
+                
+                # Pad if too short
+                if seq_len < max_seq_len:
+                    padding = torch.zeros(
+                        max_seq_len - seq_len,
+                        node_embeddings.embedding_dim,
+                        dtype=torch.float32
+                    )
+                    node_embs = torch.cat([node_embs, padding], dim=0)
+                
+                # Create mask (1 = valid token, 0 = padding)
+                mask = torch.cat([
+                    torch.ones(seq_len, dtype=torch.float32),
+                    torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
+                ])
+                
+                batch_node_embs.append(node_embs)
+                batch_hours.append(hour)
+                batch_agent_ids.append(agent_id)
+                batch_masks.append(mask)
+                batch_goal_indices.append(goal_idx)
         
         return {
             'node_embeddings': torch.stack(batch_node_embs),
@@ -401,7 +438,8 @@ def create_dataloaders(
     node_embeddings=None,
     batch_size: int = 32,
     num_workers: int = 0,
-    max_seq_len: int = 60
+    max_seq_len: int = 60,
+    incremental_training: bool = False
 ) -> Tuple[DataLoader, DataLoader, DataLoader, int]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
@@ -433,7 +471,11 @@ def create_dataloaders(
     
     # Choose collate function based on whether embeddings are provided
     if node_embeddings is not None:
-        collate_fn = create_collate_fn_with_embeddings(node_embeddings, max_seq_len)
+        collate_fn = create_collate_fn_with_embeddings(
+            node_embeddings, 
+            max_seq_len, 
+            incremental_training=incremental_training
+        )
     else:
         collate_fn = collate_trajectories
     
