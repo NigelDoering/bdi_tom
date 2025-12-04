@@ -93,8 +93,10 @@ class TrajectoryEncoder(nn.Module):
         
         # Add positional encoding to preserve sequence order
         # This is CRITICAL - without it, the model can't distinguish [A,B,C] from [C,B,A]!
+        # Only add positional encoding to valid (non-padded) positions
         pos_enc = self.positional_encoding[:, :seq_len, :]  # (1, seq_len, node_emb_dim)
-        node_embeddings_with_pos = node_embeddings + pos_enc  # (batch_size, seq_len, node_emb_dim)
+        mask_expanded = mask.unsqueeze(-1)  # (batch_size, seq_len, 1)
+        node_embeddings_with_pos = node_embeddings + (pos_enc * mask_expanded)  # Only add to valid positions
         
         # Apply transformer
         transformer_out = self.transformer(
@@ -103,7 +105,7 @@ class TrajectoryEncoder(nn.Module):
         )  # (batch_size, seq_len, node_emb_dim)
         
         # Global mean pooling (average over valid tokens only)
-        mask_expanded = mask.unsqueeze(-1)  # (batch_size, seq_len, 1)
+        # mask_expanded already computed above for positional encoding
         traj_emb = (transformer_out * mask_expanded).sum(dim=1) / (mask.sum(dim=1, keepdim=True) + 1e-8)
         # (batch_size, node_emb_dim)
         
