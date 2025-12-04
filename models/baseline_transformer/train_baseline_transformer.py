@@ -26,20 +26,21 @@ import argparse
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from models.training.utils import (
+from models.utils.utils import (
     get_device, set_seed, save_checkpoint, load_checkpoint,
     compute_accuracy, AverageMeter, MetricsTracker
 )
-from models.training.data_loader import (
+from models.data_loader_utils.data_loader import (
     load_simulation_data, split_data, create_dataloaders
 )
-from models.training.wandb_config import (
-    init_wandb, log_metrics, log_incremental_validation,
+from models.data_loader_utils.data_diagnostics import analyze_data_distribution
+from models.utils.wandb_config import (
+    init_wandb, log_metrics,
     save_model_artifact, watch_model, WandBConfig, get_run_name_from_config
 )
-from models.transformer_predictor import GoalPredictionModel
-from models.encoders.fusion_encoder import ToMGraphEncoder
-from models.data.node_embeddings import get_or_create_embeddings, Node2VecEmbeddings
+from models.baseline_transformer.transformer_predictor import GoalPredictionModel
+from models.fusion_encoders_preprocessing.fusion_encoder import ToMGraphEncoder
+from models.node2vec_preprocessing.node_embeddings import get_or_create_embeddings, Node2VecEmbeddings
 from graph_controller.world_graph import WorldGraph
 import networkx as nx
 
@@ -110,6 +111,7 @@ def train_epoch(
         traj_batch = {
             'node_embeddings': batch['node_embeddings'].to(device),
             'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
             'mask': batch['mask'].to(device)
         }
         targets = batch['goal_indices'].to(device)
@@ -175,6 +177,7 @@ def validate(
         traj_batch = {
             'node_embeddings': batch['node_embeddings'].to(device),
             'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
             'mask': batch['mask'].to(device)
         }
         targets = batch['goal_indices'].to(device)
@@ -204,111 +207,75 @@ def validate(
 
 
 @torch.no_grad()
-def validate_incremental(
+def evaluate_incremental(
     model: nn.Module,
-    val_loader: DataLoader,
+    data_loader: DataLoader,
     criterion: nn.Module,
     graph_data: dict,
     device: torch.device,
-    truncation_ratios: list = [0.25, 0.5, 0.75]
+    split_name: str = 'Val'
 ) -> dict:
     """
-    Validate model at different trajectory truncation points.
+    Evaluate model on incremental trajectory samples.
+    
+    The dataloader provides incremental samples (e.g., [n1]→goal, [n1,n2]→goal, etc.)
+    and we evaluate all samples, averaging metrics across all trajectory increments.
     
     Args:
         model: Model to evaluate
-        val_loader: Validation data loader
+        data_loader: Data loader with incremental samples
         criterion: Loss function
-        trajectory_prep: Trajectory data preparator
         graph_data: Graph data
         device: Device to run on
-        truncation_ratios: List of truncation ratios to test (e.g., [0.25, 0.5, 0.75])
+        split_name: Name of split for logging ('Train', 'Val', 'Test')
     
     Returns:
-        Dict with results for each truncation ratio
+        Dict with averaged metrics: {'loss', 'top1', 'top5'}
     """
     model.eval()
     
-    # Initialize meters for each truncation ratio
-    results = {}
-    for ratio in truncation_ratios:
-        results[ratio] = {
-            'loss': AverageMeter(),
-            'top1': AverageMeter(),
-            'top5': AverageMeter()
+    loss_meter = AverageMeter()
+    top1_meter = AverageMeter()
+    top5_meter = AverageMeter()
+    
+    progress_bar = tqdm(data_loader, desc=f'{split_name} (Incremental)')
+    
+    for batch in progress_bar:
+        # Prepare batch
+        traj_batch = {
+            'node_embeddings': batch['node_embeddings'].to(device),
+            'hour': batch['hour'].to(device),
+            'agent_id': batch['agent_id'].to(device),
+            'mask': batch['mask'].to(device)
         }
+        targets = batch['goal_indices'].to(device)
+        
+        # Forward pass
+        logits = model(traj_batch, graph_data, return_logits=True)
+        loss = criterion(logits, targets)
+        
+        # Compute metrics
+        top1_acc = compute_accuracy(logits, targets, k=1)
+        top5_acc = compute_accuracy(logits, targets, k=5)
+        
+        # Update meters
+        batch_size = targets.size(0)
+        loss_meter.update(loss.item(), batch_size)
+        top1_meter.update(top1_acc, batch_size)
+        top5_meter.update(top5_acc, batch_size)
+        
+        # Update progress bar
+        progress_bar.set_postfix({
+            'loss': f'{loss_meter.avg:.4f}',
+            'top1': f'{top1_meter.avg:.2f}%',
+            'top5': f'{top5_meter.avg:.2f}%'
+        })
     
-    # Track trajectory lengths for debugging
-    traj_lengths = {ratio: [] for ratio in truncation_ratios}
-    
-    for batch in tqdm(val_loader, desc='Incremental Val'):
-        # For each truncation ratio
-        for ratio in truncation_ratios:
-            # Truncate embeddings based on valid sequence lengths (using mask)
-            node_embeddings_full = batch['node_embeddings']  # (batch, max_seq_len, emb_dim)
-            mask_full = batch['mask']  # (batch, max_seq_len)
-            
-            # Get actual sequence lengths from mask
-            seq_lens = mask_full.sum(dim=1).long()  # (batch,)
-            
-            # Calculate truncated lengths
-            truncated_lens = torch.maximum(
-                torch.ones_like(seq_lens),
-                (seq_lens.float() * ratio).long()
-            )
-            
-            # Track lengths for debugging
-            if len(traj_lengths[ratio]) < 5:
-                for orig_len, trunc_len in zip(seq_lens.tolist(), truncated_lens.tolist()):
-                    if len(traj_lengths[ratio]) < 5:
-                        traj_lengths[ratio].append((orig_len, trunc_len))
-            
-            # Create truncated mask
-            mask_truncated = torch.zeros_like(mask_full)
-            for i, trunc_len in enumerate(truncated_lens):
-                mask_truncated[i, :trunc_len] = 1.0
-            
-            # Prepare truncated batch
-            traj_batch = {
-                'node_embeddings': node_embeddings_full.to(device),  # Keep full embeddings, mask handles truncation
-                'hour': batch['hour'].to(device),
-                'mask': mask_truncated.to(device)
-            }
-            targets = batch['goal_indices'].to(device)
-            
-            # Forward pass
-            logits = model(traj_batch, graph_data, return_logits=True)
-            loss = criterion(logits, targets)
-
-            
-            
-            # Compute metrics
-            top1_acc = compute_accuracy(logits, targets, k=1)
-            top5_acc = compute_accuracy(logits, targets, k=5)
-            
-            # Update meters
-            batch_size = targets.size(0)  # Get batch size from targets tensor
-            results[ratio]['loss'].update(loss.item(), batch_size)
-            results[ratio]['top1'].update(top1_acc, batch_size)
-            results[ratio]['top5'].update(top5_acc, batch_size)
-    
-    # Debug: Print trajectory lengths to verify truncation is working
-    print(f"\n🔍 Debug - Trajectory lengths (original → truncated):")
-    for ratio in truncation_ratios:
-        if traj_lengths[ratio]:
-            sample_lengths = traj_lengths[ratio][:3]
-            print(f"   {int(ratio*100)}%: {sample_lengths}")
-    
-    # Convert to simple dict with averages
-    summary = {}
-    for ratio in truncation_ratios:
-        summary[ratio] = {
-            'loss': results[ratio]['loss'].avg,
-            'top1': results[ratio]['top1'].avg,
-            'top5': results[ratio]['top5'].avg
-        }
-    
-    return summary
+    return {
+        'loss': loss_meter.avg,
+        'top1': top1_meter.avg,
+        'top5': top5_meter.avg
+    }
 
 
 def main(args):
@@ -328,14 +295,18 @@ def main(args):
     print("\n📂 Loading data...")
     trajectories, graph, poi_nodes = load_simulation_data(args.run_dir, args.graph_path)
     
-    # Split data
+    # Split data (will load existing split if available, otherwise create and save new one)
     train_trajs, val_trajs, test_trajs = split_data(
         trajectories,
         train_ratio=args.train_ratio,
         val_ratio=args.val_ratio,
         test_ratio=args.test_ratio,
-        seed=args.seed
+        seed=args.seed,
+        run_dir=args.run_dir  # Save/load split from run directory
     )
+    
+    # Analyze data distribution to identify potential issues
+    #analyze_data_distribution(train_trajs, val_trajs, test_trajs)
     
     # Initialize Node2Vec embeddings (before creating dataloaders)
     print("\n🎯 Initializing Node2Vec embeddings...")
@@ -362,15 +333,22 @@ def main(args):
     
     print(f"   ✅ Node2Vec embeddings ready: {node_embeddings.num_nodes} nodes, {node_embeddings.embedding_dim} dims")
     
-    # Create dataloaders with embedding conversion
-    print("\n📦 Creating dataloaders with Node2Vec preprocessing...")
-    train_loader, val_loader, test_loader = create_dataloaders(
+    # Create dataloaders with incremental training
+    print("\n📦 Creating dataloaders with INCREMENTAL TRAINING...")
+    print("   Each trajectory will be expanded into multiple samples:")
+    print("   (node1) → goal, (node1, node2) → goal, ..., (full trajectory) → goal")
+    print("   ⚠️  Note: Effective batch size will be much larger!")
+    print(f"   With batch_size={args.batch_size} and avg ~30 nodes/trajectory")
+    print(f"   → Each batch will contain ~{args.batch_size * 30} samples")
+    
+    train_loader, val_loader, test_loader, num_agents = create_dataloaders(
         train_trajs, val_trajs, test_trajs,
         graph, poi_nodes,
         node_embeddings=node_embeddings,  # Pass embeddings for preprocessing
         batch_size=args.batch_size,
         num_workers=0,  # Keep 0 for MPS compatibility
-        max_seq_len=50
+        max_seq_len=60,
+        incremental_training=True  # Always use incremental training
     )
     
     # Prepare graph data using Node2Vec embeddings
@@ -382,13 +360,15 @@ def main(args):
     print(f"   Number of nodes: {num_nodes}")
     print(f"   Node embedding dim: {args.node_emb_dim}")
     print(f"   Number of POI nodes: {len(poi_nodes)}")
+    print(f"   Number of agents: {num_agents}")
     
     fusion_encoder = ToMGraphEncoder(
         node_emb_dim=args.node_emb_dim,
-        hidden_dim=64,
+        hidden_dim=args.encoder_hidden_dim,
+        num_agents=num_agents,
         output_dim=args.fusion_dim,
-        n_layers=2,
-        n_heads=4,
+        n_layers=args.num_encoder_layers,
+        n_heads=args.num_heads,
         dropout=args.dropout
     )
     
@@ -397,7 +377,7 @@ def main(args):
         fusion_encoder=fusion_encoder,
         num_poi_nodes=len(poi_nodes),
         fusion_dim=args.fusion_dim,
-        hidden_dim=args.transformer_dim,
+        hidden_dim=args.predictor_hidden_dim,
         n_transformer_layers=args.num_transformer_layers,
         n_heads=args.num_heads,
         dropout=args.dropout
@@ -477,31 +457,33 @@ def main(args):
         print(f"\nEpoch {epoch}/{args.num_epochs}")
         print("-" * 40)
         
-        # Train
-        train_loss, train_top1, train_top5 = train_epoch(
+        # Train (gradient updates only - metrics computed with dropout)
+        _ = train_epoch(
             model, train_loader, optimizer, criterion,
             graph_data, device, epoch
         )
         
-        # Validate with incremental truncation
-        print(f"\n📊 Incremental Validation (at different trajectory portions):")
-        val_results = validate_incremental(
+        # Evaluate on training set (without dropout for fair comparison)
+        print(f"\n📊 Evaluating training set...")
+        train_results = evaluate_incremental(
+            model, train_loader, criterion,
+            graph_data, device,
+            split_name='Train'
+        )
+        train_loss = train_results['loss']
+        train_top1 = train_results['top1']
+        train_top5 = train_results['top5']
+        
+        # Evaluate on validation set
+        print(f"\n📊 Evaluating validation set...")
+        val_results = evaluate_incremental(
             model, val_loader, criterion,
             graph_data, device,
-            truncation_ratios=[0.25, 0.5, 0.75]
+            split_name='Val'
         )
-        
-        # Print incremental results
-        for ratio, ratio_metrics in val_results.items():
-            print(f"   {int(ratio*100)}% of trajectory: "
-                  f"Loss={ratio_metrics['loss']:.4f}, "
-                  f"Top-1={ratio_metrics['top1']:.2f}%, "
-                  f"Top-5={ratio_metrics['top5']:.2f}%")
-        
-        # Use 75% truncation results for main validation metrics
-        val_loss = val_results[0.75]['loss']
-        val_top1 = val_results[0.75]['top1']
-        val_top5 = val_results[0.75]['top5']
+        val_loss = val_results['loss']
+        val_top1 = val_results['top1']
+        val_top5 = val_results['top5']
         
         # Update learning rate
         scheduler.step(val_loss)
@@ -515,23 +497,19 @@ def main(args):
         
         # Log to W&B
         if wandb_run is not None:
-            # Log main training metrics
+            # Log main metrics (now properly averaged over all increments)
             log_metrics({
-                'epoch': epoch,
-                'train/loss': train_loss,
-                'train/top1_accuracy': train_top1,
-                'train/top5_accuracy': train_top5,
-                'val/loss': val_loss,
-                'val/top1_accuracy': val_top1,
-                'val/top5_accuracy': val_top5,
+                'incremental_train/loss': train_loss,
+                'incremental_train/top1_accuracy': train_top1,
+                'incremental_train/top5_accuracy': train_top5,
+                'incremental_val/loss': val_loss,
+                'incremental_val/top1_accuracy': val_top1,
+                'incremental_val/top5_accuracy': val_top5,
                 'learning_rate': optimizer.param_groups[0]['lr']
-            })
-            
-            # Log incremental validation results
-            log_incremental_validation(val_results, epoch)
+            }, step=epoch)
         
         # Print epoch summary
-        print(f"\n📊 Epoch {epoch} Summary:")
+        print(f"\n📊 Epoch {epoch} Summary (averaged over all trajectory increments):")
         print(f"   Train - Loss: {train_loss:.4f}, Top-1: {train_top1:.2f}%, Top-5: {train_top5:.2f}%")
         print(f"   Val   - Loss: {val_loss:.4f}, Top-1: {val_top1:.2f}%, Top-5: {val_top5:.2f}%")
         
@@ -586,19 +564,23 @@ def main(args):
     
     # Test evaluation with best model
     print("\n" + "=" * 80)
-    print("FINAL TEST EVALUATION")
+    print("FINAL TEST EVALUATION (Incremental)")
     print("=" * 80)
     
     best_checkpoint = os.path.join(args.checkpoint_dir, 'best_model.pt')
     load_checkpoint(best_checkpoint, model)
     model = model.to(device)
     
-    test_loss, test_top1, test_top5 = validate(
+    test_results = evaluate_incremental(
         model, test_loader, criterion,
-        graph_data, device, 'Test'
+        graph_data, device,
+        split_name='Test'
     )
+    test_loss = test_results['loss']
+    test_top1 = test_results['top1']
+    test_top5 = test_results['top5']
     
-    print(f"\n🎯 Test Results:")
+    print(f"\n🎯 Test Results (averaged over all trajectory increments):")
     print(f"   Loss: {test_loss:.4f}")
     print(f"   Top-1 Accuracy: {test_top1:.2f}%")
     print(f"   Top-5 Accuracy: {test_top5:.2f}%")
@@ -606,10 +588,10 @@ def main(args):
     # Log test results to W&B
     if wandb_run is not None:
         log_metrics({
-            'test/loss': test_loss,
-            'test/top1_accuracy': test_top1,
-            'test/top5_accuracy': test_top5
-        })
+            'incremental_test/loss': test_loss,
+            'incremental_test/top1_accuracy': test_top1,
+            'incremental_test/top5_accuracy': test_top5
+        }, step=epoch)
         wandb_run.finish()
         print("📊 W&B run finished")
     
@@ -653,10 +635,16 @@ if __name__ == '__main__':
     parser.add_argument('--transformer_dim', type=int, default=128,
                         help='Transformer dimension')
     parser.add_argument('--num_transformer_layers', type=int, default=1,
-                        help='Number of transformer layers')
+                        help='Number of transformer layers in goal prediction head')
+    parser.add_argument('--num_encoder_layers', type=int, default=1,
+                        help='Number of layers in trajectory/graph encoders')
+    parser.add_argument('--encoder_hidden_dim', type=int, default=64,
+                        help='Hidden dimension for trajectory/graph encoders')
+    parser.add_argument('--predictor_hidden_dim', type=int, default=64,
+                        help='Hidden dimension for goal prediction model')
     parser.add_argument('--num_heads', type=int, default=4,
                         help='Number of attention heads')
-    parser.add_argument('--dropout', type=float, default=0.1,
+    parser.add_argument('--dropout', type=float, default=0.3,
                         help='Dropout rate')
     
     # Checkpoint arguments

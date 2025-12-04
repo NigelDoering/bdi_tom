@@ -75,11 +75,8 @@ class GoalPredictionModel(nn.Module):
         else:
             self.transformer = None
         
-        # Classification head: MLP that outputs logits for each POI
+        # Classification head: Simplified MLP (reduced from 3 layers to 2)
         self.classifier = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),

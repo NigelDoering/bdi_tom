@@ -390,14 +390,15 @@ Test: 100%|████████████| 24/24 [00:05<00:00, loss=0.5432
 
 ```python
 import torch
-from models.transformer_predictor import GoalPredictionModel
-from models.encoders.fusion_encoder import ToMGraphEncoder
-from models.training.utils import load_checkpoint
+from models.baseline_transformer.transformer_predictor import GoalPredictionModel
+from models.fusion_encoders_preprocessing.fusion_encoder import ToMGraphEncoder
+from models.utils.utils import load_checkpoint
 
 # Initialize model (same architecture as training)
+# Note: ToMGraphEncoder API has changed - see current implementation
 fusion_encoder = ToMGraphEncoder(
-    num_nodes=1234,
-    graph_node_feat_dim=12,
+    node_emb_dim=128,
+    num_agents=100,
     traj_node_emb_dim=32,
     hidden_dim=64,
     output_dim=64

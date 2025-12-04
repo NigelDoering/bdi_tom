@@ -35,17 +35,20 @@ class TrajectoryDataset(Dataset):
         self,
         trajectories: List[Dict],
         graph: nx.Graph,
-        poi_nodes: List[str]
+        poi_nodes: List[str],
+        agent_to_idx: Optional[Dict[str, int]] = None
     ):
         """
         Args:
             trajectories: List of trajectory dictionaries from simulation
             graph: NetworkX graph of the world
             poi_nodes: List of POI node IDs (for goal indexing)
+            agent_to_idx: Optional mapping from agent_id (string) to integer index
         """
         self.trajectories = trajectories
         self.graph = graph
         self.poi_nodes = poi_nodes
+        self.agent_to_idx = agent_to_idx or {}
         
         # Create mapping from node_id to goal index
         self.goal_to_idx = {node_id: idx for idx, node_id in enumerate(poi_nodes)}
@@ -57,6 +60,8 @@ class TrajectoryDataset(Dataset):
                 self.valid_indices.append(idx)
         
         print(f"📊 Dataset: {len(self.valid_indices)} / {len(trajectories)} trajectories with valid POI goals")
+        if self.agent_to_idx:
+            print(f"👥 Using {len(self.agent_to_idx)} unique agents")
     
     def __len__(self) -> int:
         return len(self.valid_indices)
@@ -69,6 +74,7 @@ class TrajectoryDataset(Dataset):
             Dict with keys:
             - 'trajectory': List of (node_id, goal_id) tuples
             - 'hour': int (0-23)
+            - 'agent_id': int (agent index, or 0 if not available)
             - 'goal_idx': int (index in poi_nodes list)
             - 'goal_node': str (node ID of the goal)
         """
@@ -78,9 +84,14 @@ class TrajectoryDataset(Dataset):
         goal_node = traj['goal_node']
         goal_idx = self.goal_to_idx[goal_node]
         
+        # Get agent_id from trajectory data, default to 0 if not present
+        agent_id_str = traj.get('agent_id', 'agent_000')
+        agent_id = self.agent_to_idx.get(agent_id_str, 0)
+        
         return {
             'trajectory': traj['path'],
             'hour': traj['hour'],
+            'agent_id': agent_id,
             'goal_idx': goal_idx,
             'goal_node': goal_node
         }
@@ -138,10 +149,14 @@ def load_simulation_data(
     # Handle different trajectory file formats
     if isinstance(data, dict) and all(isinstance(v, list) for v in data.values()):
         # Format: {"agent_000": [traj1, traj2, ...], "agent_001": [...], ...}
-        # Flatten all agent trajectories into a single list
+        # Flatten all agent trajectories into a single list and add agent_id to each trajectory
         trajectories = []
         for agent_id, agent_trajs in data.items():
-            trajectories.extend(agent_trajs)
+            for traj in agent_trajs:
+                # Add agent_id to trajectory if not already present
+                if 'agent_id' not in traj:
+                    traj['agent_id'] = agent_id
+                trajectories.append(traj)
         print(f"🚶 Loaded {len(trajectories)} trajectories from {len(data)} agents")
     elif isinstance(data, list):
         # Format: [traj1, traj2, traj3, ...]
@@ -158,10 +173,15 @@ def split_data(
     train_ratio: float = 0.7,
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
-    seed: int = 42
+    seed: int = 42,
+    run_dir: Optional[str] = None,
+    force_new_split: bool = False
 ) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     """
     Split trajectories into train/val/test sets.
+    
+    If run_dir is provided, will try to load existing split from 
+    {run_dir}/split_data/. If not found, creates new split and saves it.
     
     Args:
         trajectories: List of trajectory dictionaries
@@ -169,11 +189,48 @@ def split_data(
         val_ratio: Fraction for validation set
         test_ratio: Fraction for test set
         seed: Random seed for reproducibility
+        run_dir: Optional path to simulation run directory (e.g., 'data/simulation_data/run_8')
+        force_new_split: If True, ignore existing split and create new one
     
     Returns:
         Tuple of (train_trajectories, val_trajectories, test_trajectories)
     """
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, "Ratios must sum to 1.0"
+    
+    # Try to load existing split if run_dir provided
+    if run_dir and not force_new_split:
+        split_dir = os.path.join(run_dir, 'split_data')
+        split_file = os.path.join(split_dir, f'split_indices_seed{seed}.json')
+        
+        if os.path.exists(split_file):
+            print(f"\n📂 Loading existing data split from {split_file}")
+            with open(split_file, 'r') as f:
+                split_data_dict = json.load(f)
+            
+            train_indices = split_data_dict['train_indices']
+            val_indices = split_data_dict['val_indices']
+            test_indices = split_data_dict['test_indices']
+            
+            # Verify split matches current data
+            expected_total = len(train_indices) + len(val_indices) + len(test_indices)
+            if expected_total != len(trajectories):
+                print(f"   ⚠️  Warning: Saved split has {expected_total} trajectories but dataset has {len(trajectories)}")
+                print(f"   Creating new split...")
+            else:
+                # Create splits from saved indices
+                train_trajs = [trajectories[i] for i in train_indices]
+                val_trajs = [trajectories[i] for i in val_indices]
+                test_trajs = [trajectories[i] for i in test_indices]
+                
+                print(f"   ✓ Loaded split:")
+                print(f"     Train: {len(train_trajs)} ({len(train_trajs)/len(trajectories)*100:.0f}%)")
+                print(f"     Val:   {len(val_trajs)} ({len(val_trajs)/len(trajectories)*100:.0f}%)")
+                print(f"     Test:  {len(test_trajs)} ({len(test_trajs)/len(trajectories)*100:.0f}%)")
+                
+                return train_trajs, val_trajs, test_trajs
+    
+    # Create new split
+    print(f"\n📊 Creating new data split (seed={seed})...")
     
     # Shuffle trajectories
     np.random.seed(seed)
@@ -184,19 +241,40 @@ def split_data(
     n_val = int(len(trajectories) * val_ratio)
     
     # Split indices
-    train_indices = indices[:n_train]
-    val_indices = indices[n_train:n_train + n_val]
-    test_indices = indices[n_train + n_val:]
+    train_indices = indices[:n_train].tolist()
+    val_indices = indices[n_train:n_train + n_val].tolist()
+    test_indices = indices[n_train + n_val:].tolist()
     
     # Create splits
     train_trajs = [trajectories[i] for i in train_indices]
     val_trajs = [trajectories[i] for i in val_indices]
     test_trajs = [trajectories[i] for i in test_indices]
     
-    print(f"\n📊 Data Split:")
     print(f"   Train: {len(train_trajs)} ({train_ratio*100:.0f}%)")
     print(f"   Val:   {len(val_trajs)} ({val_ratio*100:.0f}%)")
     print(f"   Test:  {len(test_trajs)} ({test_ratio*100:.0f}%)")
+    
+    # Save split indices if run_dir provided
+    if run_dir:
+        split_dir = os.path.join(run_dir, 'split_data')
+        os.makedirs(split_dir, exist_ok=True)
+        
+        split_file = os.path.join(split_dir, f'split_indices_seed{seed}.json')
+        split_data_dict = {
+            'train_indices': train_indices,
+            'val_indices': val_indices,
+            'test_indices': test_indices,
+            'train_ratio': train_ratio,
+            'val_ratio': val_ratio,
+            'test_ratio': test_ratio,
+            'seed': seed,
+            'total_trajectories': len(trajectories)
+        }
+        
+        with open(split_file, 'w') as f:
+            json.dump(split_data_dict, f, indent=2)
+        
+        print(f"   ✓ Saved split to {split_file}")
     
     return train_trajs, val_trajs, test_trajs
 
@@ -215,29 +293,79 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
         Dict with batched data:
         - 'trajectories': List of trajectory paths
         - 'hours': List of hours
+        - 'agent_ids': List of agent IDs
         - 'goal_indices': Tensor of goal indices
         - 'goal_nodes': List of goal node IDs
     """
     trajectories = [sample['trajectory'] for sample in batch]
     hours = [sample['hour'] for sample in batch]
+    agent_ids = [sample['agent_id'] for sample in batch]
     goal_indices = torch.tensor([sample['goal_idx'] for sample in batch], dtype=torch.long)
     goal_nodes = [sample['goal_node'] for sample in batch]
     
     return {
         'trajectories': trajectories,
         'hours': hours,
+        'agent_ids': agent_ids,
         'goal_indices': goal_indices,
         'goal_nodes': goal_nodes
     }
 
 
-def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
+def preprocess_trajectory_length(node_ids: List[str], max_seq_len: int = 60) -> List[str]:
+    """
+    Preprocess trajectory to handle variable lengths intelligently.
+    
+    Strategy:
+    - If len <= max_seq_len: Return as-is (will be padded later)
+    - If len > max_seq_len: Downsample to max_seq_len nodes while preserving:
+        1. Start node (trajectory beginning)
+        2. End nodes (trajectory conclusion - important for goal prediction)
+        3. Evenly spaced intermediate nodes (maintain trajectory coverage)
+    
+    Args:
+        node_ids: List of node IDs in trajectory
+        max_seq_len: Maximum sequence length
+    
+    Returns:
+        List of node IDs with length <= max_seq_len
+    """
+    if len(node_ids) <= max_seq_len:
+        return node_ids
+    
+    # For long trajectories, intelligently downsample
+    # Strategy: Keep more nodes at the end (important for goal prediction)
+    # Allocation: 40% beginning, 60% end
+    
+    n_start = int(max_seq_len * 0.4)  # Keep 40% from start
+    n_end = max_seq_len - n_start      # Keep 60% from end
+    
+    # Sample indices from start portion
+    start_indices = np.linspace(0, len(node_ids) // 2, n_start, dtype=int)
+    
+    # Sample indices from end portion (keep final nodes for goal context)
+    end_indices = np.linspace(len(node_ids) // 2, len(node_ids) - 1, n_end, dtype=int)
+    
+    # Combine and ensure unique, sorted indices
+    all_indices = np.unique(np.concatenate([start_indices, end_indices]))
+    
+    # Take exactly max_seq_len nodes
+    if len(all_indices) > max_seq_len:
+        print("PROBLEM: More indices than max_seq_len after sampling!")
+        all_indices = all_indices[:max_seq_len]
+    
+    return [node_ids[i] for i in all_indices]
+
+
+def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 60, incremental_training: bool = False):
     """
     Create a collate function that converts trajectories to Node2Vec embeddings.
     
     Args:
         node_embeddings: Node2VecEmbeddings instance for converting node IDs to embeddings
         max_seq_len: Maximum sequence length for padding/truncation
+        incremental_training: If True, creates multiple samples per trajectory by incrementally
+                            revealing nodes (node1 -> goal, node1-2 -> goal, etc.)
     
     Returns:
         Collate function for DataLoader
@@ -253,17 +381,20 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             Dict with:
             - 'node_embeddings': (batch_size, max_seq_len, emb_dim) tensor
             - 'hour': (batch_size,) tensor
+            - 'agent_id': (batch_size,) tensor
             - 'mask': (batch_size, max_seq_len) tensor (1 = valid, 0 = padding)
             - 'goal_indices': (batch_size,) tensor (POI indices for targets)
         """
         batch_node_embs = []
         batch_hours = []
+        batch_agent_ids = []
         batch_masks = []
         batch_goal_indices = []
         
         for sample in batch:
             traj_path = sample['trajectory']
             hour = sample['hour']
+            agent_id = sample['agent_id']
             goal_idx = sample['goal_idx']
             goal_node = sample['goal_node']
             
@@ -278,42 +409,82 @@ def create_collate_fn_with_embeddings(node_embeddings, max_seq_len: int = 50):
             
             # **CRITICAL FIX**: Remove goal node if it's at the end
             # The model should PREDICT the goal, not just read it from the input!
-            if node_ids[-1] == goal_node:
+            if len(node_ids) > 0 and node_ids[-1] == goal_node:
                 node_ids = node_ids[:-1]
             
- 
+            # Handle empty trajectory edge case
+            if len(node_ids) == 0:
+                # If trajectory is empty after removing goal, use a dummy node
+                # This shouldn't happen in practice but provides safety
+                node_ids = [list(traj_path[0])[0] if isinstance(traj_path[0], (list, tuple)) else traj_path[0]]
             
-            # Truncate if too long
-            if len(node_ids) > max_seq_len:
-                node_ids = node_ids[:max_seq_len]
+            # Preprocess trajectory length: downsample if too long, will pad if too short
+            node_ids = preprocess_trajectory_length(node_ids, max_seq_len)
             
-            # Get embeddings for nodes
-            seq_len = len(node_ids)
-            node_embs = node_embeddings.trajectory_to_embeddings(node_ids)
-            
-            # Pad if too short
-            if seq_len < max_seq_len:
-                padding = torch.zeros(
-                    max_seq_len - seq_len,
-                    node_embeddings.embedding_dim,
-                    dtype=torch.float32
-                )
-                node_embs = torch.cat([node_embs, padding], dim=0)
-            
-            # Create mask (1 = valid token, 0 = padding)
-            mask = torch.cat([
-                torch.ones(seq_len, dtype=torch.float32),
-                torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
-            ])
-            
-            batch_node_embs.append(node_embs)
-            batch_hours.append(hour)
-            batch_masks.append(mask)
-            batch_goal_indices.append(goal_idx)
+            if incremental_training:
+                # INCREMENTAL TRAINING: Create multiple samples from this trajectory
+                # For trajectory [n1, n2, n3, n4] → create 4 samples:
+                #   [n1] -> goal, [n1, n2] -> goal, [n1, n2, n3] -> goal, [n1, n2, n3, n4] -> goal
+                
+                for i in range(1, len(node_ids) + 1):
+                    # Take first i nodes
+                    partial_node_ids = node_ids[:i]
+                    seq_len = len(partial_node_ids)
+                    
+                    # Get embeddings
+                    node_embs = node_embeddings.trajectory_to_embeddings(partial_node_ids)
+                    
+                    # Pad to max_seq_len
+                    if seq_len < max_seq_len:
+                        padding = torch.zeros(
+                            max_seq_len - seq_len,
+                            node_embeddings.embedding_dim,
+                            dtype=torch.float32
+                        )
+                        node_embs = torch.cat([node_embs, padding], dim=0)
+                    
+                    # Create mask
+                    mask = torch.cat([
+                        torch.ones(seq_len, dtype=torch.float32),
+                        torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
+                    ])
+                    
+                    # Add to batch (same goal for all incremental steps)
+                    batch_node_embs.append(node_embs)
+                    batch_hours.append(hour)
+                    batch_agent_ids.append(agent_id)
+                    batch_masks.append(mask)
+                    batch_goal_indices.append(goal_idx)
+            else:
+                # STANDARD TRAINING: Use full trajectory
+                seq_len = len(node_ids)
+                node_embs = node_embeddings.trajectory_to_embeddings(node_ids)
+                
+                # Pad if too short
+                if seq_len < max_seq_len:
+                    padding = torch.zeros(
+                        max_seq_len - seq_len,
+                        node_embeddings.embedding_dim,
+                        dtype=torch.float32
+                    )
+                    node_embs = torch.cat([node_embs, padding], dim=0)
+                
+                # Create mask (1 = valid token, 0 = padding)
+                mask = torch.cat([
+                    torch.ones(seq_len, dtype=torch.float32),
+                    torch.zeros(max_seq_len - seq_len, dtype=torch.float32)
+                ])
+                
+                batch_node_embs.append(node_embs)
+                batch_hours.append(hour)
+                batch_agent_ids.append(agent_id)
+                batch_masks.append(mask)
+                batch_goal_indices.append(goal_idx)
         
         return {
             'node_embeddings': torch.stack(batch_node_embs),
             'hour': torch.tensor(batch_hours, dtype=torch.long),
+            'agent_id': torch.tensor(batch_agent_ids, dtype=torch.long),
             'mask': torch.stack(batch_masks),
             'goal_indices': torch.tensor(batch_goal_indices, dtype=torch.long)
         }
@@ -330,8 +501,9 @@ def create_dataloaders(
     node_embeddings=None,
     batch_size: int = 32,
     num_workers: int = 0,
-    max_seq_len: int = 50
-) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    max_seq_len: int = 60,
+    incremental_training: bool = False
+) -> Tuple[DataLoader, DataLoader, DataLoader, int]:
     """
     Create PyTorch DataLoaders for train/val/test sets.
     
@@ -347,15 +519,26 @@ def create_dataloaders(
         max_seq_len: Maximum sequence length for trajectory padding
     
     Returns:
-        Tuple of (train_loader, val_loader, test_loader)
+        Tuple of (train_loader, val_loader, test_loader, num_agents)
     """
-    train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes)
-    val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes)
-    test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes)
+    # Create agent_to_idx mapping from all trajectories
+    all_trajectories = train_trajectories + val_trajectories + test_trajectories
+    unique_agents = sorted(set(traj.get('agent_id', 'agent_000') for traj in all_trajectories))
+    agent_to_idx = {agent_id: idx for idx, agent_id in enumerate(unique_agents)}
+    
+    print(f"👥 Found {len(unique_agents)} unique agents")
+    
+    train_dataset = TrajectoryDataset(train_trajectories, graph, poi_nodes, agent_to_idx)
+    val_dataset = TrajectoryDataset(val_trajectories, graph, poi_nodes, agent_to_idx)
+    test_dataset = TrajectoryDataset(test_trajectories, graph, poi_nodes, agent_to_idx)
     
     # Choose collate function based on whether embeddings are provided
     if node_embeddings is not None:
-        collate_fn = create_collate_fn_with_embeddings(node_embeddings, max_seq_len)
+        collate_fn = create_collate_fn_with_embeddings(
+            node_embeddings, 
+            max_seq_len, 
+            incremental_training=incremental_training
+        )
     else:
         collate_fn = collate_trajectories
     
@@ -392,7 +575,8 @@ def create_dataloaders(
     print(f"   Val batches:   {len(val_loader)}")
     print(f"   Test batches:  {len(test_loader)}")
     
-    return train_loader, val_loader, test_loader
+    # Return dataloaders and number of agents
+    return train_loader, val_loader, test_loader, len(unique_agents)
 
 
 if __name__ == '__main__':
@@ -414,9 +598,10 @@ if __name__ == '__main__':
     train_trajs, val_trajs, test_trajs = split_data(trajectories)
     
     # Create dataloaders
-    train_loader, val_loader, test_loader = create_dataloaders(
+    train_loader, val_loader, test_loader, num_agents = create_dataloaders(
         train_trajs, val_trajs, test_trajs, graph, poi_nodes, batch_size=16
     )
+    print(f"   Number of agents: {num_agents}")
     
     # Test loading a batch
     print("\n🧪 Testing batch loading...")

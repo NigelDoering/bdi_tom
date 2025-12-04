@@ -11,7 +11,7 @@ import os
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.training.utils import compute_accuracy
+from models.utils.utils import compute_accuracy
 
 
 def test_top1_accuracy():
