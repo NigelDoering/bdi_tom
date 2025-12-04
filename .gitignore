@@ -31,5 +31,5 @@ checkpoints/*
 
 # Only keep the one processed file we want tracked
 !/data/processed/ucsd_walk_full.graphml
-
+!/data/processed/node2vec_embeddings.pkl
 # End of .gitignore
