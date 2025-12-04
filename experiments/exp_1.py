@@ -194,7 +194,7 @@ def main():
     embeddings_path = Path("data/processed/node2vec_embeddings.pkl")
     node_emb_manager = Node2VecEmbeddings(embedding_dim=128)
     node_emb_manager.load(str(embeddings_path))
-    print(f"  ✓ Loaded: {node_emb_manager.embedding_matrix.shape}")
+    print(f"  ✓ Loaded: {node_emb_manager.embedding_matrix.shape}") # type: ignore
     
     # Check trajectory lengths
     traj_lengths = [len(t['path']) for t in test_trajs]
@@ -223,7 +223,7 @@ def main():
     ], dtype=torch.long)
     
     graph_data = {
-        'node_embeddings': node_emb_manager.embedding_matrix.to(device),
+        'node_embeddings': node_emb_manager.embedding_matrix.to(device), # type: ignore
         'edge_index': edge_index.to(device)
     }
     
