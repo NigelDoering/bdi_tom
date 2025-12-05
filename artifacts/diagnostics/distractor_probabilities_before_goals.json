@@ -1,0 +1,202 @@
+[
+  {
+    "episode_idx": 7,
+    "agent_id": "agent_003",
+    "prefix_len_before_true": 46,
+    "pref_prob_before_true": 1.343543772236444e-06,
+    "dist_prob_before_true": 5.538586265174672e-06,
+    "prefix_len_before_distractor": 6,
+    "pref_prob_before_distractor": 1.235136096511269e-05,
+    "dist_prob_before_distractor": 0.006881553214043379
+  },
+  {
+    "episode_idx": 1,
+    "agent_id": "agent_000",
+    "prefix_len_before_true": 38,
+    "pref_prob_before_true": 1.5181122989815776e-06,
+    "dist_prob_before_true": 0.016919177025556564,
+    "prefix_len_before_distractor": 5,
+    "pref_prob_before_distractor": 8.120515303744469e-06,
+    "dist_prob_before_distractor": 0.006098538637161255
+  },
+  {
+    "episode_idx": 9,
+    "agent_id": "agent_004",
+    "prefix_len_before_true": 40,
+    "pref_prob_before_true": 8.819655704428442e-06,
+    "dist_prob_before_true": 1.5908062778180465e-06,
+    "prefix_len_before_distractor": 7,
+    "pref_prob_before_distractor": 4.782034920935985e-06,
+    "dist_prob_before_distractor": 0.004377115983515978
+  },
+  {
+    "episode_idx": 6,
+    "agent_id": "agent_003",
+    "prefix_len_before_true": 51,
+    "pref_prob_before_true": 4.654840068951671e-08,
+    "dist_prob_before_true": 0.0009194080485031009,
+    "prefix_len_before_distractor": 20,
+    "pref_prob_before_distractor": 4.32836986874463e-06,
+    "dist_prob_before_distractor": 0.0038157792296260595
+  },
+  {
+    "episode_idx": 0,
+    "agent_id": "agent_000",
+    "prefix_len_before_true": 35,
+    "pref_prob_before_true": 0.003521390724927187,
+    "dist_prob_before_true": 0.00019729424093384296,
+    "prefix_len_before_distractor": 7,
+    "pref_prob_before_distractor": 1.4991330317570828e-05,
+    "dist_prob_before_distractor": 0.0028558066114783287
+  },
+  {
+    "episode_idx": 13,
+    "agent_id": "agent_006",
+    "prefix_len_before_true": 38,
+    "pref_prob_before_true": 7.557239587185904e-05,
+    "dist_prob_before_true": 0.00372719531878829,
+    "prefix_len_before_distractor": 30,
+    "pref_prob_before_distractor": 1.8000220734393224e-05,
+    "dist_prob_before_distractor": 0.002462985459715128
+  },
+  {
+    "episode_idx": 10,
+    "agent_id": "agent_005",
+    "prefix_len_before_true": 24,
+    "pref_prob_before_true": 1.1681024799769374e-14,
+    "dist_prob_before_true": 0.014188932254910469,
+    "prefix_len_before_distractor": 6,
+    "pref_prob_before_distractor": 1.9000019165105186e-05,
+    "dist_prob_before_distractor": 0.0017565730959177017
+  },
+  {
+    "episode_idx": 11,
+    "agent_id": "agent_005",
+    "prefix_len_before_true": 55,
+    "pref_prob_before_true": 5.9069311941772895e-12,
+    "dist_prob_before_true": 1.4198732287695748e-06,
+    "prefix_len_before_distractor": 1,
+    "pref_prob_before_distractor": 1.1797989145634347e-06,
+    "dist_prob_before_distractor": 0.0007350956439040601
+  },
+  {
+    "episode_idx": 15,
+    "agent_id": "agent_007",
+    "prefix_len_before_true": 37,
+    "pref_prob_before_true": 3.938176632800605e-06,
+    "dist_prob_before_true": 2.363715776929065e-12,
+    "prefix_len_before_distractor": 4,
+    "pref_prob_before_distractor": 7.470137643394992e-05,
+    "dist_prob_before_distractor": 0.0006848478806205094
+  },
+  {
+    "episode_idx": 8,
+    "agent_id": "agent_004",
+    "prefix_len_before_true": 51,
+    "pref_prob_before_true": 0.006901133805513382,
+    "dist_prob_before_true": 0.009009752422571182,
+    "prefix_len_before_distractor": 31,
+    "pref_prob_before_distractor": 0.0008857399225234985,
+    "dist_prob_before_distractor": 0.00046783778816461563
+  },
+  {
+    "episode_idx": 14,
+    "agent_id": "agent_007",
+    "prefix_len_before_true": 32,
+    "pref_prob_before_true": 0.000554111204110086,
+    "dist_prob_before_true": 5.3832089179195464e-05,
+    "prefix_len_before_distractor": 9,
+    "pref_prob_before_distractor": 0.0004524815012700856,
+    "dist_prob_before_distractor": 0.00013314283569343388
+  },
+  {
+    "episode_idx": 2,
+    "agent_id": "agent_001",
+    "prefix_len_before_true": 45,
+    "pref_prob_before_true": 0.00022002891637384892,
+    "dist_prob_before_true": 0.00022081595670897514,
+    "prefix_len_before_distractor": 9,
+    "pref_prob_before_distractor": 0.044610727578401566,
+    "dist_prob_before_distractor": 0.00011639201693469658
+  },
+  {
+    "episode_idx": 19,
+    "agent_id": "agent_009",
+    "prefix_len_before_true": 43,
+    "pref_prob_before_true": 8.917255036067218e-05,
+    "dist_prob_before_true": 0.004171684384346008,
+    "prefix_len_before_distractor": 20,
+    "pref_prob_before_distractor": 3.0121887562017946e-07,
+    "dist_prob_before_distractor": 0.00010639298852765933
+  },
+  {
+    "episode_idx": 18,
+    "agent_id": "agent_009",
+    "prefix_len_before_true": 42,
+    "pref_prob_before_true": 0.0019970941357314587,
+    "dist_prob_before_true": 0.0004969213623553514,
+    "prefix_len_before_distractor": 20,
+    "pref_prob_before_distractor": 4.0238356291411037e-07,
+    "dist_prob_before_distractor": 6.612708239117637e-05
+  },
+  {
+    "episode_idx": 3,
+    "agent_id": "agent_001",
+    "prefix_len_before_true": 30,
+    "pref_prob_before_true": 0.01680126041173935,
+    "dist_prob_before_true": 0.014404438436031342,
+    "prefix_len_before_distractor": 21,
+    "pref_prob_before_distractor": 3.6397931890697066e-10,
+    "dist_prob_before_distractor": 1.3911195310356561e-05
+  },
+  {
+    "episode_idx": 12,
+    "agent_id": "agent_006",
+    "prefix_len_before_true": 57,
+    "pref_prob_before_true": 2.761383299798581e-08,
+    "dist_prob_before_true": 3.6699902921100147e-06,
+    "prefix_len_before_distractor": 36,
+    "pref_prob_before_distractor": 1.9586686050843127e-08,
+    "dist_prob_before_distractor": 9.342164958070498e-06
+  },
+  {
+    "episode_idx": 4,
+    "agent_id": "agent_002",
+    "prefix_len_before_true": 30,
+    "pref_prob_before_true": 1.738530227157753e-05,
+    "dist_prob_before_true": 0.0017043016850948334,
+    "prefix_len_before_distractor": 9,
+    "pref_prob_before_distractor": 0.009684737771749496,
+    "dist_prob_before_distractor": 4.7509107048426813e-07
+  },
+  {
+    "episode_idx": 5,
+    "agent_id": "agent_002",
+    "prefix_len_before_true": 34,
+    "pref_prob_before_true": 0.0001196882440126501,
+    "dist_prob_before_true": 8.1971043286444e-09,
+    "prefix_len_before_distractor": 6,
+    "pref_prob_before_distractor": 4.022994471597485e-05,
+    "dist_prob_before_distractor": 2.333973547763435e-08
+  },
+  {
+    "episode_idx": 16,
+    "agent_id": "agent_008",
+    "prefix_len_before_true": 46,
+    "pref_prob_before_true": 0.025576511397957802,
+    "dist_prob_before_true": 3.005579951587123e-10,
+    "prefix_len_before_distractor": 30,
+    "pref_prob_before_distractor": 0.006179006304591894,
+    "dist_prob_before_distractor": 9.577807297267427e-13
+  },
+  {
+    "episode_idx": 17,
+    "agent_id": "agent_008",
+    "prefix_len_before_true": 67,
+    "pref_prob_before_true": 0.012686864472925663,
+    "dist_prob_before_true": 3.929074426922696e-11,
+    "prefix_len_before_distractor": 52,
+    "pref_prob_before_distractor": 0.006255834363400936,
+    "dist_prob_before_distractor": 9.17846311107584e-13
+  }
+]

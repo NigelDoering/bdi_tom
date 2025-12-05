@@ -15,6 +15,7 @@ dependencies = [
     "networkx>=3.5",
     "notebook>=7.4.7",
     "numpy>=2.3.3",
+    "haversine>=2.9.0",
     "osmnx>=2.0.6",
     "pandas>=2.3.3",
     "pre-commit>=4.3.0",

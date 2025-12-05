@@ -1,0 +1,6014 @@
+{
+  "0.10": [
+    {
+      "preferred_prob": 6.008889954500773e-07,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.6872817809598928e-08,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.002025008201599121,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.217973798541607e-08,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.004080167971551418,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.03284521773457527,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 9.639719792176038e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.004446528386324644,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.006233443506062031,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0022954081650823355,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 4.782981477546855e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0025828557554632425,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0004585841961670667,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.1309113645552316e-08,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0005571635556407273,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0015511284582316875,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00356135331094265,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.4339806553873586e-09,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.303339953068644e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.27028772234916687,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.002310342388227582,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.971973147708923e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.004572433885186911,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0020002536475658417,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.0199348253081553e-05,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.533113001845777e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.001786643173545599,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.5219222859741421e-06,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.187266757886391e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.811838779365644e-05,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.1312837302684784,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 9.620690434530843e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.056733351200819016,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 3.703021502587944e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0015404995065182447,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.454985178701463e-06,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.004744395148009062,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.005141146946698427,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.008025569841265678,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0003416274848859757,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.007623013108968735,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0031718991231173277,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.022396786138415337,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.8739669250276165e-09,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0030925737228244543,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.001274800393730402,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.002819596789777279,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.8185715983397586e-09,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00048698147293180227,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 6.53113772841607e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0218039620667696,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0003128664393443614,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00014395876496564597,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0005037961527705193,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00016905048687476665,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.2766261532219945e-12,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 1.6334013707819395e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 1.5997307763817052e-15,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00492100277915597,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.73313308985659e-17,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0003611417196225375,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0011268297675997019,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 7.842288596293656e-07,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0008508174796588719,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 8.577288213018619e-07,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 5.789646024823014e-07,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.309654980632182e-11,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0024885698221623898,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0148666026070714,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0170388612896204,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.01282538566738367,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.159071499363563e-08,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.033685341477394104,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00024446420138701797,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 6.23120826048762e-08,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 7.113517597190366e-08,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 7.945516699692234e-06,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.5871636772100146e-09,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.3248917102591804e-07,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 8.766091693680755e-14,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 6.775628662580857e-06,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0029826276004314423,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 3.1968361741433957e-14,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.004164487589150667,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0026068545412272215,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 8.422419455200725e-07,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.1291395821899641e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.007565381936728954,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 6.255574135138886e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0004322105960454792,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0017720952164381742,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.2715504378065816e-07,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.008820094168186188,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.09678255766630173,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.000533092999830842,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.663080067577539e-07,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.778200036525959e-06,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.0036323412095953e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0032498668879270554,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00024615356232970953,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.03210696578025818,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.850122477777607e-12,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0008284125360660255,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0001377632434014231,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 4.578460448101396e-06,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0008578611887060106,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00020630867220461369,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 8.139174667576299e-08,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0011791469296440482,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.2403836558447807e-12,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 8.271809201687574e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0021381410770118237,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0001310049556195736,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 6.593843136215582e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0003792976785916835,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0006513289408758283,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 1.20057108699001e-09,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.08828429877758026,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0022939378395676613,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.131995643139817e-06,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 5.6612368126707224e-08,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 6.535778811667114e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.19122295081615448,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00011329368862789124,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0019519139314070344,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 5.303408201484672e-08,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 7.947806324182238e-08,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.1838352520499029e-07,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.2900110587263942e-12,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 2.0580118587076868e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 4.9427289923187345e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.9513297921935902e-10,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0008574669482186437,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 9.091973333852366e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.006984875537455082,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.04518340528011322,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0018215905874967575,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.055262137204408646,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.2127214777410984e-10,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 8.574012326789671e-07,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0005744961672462523,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 3.020943495357642e-07,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 7.415868458338082e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.004245007876306772,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.805966682397411e-07,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 1.531247835373506e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00017318790196441114,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.04031948372721672,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0026494781486690044,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.020976733416318893,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.164784570548363e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0006825517048127949,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 6.17584191786591e-06,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.028427185490727425,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 2.1290607037371956e-05,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.015161718241870403,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0028822992462664843,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 7.312306479434483e-06,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000504112453199923,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0016491105780005455,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 9.848457921179943e-06,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0013683970319107175,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0019065585220232606,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 6.255759799067562e-14,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.002863779431208968,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 3.580840029826504e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.567875268752687e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.02376062236726284,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 3.310621568552996e-11,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.4337339315773079e-08,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0002637389115989208,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.004131535533815622,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.029218357056379318,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.040285006165504456,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.6717771359253675e-05,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.060136340442114e-06,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.59082605932781e-06,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 4.721735401283446e-16,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0018764105625450611,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.56915438210126e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0015226458199322224,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 1.1485639709826224e-14,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0018852620851248503,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.003032551845535636,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 2.0340239909044655e-12,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 7.372883601419744e-07,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0020446244161576033,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.007547787390649319,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0003768594760913402,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 8.673217166688119e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0627087652683258,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00033291219733655453,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 3.0459828849416226e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0003531239053700119,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 4.457293562021292e-11,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0007349004736170173,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0036329105496406555,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 9.988361853174865e-06,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.001798258163034916,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00035266936174593866,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ],
+  "0.20": [
+    {
+      "preferred_prob": 0.006397664546966553,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 8.28540223096752e-08,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 8.96488709258847e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.590195163383214e-08,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0013446981320157647,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.020860031247138977,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.9600569178001024e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00014804760576225817,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.004589250776916742,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 6.70744839226245e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.920360770986008e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0021090232767164707,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.03247365355491638,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.7527331525334375e-08,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007991468533873558,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007870731875300407,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0001913834421429783,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.4742819348944067e-08,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0019933697767555714,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.026032961905002594,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00031249207677319646,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.5568575690849684e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.945527952164412e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0022737940307706594,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 6.700484505017812e-07,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.018910715356469154,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.012328007258474827,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 6.091038812883198e-06,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 3.4005217912636e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.5816582390471012e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.020921500399708748,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.148924098350108e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0011276575969532132,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.6058251023641787e-06,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.000678421463817358,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.42994143870601e-07,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.11815512180328369,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00022585356782656163,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 3.2814368084756185e-14,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.608720139802653e-14,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.002730964682996273,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.007913291454315186,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0018531858222559094,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.451787331442899e-14,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.11110963672399521,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.002761727897450328,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.008374948985874653,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 5.902616067032795e-06,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.536442707423703e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0001831013651099056,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0002133799425791949,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 9.455595773033565e-08,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.836036194115877e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.013350186869502068,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 1.2596910181628118e-08,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.9747456668088867e-12,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 1.359098632747191e-06,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 1.1864220716972795e-10,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.008497592993080616,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.01585237868130207,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00034600382787175477,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0016341164009645581,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 5.1535330385377165e-06,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0011384759563952684,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.005074960179626942,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 9.547699846734758e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 5.807543844698476e-14,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.006622130982577801,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.007663451600819826,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00919761136174202,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.027065932750701904,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0006390414200723171,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.103124868175655e-08,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0007646065205335617,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 4.4083768443670124e-05,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.0355495067292395e-11,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.2277634343481623e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 6.197843163135985e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.70933963090647e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 4.471925785765052e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.3488730960252724e-07,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0012373157078400254,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.7187838785858176e-11,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.009632177650928497,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.2417225409299135e-05,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0004446454404387623,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.399615972592528e-08,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.008241748437285423,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00034128647530451417,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0069373114965856075,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0007820350583642721,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.3576820556693292e-08,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.622103162901567e-08,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0368364043533802,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00012322410475462675,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.9837741045166695e-08,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 3.28477326547727e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.4768763989536637e-09,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.831183898432954e-10,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.009303944185376167,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.492028445682081e-06,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.2637541380609036e-07,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00385459722019732,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0001909008715301752,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0011055138893425465,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0006048571085557342,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0002185863268096,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 1.0733184353739489e-05,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00015064794570207596,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 8.773184134724943e-08,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00012295835767872632,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.608162867545616e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 5.882517871214077e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0052092913538217545,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.1557509171543643e-05,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.1636466044583358e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.10542713133279e-16,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00026616526884026825,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.014519743621349335,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.0172871373347334e-08,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 9.257296318399e-12,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00010064672096632421,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.07278832793235779,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0031883949413895607,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.010238862596452236,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00013334228424355388,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00023628857161384076,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.3829036106471904e-05,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.003315350040793419,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0010201343102380633,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 5.274981958791614e-06,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.6748279086395996e-08,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0002976206596940756,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.002632602583616972,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.04071599245071411,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.000272467645118013,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00023801135830581188,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.03547987714409828,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.9353510651853867e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 4.5910859626019374e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00013639865210279822,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 3.6052406358066946e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.002694052644073963,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000734398141503334,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 6.811368418076225e-13,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.5871027509747364e-07,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.769103543367237e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00018675556930247694,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.595935934048612e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.06846325844526291,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.018228325992822647,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 5.72924836887978e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 6.536969158332795e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.020505355671048164,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0002789274149108678,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.023239856585860252,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.012162131257355213,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 3.140495437037316e-06,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 1.2920753761136439e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0005502929561771452,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0011987369507551193,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0006023002788424492,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.026855433243327e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.899790941907095e-17,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.000479399343021214,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 3.627208116085967e-07,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.0825212939380435e-06,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00023028547002468258,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.34756214711725e-14,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.6431662192294425e-08,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00026935842470265925,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0002976441173814237,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.056102731439751e-06,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.006978187244385481,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0009693920146673918,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0002890432078856975,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0007650235202163458,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 3.1138868827808857e-21,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00037374402745626867,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0011099623516201973,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0001387720403727144,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 2.509712300600189e-16,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00027483515441417694,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.010617375373840332,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 1.8594191075749222e-08,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 5.793897344119614e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.009423688054084778,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.05686372146010399,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 4.176621132501168e-06,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 7.309052307391539e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.006753502879291773,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0001643272553337738,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0001018539333017543,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 1.0588482313167447e-09,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 2.7681874570362197e-09,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00011770525452448055,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.006840016692876816,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0015609323745593429,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0006131675909273326,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00044674990931525826,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ],
+  "0.50": [
+    {
+      "preferred_prob": 0.014664795249700546,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.003190632676705718,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0013489620760083199,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.638474055378538e-08,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.012786854058504105,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.1332414448261261,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00020388525445014238,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00581871485337615,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.02091939188539982,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.555495641194284e-05,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 4.599578176112118e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007187237963080406,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.5627019820385613e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 9.317279250353749e-07,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.005776234902441502,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.011786267161369324,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00021481592557393014,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.13821293629735e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0010725210886448622,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.717822044611239e-07,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.011030459776520729,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.0765571687443298e-06,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0008866110583767295,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0006155192386358976,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.101931037643226e-07,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.03102995455265045,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.014386724680662155,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.010338905267417431,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 7.003586506471038e-05,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.001294287503696978,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.02608475275337696,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.007918537594377995,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00160086783580482,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0005397257627919316,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0011157025583088398,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0006417270633392036,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.2983982742298394e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0003295704664196819,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.5099010397534585e-06,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.187284095129144e-08,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.014274057932198048,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0018518422730267048,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.02055833488702774,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.551040788669525e-08,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.009776771068572998,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0024885055609047413,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.026191767305135727,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0006750015891157091,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0003335982037242502,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.014775186078623e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.01030550803989172,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.3871201594593003e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.005388306453824043,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00034607102861627936,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0019033788703382015,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.184682739743039e-08,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.6223431127145886e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00012466251791920513,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.028210438787937164,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0014386203838512301,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.009877884760499,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.4185950021783356e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.697716627153568e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0009085317142307758,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0025268918834626675,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.5097619072766975e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.3258787976268855e-13,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00013507877883967012,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00857947301119566,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0019181021489202976,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0035348045639693737,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0001976911589736119,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.9800290576531552e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00017260223103221506,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0024551786482334137,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 9.99657231659512e-07,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00016018559108488262,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00019953498849645257,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.0233736652007792e-06,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0034678347874432802,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00013545060937758535,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0007197693339549005,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.2003782141364354e-07,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.013568506576120853,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0018467772752046585,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 3.559629840310663e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00911185797303915,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.012047205120325089,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0731164813041687,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.013039276003837585,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0036983995232731104,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00045348730054683983,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.032115962356328964,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0009556944132782519,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.001192440977320075,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.006193666253238916,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 5.1986222388222814e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 3.229383582947776e-05,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0011619186261668801,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.002667661290615797,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.5631176001073008e-11,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.003805208718404174,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 7.019099575700238e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0005134099628776312,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.013016093522310257,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00948240701109171,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0001777672441676259,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.025496656075119972,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0005568306660279632,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.003135720733553171,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.125329749309458e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.1631626623275224e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.09825644642114639,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 4.914975875180971e-07,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.005275063216686249,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 7.650614134036005e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 5.1083039165865374e-14,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.008466353639960289,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0003226205881219357,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 9.230971954821143e-06,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 8.475734830426518e-06,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 5.726598828914575e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.18375761806964874,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0006541608599945903,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.009381773881614208,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.004517449531704187,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00014277298760134727,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0005035107606090605,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.07971815764904022,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 9.270436748920474e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0004170890897512436,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 4.225256602929939e-11,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00025588719290681183,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0013367057545110583,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.019786324352025986,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 8.958485705079511e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00022113714658189565,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0002241997717646882,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 4.4906556695423205e-08,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.372305541735841e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.004168787505477667,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0007639815448783338,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00992666371166706,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.002371493261307478,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 2.425247773874678e-14,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 6.5738709054130595e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 3.765202927752398e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.017955439165234566,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00046489015221595764,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.019967790693044662,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0015794006176292896,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000988438492640853,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.003971768543124199,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00260367919690907,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.02606125921010971,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00012211383727844805,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0045510693453252316,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 4.260783725840156e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 2.9858495054213563e-06,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.004297650884836912,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.006580829620361328,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0028234748169779778,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.04025869816541672,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.904129539659569e-15,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.07054530829191208,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.120134740517642e-08,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00026606599567458034,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0011208440409973264,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0001244490995304659,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 3.065163767246304e-08,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 4.5104865421308205e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.579374475113582e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.4134081993688596e-06,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 4.805731077794917e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 8.57905251905322e-06,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 4.339865336078219e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.007892598398029804,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 6.867753978359592e-13,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0006261261296458542,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0017364085651934147,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 8.21321677335618e-09,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.02813798375427723,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0014059222303330898,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0013162738177925348,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.004870538134127855,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 1.9184031771146692e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.014404525980353355,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.013151701539754868,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 1.8312544852960855e-05,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 6.765711987100076e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.02852506935596466,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0017881941748782992,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00019336938566993922,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 3.730345454755479e-08,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.001139644649811089,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0031871641986072063,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.008105194196105003,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0035233208909630775,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.012373431585729122,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00029141688719391823,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ],
+  "0.75": [
+    {
+      "preferred_prob": 0.015790695324540138,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.03054477833211422,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0018780735554173589,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.854638965909544e-07,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.010080844163894653,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.11264456063508987,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.008951040916144848,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.003685211529955268,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.006701335310935974,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.500734113818908e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.293977013323456e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0002522130962461233,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.009845199063420296,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.982682306334027e-06,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0005755438469350338,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.008827784098684788,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0060922629199922085,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.381117939075921e-08,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.002225731499493122,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 7.442348959330047e-08,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.025693628937005997,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 7.679110240133014e-06,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00046481171739287674,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00020249754015821964,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.254501047602389e-06,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.009188913740217686,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.016012392938137054,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.006360873579978943,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 4.007777533843182e-05,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0008899068925529718,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.024949362501502037,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.549968374092714e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.01618734374642372,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 4.360781076684361e-06,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00017390245920978487,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.4609083336836193e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00023493300250265747,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0015449385391548276,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.6778050596476533e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 6.351642696245108e-07,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.004962792154401541,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.006806443445384502,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.01574384793639183,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.090981019544415e-05,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.004765213932842016,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.004421315621584654,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.03525247424840927,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.004303822293877602,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0006811903440393507,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0006596608436666429,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.06609054654836655,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.004064887762069702,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.042732130736112595,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0007963076350279152,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0032764747738838196,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 3.7607097880254514e-08,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.7838488676934503e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00018224066297989339,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.054093796759843826,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.003980707842856646,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.01797662489116192,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.017499446868896484,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.909301136038266e-05,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0006059310981072485,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.008287305012345314,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 4.271636043995386e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.276555666729351e-10,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0002043836866505444,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.014923254027962685,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.016412261873483658,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.020813003182411194,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00024102567113004625,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 6.688613551908418e-10,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0003911236999556422,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.002375879092141986,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0003607518447097391,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0002808580466080457,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0009300706442445517,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.0246718375128694e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0032273540273308754,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.000566162052564323,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.011856400407850742,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.005475053563714027,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0015166986268013716,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.008519464172422886,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 4.9337813834426925e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.01038548443466425,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.005366857163608074,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.29028359055519104,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.006634430959820747,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.011834722943603992,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.007361140567809343,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.008377227000892162,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.001468765432946384,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00017285131616517901,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.010397595353424549,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00014828989515081048,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.000749008497223258,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.005603048950433731,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.002440481446683407,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 8.630544057197653e-10,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.04094948619604111,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0018888846971094608,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0004904926172457635,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0008101516286842525,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.011425149627029896,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00037316730595193803,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.008780022151768208,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.000503523915540427,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.011678642593324184,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0010223594726994634,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0017914886120706797,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0013626953586935997,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 9.219123381365435e-11,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.003313892986625433,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.7807170883752406e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.5806955314053304e-13,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.01893300563097,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.000280938547803089,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.301677959337667e-09,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00047157256631180644,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0001980910456040874,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.1520945429801941,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.002594217425212264,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0052933888509869576,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.006480107083916664,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.8328477381146513e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00898321159183979,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0016528061823919415,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 2.2946414901525714e-05,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0104284156113863,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 4.554679983864718e-12,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.007126705255359411,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0011734319850802422,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0348406583070755,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.6854558857157826e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.009275362826883793,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.725685746758245e-05,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00017777911853045225,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 6.642669177381322e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00029721742612309754,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0007895351154729724,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0036850932519882917,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.013154345564544201,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 9.076691753762134e-08,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 5.366237019188702e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000252978119533509,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.014069929718971252,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0010189167223870754,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.005280874669551849,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00281708175316453,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0010348199866712093,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0011331320274621248,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.016601447016000748,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.009505141526460648,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.001221159822307527,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0038374559953808784,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 5.8372745115775615e-05,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 1.9425649952609092e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.04798813909292221,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0032158037647604942,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0017634358955547214,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.05013825371861458,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 9.330379725724924e-06,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.04973587393760681,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0016772168455645442,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.0907841897278558e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.65009872338851e-07,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0012022953014820814,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.8591482557894778e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.901022086618468e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.7577915514266351e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.401461645400559e-06,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.011402820236980915,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 6.062613829271868e-05,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00011661724420264363,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0010448904940858483,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.0977012632196192e-09,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00011353089939802885,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0004664570151362568,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.3192073311074637e-05,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.033962350338697433,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0026399660855531693,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 7.254922365973471e-06,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.016883455216884613,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.000533953367266804,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.022731324657797813,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.032612789422273636,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.002778626512736082,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 3.243754633786011e-07,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.026646984741091728,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0013582867104560137,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 8.704158244654536e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 3.4824845229763923e-09,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.11182498931884766,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.009002257138490677,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.007386420387774706,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0001535482588224113,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.002514829160645604,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.002151777036488056,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ],
+  "0.90": [
+    {
+      "preferred_prob": 0.0025483500212430954,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.022397711873054504,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.002398211043328047,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.549840019128169e-07,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00947015080600977,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.07876715064048767,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.04587696120142937,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.004881744273006916,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007083769887685776,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 9.885182805646764e-08,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 5.3810395911568776e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0002423174009891227,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 8.840563623380149e-07,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 2.2065082703193184e-06,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0002481062838342041,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.012078607454895973,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0013102578232064843,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.25900925240785e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0019771577790379524,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 9.439492743013034e-08,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.015394160524010658,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00021813894272781909,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0005247062654234469,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00029509025625884533,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.0277565252181375e-06,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.007988795638084412,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.018943648785352707,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.04092570021748543,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 3.602010110625997e-05,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00018691510194912553,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.025099126622080803,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.301575129124103e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0006697691860608757,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.058778773061931e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0002997371193487197,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 6.348136230371892e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 8.027327567106113e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0014222514582797885,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 3.73962620869861e-06,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 2.1593217880422344e-08,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.003324133111163974,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.008223342709243298,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.01610686630010605,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.014153091236948967,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0033695909660309553,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.005399314220994711,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.028384441509842873,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0008339975029230118,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00019004306523129344,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.005104313138872385,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.2973335944698192e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0025294478982686996,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.012557159177958965,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0023883848916739225,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.018586769700050354,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00011182255548192188,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.9857368645025417e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0009609040571376681,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.032059427350759506,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0014818751951679587,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.014824682846665382,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.05879136547446251,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 5.797211088065524e-06,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0005859893281012774,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0008060372201725841,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.7637461269259802e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.012122652355174e-06,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0004236323293298483,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.014908664859831333,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0070558711886405945,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.01021414715796709,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.420009539288003e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.7311382549678456e-08,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.000489289581310004,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.006238726899027824,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00010034541628556326,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.003343203803524375,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0036284870002418756,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.2167419956531376e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.007780635263770819,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.015629230067133904,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.004605733323842287,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 1.228293626809318e-07,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.006686870940029621,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0026294139679521322,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.007419688627123833,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.010865799151360989,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.011685416102409363,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.003978201188147068,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.009897813200950623,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.005081608425825834,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.007732581812888384,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.04190850630402565,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00059693050570786,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0007388099329546094,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.014121404848992825,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 8.996413089334965e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00351225514896214,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.001765875262208283,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0023740786127746105,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 2.2987345360547806e-10,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0509147122502327,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0025022560730576515,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00044721781159751117,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00019503926159814,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.011277332901954651,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0012107009533792734,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.050696611404418945,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0003687366552185267,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.03203434869647026,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0004444036749191582,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0012753051705658436,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0009446243057027459,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 1.4077179457672173e-06,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.004025894217193127,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.413539550616406e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.201176435041475e-09,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.017652666196227074,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 1.93055639101658e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 6.795493612266057e-10,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0162974800914526,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 9.658566705184057e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.2233825922012329,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00033329054713249207,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.008178098127245903,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.02429889887571335,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.465249392320402e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.08132608979940414,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0737319216132164,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0004139375523664057,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.002564603928476572,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 5.85222315052647e-09,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0031907905358821154,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00047578863450326025,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.03180523216724396,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00018217487377114594,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.009488404728472233,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.002624657703563571,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 1.2091373719158582e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 3.595316593418829e-05,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0007321325247175992,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.001807334367185831,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.001314728520810604,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.013345303945243359,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 8.739185432204977e-05,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 8.3070035543642e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0007664732984267175,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00704685365781188,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0006314688362181187,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.004785008728504181,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0013757115229964256,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.008991922251880169,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.001273886300623417,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.013422486372292042,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.013255145400762558,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0018265809630975127,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0057868254370987415,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00030933369998820126,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 3.333073982503265e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.03669971972703934,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00011857391655212268,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0009621856734156609,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0975012257695198,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.000344565516570583,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.06374187767505646,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00026060055824927986,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 8.514078217558563e-06,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.219008592874161e-06,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.003550381865352392,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.4167733297654195e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.4573939299443737e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.1709762222599238e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 9.020510560731054e-07,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.08188720047473907,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0009112093830481172,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0001071586666512303,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0012047432828694582,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.65100161004284e-09,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0013334318064153194,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0029013545718044043,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.5704748875577934e-05,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.02057802863419056,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0016320786671712995,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0001533634349470958,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.049290962517261505,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00035075267078354955,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.10282591730356216,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.013392518274486065,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0008436524658463895,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0009268368594348431,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.1120380312204361,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0007320643635466695,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00044804372009821236,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 4.1588386068269756e-08,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.10601431876420975,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.010592294856905937,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0446719229221344,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0002638992737047374,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.002725421916693449,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0031023570336401463,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ],
+  "1.00": [
+    {
+      "preferred_prob": 0.0028753080405294895,
+      "episode_idx": 0,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.026942554861307144,
+      "episode_idx": 1,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0033561636228114367,
+      "episode_idx": 2,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.439493416910409e-06,
+      "episode_idx": 3,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.004820494446903467,
+      "episode_idx": 4,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.06884867697954178,
+      "episode_idx": 5,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0096653513610363,
+      "episode_idx": 6,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.006781423930078745,
+      "episode_idx": 7,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007652119733393192,
+      "episode_idx": 8,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.1714068882138235e-06,
+      "episode_idx": 9,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0007002088823355734,
+      "episode_idx": 10,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.00042829298763535917,
+      "episode_idx": 11,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.3999546411014308e-07,
+      "episode_idx": 12,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 3.039402258764312e-07,
+      "episode_idx": 13,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0010656064841896296,
+      "episode_idx": 14,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.007648359518498182,
+      "episode_idx": 15,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.001548593514598906,
+      "episode_idx": 16,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 5.471141548696323e-07,
+      "episode_idx": 17,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.0015996553702279925,
+      "episode_idx": 18,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 1.4497955191927758e-07,
+      "episode_idx": 19,
+      "agent_id": "agent_000"
+    },
+    {
+      "preferred_prob": 0.015489039942622185,
+      "episode_idx": 0,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.00028655483038164675,
+      "episode_idx": 1,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.009682483039796352,
+      "episode_idx": 2,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0005354872555471957,
+      "episode_idx": 3,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0026455915067344904,
+      "episode_idx": 4,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.003944589290767908,
+      "episode_idx": 5,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.024587325751781464,
+      "episode_idx": 6,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.022610142827033997,
+      "episode_idx": 7,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.003863458288833499,
+      "episode_idx": 8,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.0823487939237708e-10,
+      "episode_idx": 9,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.042393360286951065,
+      "episode_idx": 10,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0010333273094147444,
+      "episode_idx": 11,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0391007661819458,
+      "episode_idx": 12,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 5.1540286222007126e-05,
+      "episode_idx": 13,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0005642041796818376,
+      "episode_idx": 14,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0003399611741770059,
+      "episode_idx": 15,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 4.7275942051783204e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.010687694884836674,
+      "episode_idx": 17,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0001287497580051422,
+      "episode_idx": 18,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 1.0518236877032905e-06,
+      "episode_idx": 19,
+      "agent_id": "agent_001"
+    },
+    {
+      "preferred_prob": 0.0035690723452717066,
+      "episode_idx": 0,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.006505755707621574,
+      "episode_idx": 1,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.009456085041165352,
+      "episode_idx": 2,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.606843140209094e-05,
+      "episode_idx": 3,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.001128487871028483,
+      "episode_idx": 4,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.004771945532411337,
+      "episode_idx": 5,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.018531790003180504,
+      "episode_idx": 6,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0001003713914542459,
+      "episode_idx": 7,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00022888905368745327,
+      "episode_idx": 8,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00041990025783888996,
+      "episode_idx": 9,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 4.2595391391841986e-07,
+      "episode_idx": 10,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0008329734555445611,
+      "episode_idx": 11,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00624293927103281,
+      "episode_idx": 12,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.0002164519828511402,
+      "episode_idx": 13,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.005144704598933458,
+      "episode_idx": 14,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 6.835963350937391e-09,
+      "episode_idx": 15,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 2.3080378014128655e-05,
+      "episode_idx": 16,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.050059180706739426,
+      "episode_idx": 17,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.03653223067522049,
+      "episode_idx": 18,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.017645303159952164,
+      "episode_idx": 19,
+      "agent_id": "agent_002"
+    },
+    {
+      "preferred_prob": 0.00047388096572831273,
+      "episode_idx": 0,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.010250152088701725,
+      "episode_idx": 1,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.232157951060799e-06,
+      "episode_idx": 2,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0007260558777488768,
+      "episode_idx": 3,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00031604888499714434,
+      "episode_idx": 4,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 3.4956926810991718e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 9.392709898747853e-08,
+      "episode_idx": 6,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.013020364567637444,
+      "episode_idx": 7,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.01105407439172268,
+      "episode_idx": 8,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.013113392516970634,
+      "episode_idx": 9,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.03090936876833439,
+      "episode_idx": 10,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 7.521244242525427e-06,
+      "episode_idx": 11,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 1.7744364866345563e-09,
+      "episode_idx": 12,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00024149678938556463,
+      "episode_idx": 13,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.011508572846651077,
+      "episode_idx": 14,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 2.7144466002937406e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.012732352130115032,
+      "episode_idx": 16,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.00012721362872980535,
+      "episode_idx": 17,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 6.722741545672761e-06,
+      "episode_idx": 18,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.0032743432093411684,
+      "episode_idx": 19,
+      "agent_id": "agent_003"
+    },
+    {
+      "preferred_prob": 0.01110824104398489,
+      "episode_idx": 0,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0064780195243656635,
+      "episode_idx": 1,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 6.087220949524408e-09,
+      "episode_idx": 2,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.012293620966374874,
+      "episode_idx": 3,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.002167081693187356,
+      "episode_idx": 4,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.012179989367723465,
+      "episode_idx": 5,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0159052275121212,
+      "episode_idx": 6,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.010671977885067463,
+      "episode_idx": 7,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.004623097833245993,
+      "episode_idx": 8,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.011545385234057903,
+      "episode_idx": 9,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.009530143812298775,
+      "episode_idx": 10,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.008538836613297462,
+      "episode_idx": 11,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.03263796493411064,
+      "episode_idx": 12,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0008269641548395157,
+      "episode_idx": 13,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0002457094087731093,
+      "episode_idx": 14,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.012134737335145473,
+      "episode_idx": 15,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.00010021754133049399,
+      "episode_idx": 16,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.012659536674618721,
+      "episode_idx": 17,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.002453097142279148,
+      "episode_idx": 18,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 0.0027493885718286037,
+      "episode_idx": 19,
+      "agent_id": "agent_004"
+    },
+    {
+      "preferred_prob": 3.575409436962218e-06,
+      "episode_idx": 0,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.06520986557006836,
+      "episode_idx": 1,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0024707799311727285,
+      "episode_idx": 2,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0005696665612049401,
+      "episode_idx": 3,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.13345709443092346,
+      "episode_idx": 4,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.3593975901603699,
+      "episode_idx": 5,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0008668191148899496,
+      "episode_idx": 6,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.05461817979812622,
+      "episode_idx": 7,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00038896326441317797,
+      "episode_idx": 8,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.03605402633547783,
+      "episode_idx": 9,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.001163069042377174,
+      "episode_idx": 10,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.000608141883276403,
+      "episode_idx": 11,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.705237627029419,
+      "episode_idx": 12,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 2.949279860331444e-07,
+      "episode_idx": 13,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.0027922727167606354,
+      "episode_idx": 14,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 9.055315604200587e-05,
+      "episode_idx": 15,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 3.182941445676636e-14,
+      "episode_idx": 16,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.02554352395236492,
+      "episode_idx": 17,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 4.866194285568781e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 5.0839665810542556e-09,
+      "episode_idx": 19,
+      "agent_id": "agent_005"
+    },
+    {
+      "preferred_prob": 0.00026834712480194867,
+      "episode_idx": 0,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 2.2057112801121548e-05,
+      "episode_idx": 1,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.20419183373451233,
+      "episode_idx": 2,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0077527170069515705,
+      "episode_idx": 3,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.010486052371561527,
+      "episode_idx": 4,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.02491080015897751,
+      "episode_idx": 5,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 7.968271802383242e-07,
+      "episode_idx": 6,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.004129682667553425,
+      "episode_idx": 7,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0916735827922821,
+      "episode_idx": 8,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0008848374127410352,
+      "episode_idx": 9,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0027424779254943132,
+      "episode_idx": 10,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 5.380472067884057e-09,
+      "episode_idx": 11,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00435703806579113,
+      "episode_idx": 12,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0004867088864557445,
+      "episode_idx": 13,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.012001283466815948,
+      "episode_idx": 14,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0008037664229050279,
+      "episode_idx": 15,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.007869439199566841,
+      "episode_idx": 16,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.0002971320354845375,
+      "episode_idx": 17,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00029393151635304093,
+      "episode_idx": 18,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.00011147231271024793,
+      "episode_idx": 19,
+      "agent_id": "agent_006"
+    },
+    {
+      "preferred_prob": 0.005320608150213957,
+      "episode_idx": 0,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00048557211994193494,
+      "episode_idx": 1,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00046598847256973386,
+      "episode_idx": 2,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.00033909198828041553,
+      "episode_idx": 3,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 7.897122850408778e-05,
+      "episode_idx": 4,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 2.964856321341358e-06,
+      "episode_idx": 5,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0022383679170161486,
+      "episode_idx": 6,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000773457926698029,
+      "episode_idx": 7,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0013588517904281616,
+      "episode_idx": 8,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0038525513373315334,
+      "episode_idx": 9,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.01465552393347025,
+      "episode_idx": 10,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.048857104033231735,
+      "episode_idx": 11,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0020671947859227657,
+      "episode_idx": 12,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.05098268762230873,
+      "episode_idx": 13,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.022967204451560974,
+      "episode_idx": 14,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.000601360050495714,
+      "episode_idx": 15,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.0030536989215761423,
+      "episode_idx": 16,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 6.97733776178211e-06,
+      "episode_idx": 17,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 8.818467176752165e-05,
+      "episode_idx": 18,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 0.09714746475219727,
+      "episode_idx": 19,
+      "agent_id": "agent_007"
+    },
+    {
+      "preferred_prob": 7.165129500208423e-05,
+      "episode_idx": 0,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.003884928533807397,
+      "episode_idx": 1,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.09883318841457367,
+      "episode_idx": 2,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.908819497970399e-06,
+      "episode_idx": 3,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0002506611926946789,
+      "episode_idx": 4,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 7.616394577780738e-05,
+      "episode_idx": 5,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 4.049289054819383e-05,
+      "episode_idx": 6,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 2.2035073925508186e-06,
+      "episode_idx": 7,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.012314152903854847,
+      "episode_idx": 8,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.4977916180214379e-05,
+      "episode_idx": 9,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.790280920336954e-05,
+      "episode_idx": 10,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.1589569112402387e-05,
+      "episode_idx": 11,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 5.2654402679763734e-05,
+      "episode_idx": 12,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.04247758165001869,
+      "episode_idx": 13,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00038735097041353583,
+      "episode_idx": 14,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0003140732878819108,
+      "episode_idx": 15,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.005738019477576017,
+      "episode_idx": 16,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 1.9837070874828555e-10,
+      "episode_idx": 17,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.00013793476682621986,
+      "episode_idx": 18,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.009083217941224575,
+      "episode_idx": 19,
+      "agent_id": "agent_008"
+    },
+    {
+      "preferred_prob": 0.0001268338382942602,
+      "episode_idx": 0,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0019932896830141544,
+      "episode_idx": 1,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.003542322665452957,
+      "episode_idx": 2,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.00020907331781927496,
+      "episode_idx": 3,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.05294748395681381,
+      "episode_idx": 4,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0003854431852232665,
+      "episode_idx": 5,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.08735696971416473,
+      "episode_idx": 6,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.009666193276643753,
+      "episode_idx": 7,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0017252404941245914,
+      "episode_idx": 8,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0027805273421108723,
+      "episode_idx": 9,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.156122088432312,
+      "episode_idx": 10,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0006730458699166775,
+      "episode_idx": 11,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0002904767752625048,
+      "episode_idx": 12,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 6.879563443362713e-07,
+      "episode_idx": 13,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.1771509200334549,
+      "episode_idx": 14,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.02344493754208088,
+      "episode_idx": 15,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.04836130514740944,
+      "episode_idx": 16,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.0011238601291552186,
+      "episode_idx": 17,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.003545252373442054,
+      "episode_idx": 18,
+      "agent_id": "agent_009"
+    },
+    {
+      "preferred_prob": 0.004394066985696554,
+      "episode_idx": 19,
+      "agent_id": "agent_009"
+    }
+  ]
+}
