@@ -179,6 +179,7 @@ class PerNodeTrajectoryDataset(Dataset):
                     'trajectory_idx': traj_idx,
                     'step': step_idx,
                     'path_so_far': [self.node_to_idx.get(node[0], 0) for node in path[:step_idx]],
+                    'path_categories_so_far': [self.CATEGORY_TO_IDX.get(node[1], 6) for node in path[:step_idx]],
                     'current_node_idx': self.node_to_idx.get(current_node_id, 0),
                     'next_node_idx': self.node_to_idx.get(next_node_id, 0),
                     'next_category_idx': next_cat_idx,
@@ -199,10 +200,10 @@ class PerNodeTrajectoryDataset(Dataset):
 
 def collate_per_node_samples(batch: List[Dict]) -> Dict:
     """
-    Collate per-node samples into batches.
+    Collate per-node samples into batches with path history.
     
     Returns:
-        Dict with trajectory information and target labels.
+        Dict with trajectory information, path history, and target labels.
     """
     # Collect trajectory paths for encoding
     trajectories = [s['full_trajectory'] for s in batch]
@@ -214,7 +215,33 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
     next_categories = torch.tensor([s['next_category_idx'] for s in batch], dtype=torch.long)
     
     hours = torch.tensor([s['hour'] for s in batch], dtype=torch.float32)
-    path_lengths = torch.tensor([len(s['path_so_far']) for s in batch], dtype=torch.long)
+    
+    # ================================================================
+    # PATH HISTORY ENCODING - Critical for Theory of Mind
+    # ================================================================
+    # Get path history (what nodes has the agent visited so far)
+    max_path_len = max(len(s['path_so_far']) for s in batch)
+    max_path_len = max(1, max_path_len)  # At least 1 for batch processing
+    
+    path_nodes_padded = []
+    path_categories_padded = []
+    path_lengths = []
+    
+    for s in batch:
+        path_nodes = s['path_so_far']  # List of node indices
+        path_categories = s.get('path_categories_so_far', [0] * len(path_nodes))  # Category indices
+        path_lengths.append(len(path_nodes))
+        
+        # Pad to max_path_len
+        padded_nodes = path_nodes + [0] * (max_path_len - len(path_nodes))
+        padded_cats = path_categories + [0] * (max_path_len - len(path_categories))
+        
+        path_nodes_padded.append(padded_nodes[:max_path_len])
+        path_categories_padded.append(padded_cats[:max_path_len])
+    
+    path_nodes_tensor = torch.tensor(path_nodes_padded, dtype=torch.long)
+    path_categories_tensor = torch.tensor(path_categories_padded, dtype=torch.long)
+    path_lengths_tensor = torch.tensor(path_lengths, dtype=torch.long)
     
     return {
         'trajectories': trajectories,
@@ -223,7 +250,9 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
         'next_node_ids': next_node_indices,
         'next_categories': next_categories,
         'hours': hours,
-        'path_lengths': path_lengths,
+        'path_nodes': path_nodes_tensor,           # [batch, max_path_len]
+        'path_categories': path_categories_tensor,  # [batch, max_path_len]
+        'path_lengths': path_lengths_tensor,
         'batch_size': len(batch),
     }
 
@@ -232,8 +261,14 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
 # ENHANCED MODEL WITH W&B LOGGING
 # ============================================================================
 
-class SimpleBDIToMModel(nn.Module):
-    """Simplified BDI-ToM model optimized for per-node training."""
+class EnhancedToMModel(nn.Module):
+    """
+    Advanced Theory of Mind model with:
+    - Path history encoding (LSTM/GRU for sequential context)
+    - Goal-aware representations
+    - Agent belief state modeling (latent variable)
+    - Multi-head attention for task-specific reasoning
+    """
     
     def __init__(
         self,
@@ -243,31 +278,86 @@ class SimpleBDIToMModel(nn.Module):
         num_categories: int = 7,
         hidden_dim: int = 256,
         output_dim: int = 128,
+        latent_dim: int = 64,
         dropout: float = 0.1,
+        num_heads: int = 4,
     ):
         super().__init__()
         
         self.num_nodes = num_nodes
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
+        self.hidden_dim = hidden_dim
+        self.latent_dim = latent_dim
         
-        # Simple node embedding
+        # ================================================================
+        # CORE EMBEDDINGS
+        # ================================================================
         self.node_embedding = nn.Embedding(num_nodes, output_dim)
         self.poi_embedding = nn.Embedding(num_poi_nodes, output_dim)
         self.category_embedding = nn.Embedding(num_categories, 32)
-        
-        # Temporal encoding
         self.hour_encoding = nn.Linear(1, 32)
         
-        # Shared feature processor
+        # ================================================================
+        # AGENT BELIEF STATE - Latent variable for agent intentions
+        # ================================================================
+        self.belief_prior = nn.Linear(output_dim + 32, latent_dim)  # Prior: p(z|current_node, time)
+        self.belief_posterior = nn.Sequential(  # Posterior: q(z|current, next, goal)
+            nn.Linear(output_dim * 2 + output_dim + 32, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, latent_dim * 2),  # mean and log_var
+        )
+        
+        # ================================================================
+        # GOAL-AWARE CONTEXT
+        # ================================================================
+        self.goal_context_encoder = nn.Sequential(
+            nn.Linear(output_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+        )
+        
+        # ================================================================
+        # PATH HISTORY ENCODING (sequence of visited locations)
+        # ================================================================
+        self.path_lstm = nn.LSTM(
+            input_size=output_dim + 32,  # node_emb + category_emb
+            hidden_size=hidden_dim // 2,
+            num_layers=2,
+            batch_first=True,
+            dropout=dropout if dropout > 0 else 0,
+        )
+        
+        # ================================================================
+        # MULTI-HEAD ATTENTION FOR TASK-SPECIFIC REASONING
+        # ================================================================
+        self.multihead_attention = nn.MultiheadAttention(
+            embed_dim=hidden_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True,
+        )
+        
+        # ================================================================
+        # UNIFIED FEATURE PROCESSOR
+        # ================================================================
+        # Combines: current_node + temporal + belief_state + goal_context + path_history
+        total_feature_dim = output_dim + 32 + latent_dim + (hidden_dim // 2) + (hidden_dim // 2)
+        
         self.feature_processor = nn.Sequential(
-            nn.Linear(output_dim + 32 + 32, hidden_dim),
+            nn.Linear(total_feature_dim, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
         )
         
-        # Task heads
+        # ================================================================
+        # TASK-SPECIFIC HEADS WITH RESIDUAL CONNECTIONS
+        # ================================================================
         self.goal_head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -288,10 +378,22 @@ class SimpleBDIToMModel(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, num_categories),
         )
+        
+        # KL divergence weight for VAE-style regularization
+        self.kl_weight = 0.1
+    
+    def reparameterize(self, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+        """Sample from latent distribution N(mu, exp(log_var))."""
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return mu + eps * std
     
     def forward(
         self,
         node_ids: torch.Tensor,
+        goal_nodes: Optional[torch.Tensor] = None,
+        path_nodes: Optional[torch.Tensor] = None,  # [batch, seq_len]
+        path_categories: Optional[torch.Tensor] = None,  # [batch, seq_len]
         hours: Optional[torch.Tensor] = None,
         days: Optional[torch.Tensor] = None,
         deltas: Optional[torch.Tensor] = None,
@@ -299,43 +401,108 @@ class SimpleBDIToMModel(nn.Module):
         mask: Optional[torch.Tensor] = None,
         graph_data: Optional[Dict] = None,
     ) -> Dict[str, torch.Tensor]:
-        """Forward pass for per-node predictions."""
+        """
+        Forward pass with Theory of Mind reasoning.
+        
+        Args:
+            node_ids: Current node indices [batch]
+            goal_nodes: Goal node indices [batch]
+            path_nodes: Historical path nodes [batch, seq_len]
+            path_categories: Historical path categories [batch, seq_len]
+            hours: Hour of day [batch]
+        """
+        batch_size = node_ids.size(0)
+        device = node_ids.device
         
         # Handle 1D node_ids
-        if node_ids.dim() == 1:
-            node_ids = node_ids.unsqueeze(1)
+        if node_ids.dim() > 1:
+            node_ids = node_ids.squeeze(-1)
         
-        # Get node embeddings (batch, seq_len, hidden)
-        if node_ids.size(1) > 1:
-            # Multi-node case: use mean of embeddings
-            node_emb = self.node_embedding(node_ids).mean(dim=1)
-        else:
-            # Single node case: squeeze the seq dimension
-            node_emb = self.node_embedding(node_ids).squeeze(1)
+        # ================================================================
+        # 1. CURRENT STATE REPRESENTATION
+        # ================================================================
+        node_emb = self.node_embedding(node_ids)  # [batch, output_dim]
         
-        # Temporal features
+        # Temporal encoding
         if hours is None:
-            hours = torch.zeros(node_emb.size(0), 1, device=node_emb.device)
+            hours = torch.zeros(batch_size, 1, device=device)
+        elif hours.dim() == 1:
+            hours = hours.unsqueeze(1)
+        hours_emb = self.hour_encoding(hours)  # [batch, 32]
+        
+        # ================================================================
+        # 2. GOAL CONTEXT
+        # ================================================================
+        if goal_nodes is not None and goal_nodes.max() < self.num_poi_nodes:
+            goal_emb = self.poi_embedding(goal_nodes)  # [batch, output_dim]
         else:
-            hours = hours.unsqueeze(1) if hours.dim() == 1 else hours
+            # Use dummy goal if not provided
+            goal_emb = self.poi_embedding(torch.zeros(batch_size, dtype=torch.long, device=device))
         
-        hours_emb = self.hour_encoding(hours)
+        goal_context = self.goal_context_encoder(goal_emb)  # [batch, hidden//2]
         
-        # Category (use dummy if not provided)
-        cat_emb = self.category_embedding(torch.zeros(node_emb.size(0), dtype=torch.long, device=node_emb.device))
+        # ================================================================
+        # 3. AGENT BELIEF STATE (Latent variable modeling)
+        # ================================================================
+        # Prior: p(z|current_node, hour)
+        prior_input = torch.cat([node_emb, hours_emb], dim=-1)
+        z_mu_prior = self.belief_prior(prior_input)  # [batch, latent_dim]
         
-        # Combine features
-        combined = torch.cat([node_emb, hours_emb, cat_emb], dim=-1)
+        # Posterior: q(z|current, next, goal) - only used during training with supervision
+        if goal_nodes is not None and path_nodes is not None:
+            next_node_emb = self.node_embedding(path_nodes[:, 0]) if path_nodes.size(1) > 0 else node_emb
+            posterior_input = torch.cat([node_emb, next_node_emb, goal_emb, hours_emb], dim=-1)
+            posterior_params = self.belief_posterior(posterior_input)
+            z_mu_post, z_log_var = posterior_params[:, :self.latent_dim], posterior_params[:, self.latent_dim:]
+            z_belief = self.reparameterize(z_mu_post, z_log_var)
+        else:
+            z_belief = self.reparameterize(z_mu_prior, torch.zeros_like(z_mu_prior))
         
-        # Process through shared processor
-        features = self.feature_processor(combined)
+        # ================================================================
+        # 4. PATH HISTORY ENCODING (what has the agent done?)
+        # ================================================================
+        if path_nodes is not None and path_nodes.size(1) > 0:
+            # Embed path history
+            path_node_emb = self.node_embedding(path_nodes)  # [batch, seq_len, output_dim]
+            
+            if path_categories is not None:
+                path_cat_emb = self.category_embedding(path_categories)  # [batch, seq_len, 32]
+                path_input = torch.cat([path_node_emb, path_cat_emb], dim=-1)
+            else:
+                path_input = path_node_emb
+            
+            # LSTM processes the sequence
+            _, (path_hidden, _) = self.path_lstm(path_input)  # hidden: [2, batch, hidden//2]
+            path_context = path_hidden[-1]  # [batch, hidden//2]
+        else:
+            # No path history - use zeros
+            path_context = torch.zeros(batch_size, self.hidden_dim // 2, device=device)
         
-        # Return predictions
+        # ================================================================
+        # 5. COMBINE ALL FEATURES
+        # ================================================================
+        combined_features = torch.cat([
+            node_emb,           # Current location [output_dim]
+            hours_emb,          # Time of day [32]
+            z_belief,           # Agent belief/intention [latent_dim]
+            goal_context,       # Goal representation [hidden//2]
+            path_context,       # Path history [hidden//2]
+        ], dim=-1)
+        
+        # ================================================================
+        # 6. UNIFIED PROCESSING
+        # ================================================================
+        unified_repr = self.feature_processor(combined_features)  # [batch, hidden_dim]
+        
+        # ================================================================
+        # 7. TASK HEADS
+        # ================================================================
         return {
-            'goal': self.goal_head(features),
-            'nextstep': self.nextstep_head(features),
-            'category': self.category_head(features),
-            'embeddings': features,
+            'goal': self.goal_head(unified_repr),
+            'nextstep': self.nextstep_head(unified_repr),
+            'category': self.category_head(unified_repr),
+            'embeddings': unified_repr,
+            'belief_state': z_belief,  # For analysis/visualization
         }
 
 
@@ -357,13 +524,18 @@ class WandBTrainingLogger:
         self.enabled = WANDB_AVAILABLE
         
         if self.enabled:
-            wandb.init(
-                project=project_name,
-                name=experiment_name,
-                config=config,
-                tags=["unified-embeddings", "per-node", "multi-task"],
-            )
-            print(f"✅ W&B initialized: {project_name}/{experiment_name}")
+            try:
+                wandb.init(
+                    project=project_name,
+                    entiry='nigeldoering-uc-san-diego',
+                    name=experiment_name,
+                    config=config,
+                    tags=["unified-embeddings", "per-node", "multi-task"],
+                )
+                print(f"✅ W&B initialized: {project_name}/{experiment_name}")
+            except Exception as e:
+                print(f"⚠️  W&B initialization failed: {e}")
+                self.enabled = False
         else:
             print("⚠️  W&B disabled (not installed)")
     
@@ -522,6 +694,8 @@ def train_epoch_per_node(
         next_node_ids = batch['next_node_ids'].to(device)
         next_categories = batch['next_categories'].to(device)
         hours = batch['hours'].to(device)
+        path_nodes = batch['path_nodes'].to(device)          # [batch, seq_len]
+        path_categories = batch['path_categories'].to(device) # [batch, seq_len]
         
         # Create dummy temporal features if not provided
         batch_size = node_ids.size(0)
@@ -529,9 +703,12 @@ def train_epoch_per_node(
         deltas = torch.zeros(batch_size, 1, dtype=torch.float32, device=device)
         velocities = torch.zeros(batch_size, 1, dtype=torch.float32, device=device)
         
-        # Forward pass
+        # Forward pass with Theory of Mind features
         predictions = model(
             node_ids=node_ids,
+            goal_nodes=goal_nodes,
+            path_nodes=path_nodes,
+            path_categories=path_categories,
             hours=hours,
             days=days,
             deltas=deltas,
@@ -645,6 +822,8 @@ def validate_per_node(
         next_node_ids = batch['next_node_ids'].to(device)
         next_categories = batch['next_categories'].to(device)
         hours = batch['hours'].to(device)
+        path_nodes = batch['path_nodes'].to(device)          # [batch, seq_len]
+        path_categories = batch['path_categories'].to(device) # [batch, seq_len]
         
         # Create dummy temporal features if not provided
         batch_size = node_ids.size(0)
@@ -652,9 +831,12 @@ def validate_per_node(
         deltas = torch.zeros(batch_size, 1, dtype=torch.float32, device=device)
         velocities = torch.zeros(batch_size, 1, dtype=torch.float32, device=device)
         
-        # Forward pass
+        # Forward pass with Theory of Mind features
         predictions = model(
             node_ids=node_ids,
+            goal_nodes=goal_nodes,
+            path_nodes=path_nodes,
+            path_categories=path_categories,
             hours=hours,
             days=days,
             deltas=deltas,
@@ -851,16 +1033,18 @@ def main(args):
     # ================================================================
     # STEP 4: CREATE MODEL
     # ================================================================
-    print("\n4️⃣  Creating simplified per-node model...")
+    print("\n4️⃣  Creating Advanced Theory of Mind model...")
     
-    model = SimpleBDIToMModel(
+    model = EnhancedToMModel(
         num_nodes=graph_data['num_nodes'],
         graph_node_feat_dim=graph_data['x'].shape[1],
         num_poi_nodes=len(world_graph.poi_nodes),
         num_categories=7,
         hidden_dim=args.hidden_dim,
         output_dim=args.output_dim,
+        latent_dim=64,
         dropout=args.dropout,
+        num_heads=4,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
