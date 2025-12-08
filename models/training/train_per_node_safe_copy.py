@@ -106,19 +106,13 @@ class TrajectoryDataValidator:
 
 class TrajectoryDataset(Dataset):
     """
-    OPTIMAL Per-node expansion with FULL PATH HISTORY:
+    FAST Trajectory-level dataset (not per-node).
+    Loads enriched trajectories and processes them as sequences.
     
-    For trajectory [n1→n2→n3→n4→goal]:
-    - Sample 1: path=[n1],        next=n2  ← Model sees 1 decision point
-    - Sample 2: path=[n1→n2],     next=n3  ← Model sees 2 decision points
-    - Sample 3: path=[n1→n2→n3],  next=n4  ← Model sees 3 decision points
-    
-    BEST approach because:
-    ✅ Rich supervision at EACH step (not just first node)
-    ✅ Progressive path context = Theory of Mind!
-    ✅ Learn behavioral patterns (hesitation, correction, confidence)
-    ✅ ~500K samples from 100K trajectories = good data scale
-    ✅ Each trajectory generates 4-10 training signals, not just 1
+    Much faster than per-node approach:
+    - No need to expand 100K trajectories into millions of samples
+    - Direct trajectory-level supervision
+    - Full path context available for each sample
     """
     
     # Category to index mapping
@@ -140,7 +134,7 @@ class TrajectoryDataset(Dataset):
         node_to_idx_map: Dict[str, int] = None,
         min_traj_length: int = 2,
     ):
-        self.samples = []  # List of per-node samples (not full trajectories)
+        self.trajectories = []
         self.graph = graph
         self.poi_nodes = poi_nodes
         self.goal_to_idx = {node: idx for idx, node in enumerate(poi_nodes)}
@@ -151,12 +145,9 @@ class TrajectoryDataset(Dataset):
         else:
             self.node_to_idx = node_to_idx_map
         
-        # Expand trajectories into per-node samples with path history
-        print(f"   🧹 Expanding {len(trajectories)} trajectories into per-node samples with path history...")
-        valid_count = 0
-        sample_count = 0
-        
-        for traj in tqdm(trajectories, desc="   📊 Creating samples", leave=False):
+        # Filter valid trajectories (fast, no expansion)
+        print(f"   🧹 Filtering {len(trajectories)} trajectories...")
+        for traj in tqdm(trajectories, desc="   📊 Validating", leave=False):
             is_valid, _ = TrajectoryDataValidator.verify_trajectory_structure(traj)
             if not is_valid:
                 continue
@@ -167,64 +158,43 @@ class TrajectoryDataset(Dataset):
             if len(path) < min_traj_length or goal_node not in self.goal_to_idx:
                 continue
             
-            valid_count += 1
-            
-            # FOR EACH STEP in the trajectory, create a training sample
-            # At step i: path history is path[0:i], target is path[i]
-            for step_idx in range(1, len(path)):
-                # Path history: all nodes BEFORE current step
-                path_history = path[:step_idx]  # e.g., [n1] or [n1, n2] or [n1, n2, n3]
-                
-                # Target: the next node to visit
-                next_node_id = path[step_idx][0]
-                next_node_cat = path[step_idx][1]
-                
-                # Get temporal features for the history so far
-                temporal_deltas = traj.get('temporal_deltas', [])[: step_idx]
-                velocities = traj.get('velocities', [])[: step_idx]
-                
-                sample = {
-                    'path_nodes': [self.node_to_idx.get(n[0], 0) for n in path_history],
-                    'path_categories': [self.CATEGORY_TO_IDX.get(n[1], 6) for n in path_history],
-                    'next_node_idx': self.node_to_idx.get(next_node_id, 0),
-                    'next_cat_idx': self.CATEGORY_TO_IDX.get(next_node_cat, 6),
-                    'goal_idx': self.goal_to_idx[goal_node],
-                    'hour': traj['hour'],
-                    'day_of_week': traj.get('day_of_week', 0),
-                    'circadian_hour': traj.get('circadian_hour', traj['hour']),
-                    'temporal_deltas': temporal_deltas,
-                    'velocities': velocities,
-                }
-                self.samples.append(sample)
-                sample_count += 1
+            self.trajectories.append(traj)
         
-        print(f"✅ Expanded {valid_count} trajectories → {sample_count} per-node with history samples")
-        print(f"   Average samples per trajectory: {sample_count / max(valid_count, 1):.1f}")
-    
+        print(f"✅ TrajectoryDataset: {len(self.trajectories)} valid trajectories")
     def __len__(self) -> int:
-        return len(self.samples)
+        return len(self.trajectories)
     
     def __getitem__(self, idx: int) -> Dict:
-        return self.samples[idx]
+        traj = self.trajectories[idx]
+        path = traj['path']
+        
+        return {
+            'full_trajectory': [self.node_to_idx.get(node[0], 0) for node in path],
+            'path_nodes': torch.tensor([self.node_to_idx.get(node[0], 0) for node in path], dtype=torch.long),
+            'path_categories': torch.tensor([self.CATEGORY_TO_IDX.get(node[1], 6) for node in path], dtype=torch.long),
+            'goal_idx': self.goal_to_idx[traj['goal_node']],
+            'hour': traj['hour'],
+            'day_of_week': traj.get('day_of_week', 0),
+            'circadian_hour': traj.get('circadian_hour', traj['hour']),
+            'temporal_deltas': traj.get('temporal_deltas', []),
+            'velocities': traj.get('velocities', []),
+        }
 
 
 def collate_trajectories(batch: List[Dict]) -> Dict:
     """
-    Collate per-node samples into batches.
+    Collate trajectory-level samples into batches.
     
-    Each sample has variable-length path history.
-    Pad to max length within batch.
+    Pads sequences to same length within the batch.
     """
-    if not batch:
-        raise ValueError("Empty batch!")
-    
-    # Find max path length in this batch
-    max_path_len = max(len(s['path_nodes']) for s in batch) if batch else 1
+    # Find max lengths for padding
+    max_path_len = max(len(s['path_nodes']) for s in batch)
     max_path_len = max(1, max_path_len)
     
     batch_size = len(batch)
+    device = torch.device('cpu')
     
-    # Pad all sequences
+    # Pad sequences
     path_nodes_padded = []
     path_categories_padded = []
     path_lengths = []
@@ -235,16 +205,12 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
         path_len = len(s['path_nodes'])
         path_lengths.append(path_len)
         
-        # Pad path nodes and categories to max_path_len
+        # Pad to max_path_len
         pad_size = max_path_len - path_len
+        padded_nodes = torch.cat([s['path_nodes'], torch.zeros(pad_size, dtype=torch.long)])
+        padded_cats = torch.cat([s['path_categories'], torch.zeros(pad_size, dtype=torch.long)])
         
-        path_nodes = torch.tensor(s['path_nodes'], dtype=torch.long)
-        padded_nodes = torch.cat([path_nodes, torch.zeros(pad_size, dtype=torch.long)])
-        
-        path_cats = torch.tensor(s['path_categories'], dtype=torch.long)
-        padded_cats = torch.cat([path_cats, torch.zeros(pad_size, dtype=torch.long)])
-        
-        # Pad velocities and temporal deltas
+        # Velocities and temporal deltas
         vel = s['velocities'] if isinstance(s['velocities'], list) else []
         deltas = s['temporal_deltas'] if isinstance(s['temporal_deltas'], list) else []
         
@@ -260,8 +226,6 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
         'path_nodes': torch.stack(path_nodes_padded),
         'path_categories': torch.stack(path_categories_padded),
         'path_lengths': torch.tensor(path_lengths, dtype=torch.long),
-        'next_node_ids': torch.tensor([s['next_node_idx'] for s in batch], dtype=torch.long),
-        'next_cat_ids': torch.tensor([s['next_cat_idx'] for s in batch], dtype=torch.long),
         'goal_nodes': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
         'hours': torch.tensor([s['hour'] for s in batch], dtype=torch.float32),
         'day_of_week': torch.tensor([s['day_of_week'] for s in batch], dtype=torch.long),
@@ -269,6 +233,7 @@ def collate_trajectories(batch: List[Dict]) -> Dict:
         'velocities': torch.stack(velocities_padded),
         'temporal_deltas': torch.stack(temporal_deltas_padded),
         'batch_size': batch_size,
+        'trajectories': [s['full_trajectory'] for s in batch],
     }
 
 
@@ -487,7 +452,7 @@ class EnhancedToMModel(nn.Module):
         
         # Posterior: q(z|current, next, goal) - only used during training with supervision
         if goal_nodes is not None and path_nodes is not None:
-            next_node_emb = self.node_embedding(path_nodes[:, -1]) if path_nodes.size(1) > 0 else node_emb
+            next_node_emb = self.node_embedding(path_nodes[:, 0]) if path_nodes.size(1) > 0 else node_emb
             posterior_input = torch.cat([node_emb, next_node_emb, goal_emb, hours_emb], dim=-1)
             posterior_params = self.belief_posterior(posterior_input)
             z_mu_post, z_log_var = posterior_params[:, :self.latent_dim], posterior_params[:, self.latent_dim:]
@@ -566,7 +531,6 @@ class WandBTrainingLogger:
             try:
                 wandb.init(
                     project=project_name,
-                    entity="nigeldoering-uc-san-diego",
                     name=experiment_name,
                     config=config,
                     tags=["unified-embeddings", "per-node", "multi-task"],
@@ -639,7 +603,7 @@ class WandBTrainingLogger:
         nextstep_acc: float,
         category_acc: float,
     ):
-        """Log batch-level metrics during training (batch_idx should be global step)."""
+        """Log batch-level metrics during training."""
         if not self.enabled:
             return
         
@@ -650,11 +614,7 @@ class WandBTrainingLogger:
             f'{phase}_batch/category_acc': category_acc,
         }
         
-        # Use batch_idx as global step (must be monotonically increasing across epochs)
-        if batch_idx is not None:
-            wandb.log(log_dict, step=batch_idx)
-        else:
-            wandb.log(log_dict)
+        wandb.log(log_dict, step=batch_idx)
     
     def log_embedding_stats(
         self,
@@ -662,7 +622,7 @@ class WandBTrainingLogger:
         phase: str,
         epoch: int,
     ):
-        """Log embedding statistics (auto-increment step to avoid monotonic conflicts)."""
+        """Log embedding statistics."""
         if not self.enabled:
             return
         
@@ -673,8 +633,7 @@ class WandBTrainingLogger:
             f'{phase}/embedding_max': embeddings.max().item(),
         }
         
-        # Don't specify step here - let wandb auto-increment to avoid conflicts
-        wandb.log(log_dict)
+        wandb.log(log_dict, step=epoch)
     
     def log_model_info(self, model: nn.Module):
         """Log model architecture and parameters."""
@@ -713,16 +672,7 @@ def train_epoch_per_node(
     logger: WandBTrainingLogger,
     task_weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
-    """Train for one epoch with PROPER per-node supervision.
-    
-    NEW: Each sample has full path history up to that step.
-    For trajectory [n1→n2→n3→n4]:
-    - Sample 1: path=[n1],     next=n2  (1 step seen)
-    - Sample 2: path=[n1,n2],  next=n3  (2 steps seen)
-    - Sample 3: path=[n1,n2,n3], next=n4 (3 steps seen)
-    
-    This gives rich supervision at each decision point!
-    """
+    """Train for one epoch with trajectory-level supervision."""
     
     if task_weights is None:
         task_weights = {'goal': 1.0, 'nextstep': 0.5, 'category': 0.5}
@@ -744,24 +694,24 @@ def train_epoch_per_node(
         batch_size = batch['batch_size']
         
         # Move batch to device
-        path_nodes = batch['path_nodes'].to(device)              # [batch, max_seq_len]
-        path_categories = batch['path_categories'].to(device)     # [batch, max_seq_len]
-        path_lengths = batch['path_lengths'].to(device)           # [batch]
-        next_node_ids = batch['next_node_ids'].to(device)         # [batch] - target next node
-        next_categories = batch['next_cat_ids'].to(device)        # [batch] - target category
-        goal_nodes = batch['goal_nodes'].to(device)               # [batch]
+        path_nodes = batch['path_nodes'].to(device)          # [batch, seq_len]
+        path_categories = batch['path_categories'].to(device) # [batch, seq_len]
+        path_lengths = batch['path_lengths'].to(device)
+        goal_nodes = batch['goal_nodes'].to(device)
         hours = batch['hours'].to(device)
         days = batch['day_of_week'].to(device)
         velocities = batch['velocities'].to(device)
         temporal_deltas = batch['temporal_deltas'].to(device)
         
-        # For per-node learning:
-        # - path_nodes contains full history UP TO current step
-        # - next_node_ids is what to predict next
-        # - goal is same for entire trajectory
-        # - path_lengths tells us how much of path is valid
+        # For trajectory-level learning:
+        # - First node is starting position
+        # - Goal is the destination (same for all steps in trajectory)
+        # - Next node is the next step in the path
+        # - Categories are available for each step
         
-        node_ids = path_nodes[:, 0]  # First node in the history [batch]
+        node_ids = path_nodes[:, 0]  # First node in each trajectory [batch]
+        next_node_ids = path_nodes[:, 1] if path_nodes.size(1) > 1 else path_nodes[:, 0]
+        next_categories = path_categories[:, 1] if path_categories.size(1) > 1 else path_categories[:, 0]
         
         # Forward pass with Theory of Mind features
         predictions = model(
@@ -776,7 +726,7 @@ def train_epoch_per_node(
             graph_data=graph_data
         )
         
-        # Compute losses (predicting next step given path history)
+        # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_nodes)
         loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_ids)
         loss_category = criterion['category'](predictions['category'], next_categories)
@@ -794,7 +744,7 @@ def train_epoch_per_node(
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         
-        # Compute accuracies (predicting next node given path history)
+        # Compute accuracies
         goal_acc = compute_accuracy(predictions['goal'], goal_nodes, k=1)
         nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_ids, k=1)
         category_acc = compute_accuracy(predictions['category'], next_categories, k=1)
@@ -807,6 +757,8 @@ def train_epoch_per_node(
         metrics['goal_acc'].update(goal_acc, batch_size)
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
+        metrics['nextstep_acc'].update(nextstep_acc, node_ids.size(0))
+        metrics['category_acc'].update(category_acc, node_ids.size(0))
         
         # Log batch metrics
         logger.log_batch_metrics(
@@ -818,19 +770,19 @@ def train_epoch_per_node(
             category_acc=category_acc,
         )
         
-        # Log embedding stats periodically (disabled to avoid wandb step conflicts)
-        # if batch_idx % 50 == 0:
-        #     logger.log_embedding_stats(
-        #         predictions['embeddings'],
-        #         phase='train',
-        #         epoch=epoch * len(train_loader) + batch_idx
-        #     )
+        # Log embedding stats periodically
+        if batch_idx % 50 == 0:
+            logger.log_embedding_stats(
+                predictions['embeddings'],
+                phase='train',
+                epoch=epoch * len(train_loader) + batch_idx
+            )
         
         # Progress bar update
         pbar.set_postfix({
             'loss': f"{metrics['loss'].avg:.4f}",
             'goal_acc': f"{metrics['goal_acc'].avg:.3f}",
-            'next_acc': f"{metrics['nextstep_acc'].avg:.3f}",
+            'nextstep_acc': f"{metrics['nextstep_acc'].avg:.3f}",
             'cat_acc': f"{metrics['category_acc'].avg:.3f}",
         })
     
@@ -847,6 +799,7 @@ def train_epoch_per_node(
 
 
 @torch.no_grad()
+@torch.no_grad()
 def validate_per_node(
     model: nn.Module,
     val_loader: DataLoader,
@@ -857,10 +810,7 @@ def validate_per_node(
     logger: WandBTrainingLogger,
     task_weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
-    """Validate with PROPER per-node supervision.
-    
-    Same as training: each sample has full path history.
-    """
+    """Validate with trajectory-level supervision."""
     
     if task_weights is None:
         task_weights = {'goal': 1.0, 'nextstep': 0.5, 'category': 0.5}
@@ -882,19 +832,19 @@ def validate_per_node(
         batch_size = batch['batch_size']
         
         # Move batch to device
-        path_nodes = batch['path_nodes'].to(device)              # [batch, max_seq_len]
-        path_categories = batch['path_categories'].to(device)     # [batch, max_seq_len]
-        path_lengths = batch['path_lengths'].to(device)           # [batch]
-        next_node_ids = batch['next_node_ids'].to(device)         # [batch] - target
-        next_categories = batch['next_cat_ids'].to(device)        # [batch] - target
+        path_nodes = batch['path_nodes'].to(device)          # [batch, seq_len]
+        path_categories = batch['path_categories'].to(device) # [batch, seq_len]
+        path_lengths = batch['path_lengths'].to(device)
         goal_nodes = batch['goal_nodes'].to(device)
         hours = batch['hours'].to(device)
         days = batch['day_of_week'].to(device)
         velocities = batch['velocities'].to(device)
         temporal_deltas = batch['temporal_deltas'].to(device)
         
-        # Extract starting node from path history
-        node_ids = path_nodes[:, 0]  # First node in the history [batch]
+        # Extract starting node and next node
+        node_ids = path_nodes[:, 0]  # First node in each trajectory [batch]
+        next_node_ids = path_nodes[:, 1] if path_nodes.size(1) > 1 else path_nodes[:, 0]
+        next_categories = path_categories[:, 1] if path_categories.size(1) > 1 else path_categories[:, 0]
         
         # Forward pass
         predictions = model(
@@ -909,7 +859,7 @@ def validate_per_node(
             graph_data=graph_data
         )
         
-        # Compute losses (predicting next step given path history)
+        # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_nodes)
         loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_ids)
         loss_category = criterion['category'](predictions['category'], next_categories)
@@ -921,7 +871,7 @@ def validate_per_node(
             task_weights['category'] * loss_category
         )
         
-        # Compute accuracies (predicting next node given path history)
+        # Compute accuracies
         goal_acc = compute_accuracy(predictions['goal'], goal_nodes, k=1)
         nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_ids, k=1)
         category_acc = compute_accuracy(predictions['category'], next_categories, k=1)
@@ -935,12 +885,12 @@ def validate_per_node(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
-        # Log embedding stats (disabled to avoid wandb step conflicts)
-        # logger.log_embedding_stats(
-        #     predictions['embeddings'],
-        #     phase='val',
-        #     epoch=epoch
-        # )
+        # Log embedding stats
+        logger.log_embedding_stats(
+            predictions['embeddings'],
+            phase='val',
+            epoch=epoch
+        )
         
         pbar.set_postfix({'loss': f"{metrics['loss'].avg:.4f}"})
     
@@ -995,8 +945,8 @@ def load_per_node_data(
         seed=seed
     )
     
-    # Step 3: Create TRAJECTORY-LEVEL datasets
-    print("\n🔧 Step 3: Creating trajectory datasets...")
+    # Step 3: Create TRAJECTORY-LEVEL datasets (FAST - no per-node expansion!)
+    print("\n🔧 Step 3: Creating trajectory datasets (fast!)...")
     train_dataset = TrajectoryDataset(train_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
     val_dataset = TrajectoryDataset(val_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
     test_dataset = TrajectoryDataset(test_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
@@ -1268,6 +1218,7 @@ if __name__ == '__main__':
     )
     
     # Data
+    parser.add_argument('--data_dir', type=str, default='data/simulation_data/run_8_enriched')
     parser.add_argument('--data_dir', type=str, default='data/simulation_data/run_8_enriched')
     parser.add_argument('--graph_path', type=str, default='data/processed/ucsd_walk_full.graphml')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/per_node_v1')

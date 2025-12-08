@@ -105,7 +105,8 @@ def load_simulation_data(
     
     # Load trajectories - check for both possible locations
     possible_paths = [
-        os.path.join(run_dir, 'trajectories', 'all_trajectories.json'),
+        os.path.join(run_dir, 'enriched_trajectories.json'),  # run_8_enriched format
+        os.path.join(run_dir, 'trajectories', 'all_trajectories.json'),  # run_8 format
         os.path.join(run_dir, 'all_trajectories.json'),
         os.path.join(run_dir, 'trajectories.json')
     ]
