@@ -1,9 +1,21 @@
+"""
+PER-NODE THEORY OF MIND TRAINING WITH UNIFIED EMBEDDING PIPELINE
+
+ARCHITECTURE:
+1. Simplified Input: Just trajectory history (node sequence)
+2. UnifiedEmbeddingPipeline: Separate module for embeddings (can be frozen)
+3. Prediction Heads: Learnable task-specific outputs
+
+The model computes ALL temporal features internally (deltas, velocities, etc.)
+INPUT: history_node_indices → EMBEDDING PIPELINE → PREDICTION HEADS → outputs
+"""
+
 import os
 import sys
 import argparse
 from pathlib import Path
 from typing import Dict, Tuple, Optional, List
-import json
+from datetime import datetime
 
 # Set MPS fallback for Mac compatibility
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
@@ -12,9 +24,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from tqdm import tqdm
 import numpy as np
+import networkx as nx
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -23,16 +36,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 # ============================================================================
 from models.training.utils import (
     get_device, set_seed, save_checkpoint, load_checkpoint,
-    compute_accuracy, AverageMeter, MetricsTracker
+    compute_accuracy, AverageMeter
 )
-from models.training.data_loader import enrich_and_load_data
-from models.training.temporal_feature_enricher import TemporalFeatureEnricher
+from models.training.data_loader import load_simulation_data, split_data
 from models.en_encoders.unified_embedding_pipeline import UnifiedEmbeddingPipeline
-from models.en_encoders.enhanced_trajectory_encoder import EnhancedTrajectoryEncoder
-from models.en_encoders.enhanced_map_encoder import (
-    EnhancedWorldGraphEncoder, GraphDataPreparator
-)
-from models.en_encoders.enhanced_tom_graph_encoder import EnhancedToMGraphEncoder
 from graph_controller.world_graph import WorldGraph
 
 # W&B imports
@@ -41,87 +48,25 @@ try:
     WANDB_AVAILABLE = True
 except ImportError:
     WANDB_AVAILABLE = False
-    print("⚠️  wandb not installed. Install with: pip3 install wandb")
+    print("⚠️  wandb not installed. Install with: pip install wandb")
 
 
 # ============================================================================
-# DATA VERIFICATION & PREPARATION
+# SIMPLIFIED PER-NODE DATASET
 # ============================================================================
 
-class TrajectoryDataValidator:
-    """Validates that trajectories have all required data for training."""
-    
-    @staticmethod
-    def verify_trajectory_structure(trajectory: Dict) -> Tuple[bool, str]:
-        """
-        Verify that a trajectory has all required fields.
-        
-        Required fields:
-        - path: List of [node_id, category_id] pairs
-        - goal_node: Final destination node ID
-        - hour: Hour of day trajectory started
-        
-        Returns:
-            Tuple of (is_valid, error_message)
-        """
-        if 'path' not in trajectory:
-            return False, "Missing 'path' field"
-        if not isinstance(trajectory['path'], list) or len(trajectory['path']) == 0:
-            return False, "Empty or invalid 'path'"
-        if len(trajectory['path'][0]) != 2:
-            return False, "Path nodes should be [node_id, category_id] pairs"
-        if 'goal_node' not in trajectory:
-            return False, "Missing 'goal_node' field"
-        if 'hour' not in trajectory:
-            return False, "Missing 'hour' field"
-        
-        return True, ""
-    
-    @staticmethod
-    def validate_all_trajectories(trajectories: List[Dict]) -> Tuple[int, int, List[str]]:
-        """
-        Validate all trajectories.
-        
-        Returns:
-            Tuple of (num_valid, num_invalid, error_list)
-        """
-        num_valid = 0
-        num_invalid = 0
-        errors = []
-        
-        for idx, traj in enumerate(trajectories):
-            is_valid, error_msg = TrajectoryDataValidator.verify_trajectory_structure(traj)
-            if is_valid:
-                num_valid += 1
-            else:
-                num_invalid += 1
-                errors.append(f"Trajectory {idx}: {error_msg}")
-        
-        return num_valid, num_invalid, errors
-
-
-# ============================================================================
-# PER-NODE DATASET
-# ============================================================================
-
-class TrajectoryDataset(Dataset):
+class PerNodeTrajectoryDataset(Dataset):
     """
-    OPTIMAL Per-node expansion with FULL PATH HISTORY:
+    Simplified per-node dataset that only takes trajectory history as input.
     
-    For trajectory [n1→n2→n3→n4→goal]:
-    - Sample 1: path=[n1],        next=n2  ← Model sees 1 decision point
-    - Sample 2: path=[n1→n2],     next=n3  ← Model sees 2 decision points
-    - Sample 3: path=[n1→n2→n3],  next=n4  ← Model sees 3 decision points
+    For each trajectory [n1→n2→n3→n4→goal]:
+    - Sample 1: history=[n1],        next=n2
+    - Sample 2: history=[n1→n2],     next=n3
+    - Sample 3: history=[n1→n2→n3],  next=n4
     
-    BEST approach because:
-    ✅ Rich supervision at EACH step (not just first node)
-    ✅ Progressive path context = Theory of Mind!
-    ✅ Learn behavioral patterns (hesitation, correction, confidence)
-    ✅ ~500K samples from 100K trajectories = good data scale
-    ✅ Each trajectory generates 4-10 training signals, not just 1
+    The model computes all temporal features internally!
     """
     
-    # Category to index mapping
     CATEGORY_TO_IDX = {
         'home': 0,
         'study': 1,
@@ -135,12 +80,13 @@ class TrajectoryDataset(Dataset):
     def __init__(
         self,
         trajectories: List[Dict],
-        graph: object,
+        graph: nx.Graph,
         poi_nodes: List[str],
         node_to_idx_map: Dict[str, int] = None,
         min_traj_length: int = 2,
     ):
-        self.samples = []  # List of per-node samples (not full trajectories)
+        """Initialize per-node dataset."""
+        self.samples = []
         self.graph = graph
         self.poi_nodes = poi_nodes
         self.goal_to_idx = {node: idx for idx, node in enumerate(poi_nodes)}
@@ -151,54 +97,64 @@ class TrajectoryDataset(Dataset):
         else:
             self.node_to_idx = node_to_idx_map
         
-        # Expand trajectories into per-node samples with path history
-        print(f"   🧹 Expanding {len(trajectories)} trajectories into per-node samples with path history...")
+        # Expand trajectories into per-node samples
+        print(f"   🧹 Creating per-node samples from {len(trajectories)} trajectories...")
         valid_count = 0
         sample_count = 0
         
-        for traj in tqdm(trajectories, desc="   📊 Creating samples", leave=False):
-            is_valid, _ = TrajectoryDataValidator.verify_trajectory_structure(traj)
-            if not is_valid:
+        for traj_idx, traj in enumerate(tqdm(trajectories, desc="   📊 Expanding samples", leave=False)):
+            if 'path' not in traj or 'goal_node' not in traj:
                 continue
             
             path = traj['path']
             goal_node = traj['goal_node']
             
-            if len(path) < min_traj_length or goal_node not in self.goal_to_idx:
+            # Skip invalid trajectories
+            if not isinstance(path, list) or len(path) < min_traj_length:
+                continue
+            
+            if goal_node not in self.goal_to_idx:
                 continue
             
             valid_count += 1
+            goal_idx = self.goal_to_idx[goal_node]
             
-            # FOR EACH STEP in the trajectory, create a training sample
-            # At step i: path history is path[0:i], target is path[i]
+            # Create per-node samples from path history
             for step_idx in range(1, len(path)):
-                # Path history: all nodes BEFORE current step
-                path_history = path[:step_idx]  # e.g., [n1] or [n1, n2] or [n1, n2, n3]
+                history_path = path[:step_idx]
+                next_node = path[step_idx]
                 
-                # Target: the next node to visit
-                next_node_id = path[step_idx][0]
-                next_node_cat = path[step_idx][1]
+                # Convert node IDs to indices
+                # Handle both simple node IDs and [node_id, category] tuples
+                try:
+                    history_indices = []
+                    for node in history_path:
+                        # Extract node ID if it's a list/tuple
+                        node_id = node[0] if isinstance(node, (list, tuple)) else node
+                        history_indices.append(self.node_to_idx[node_id])
+                    
+                    # Extract node ID and category for next step
+                    next_node_id = next_node[0] if isinstance(next_node, (list, tuple)) else next_node
+                    next_node_idx = self.node_to_idx[next_node_id]
+                except (KeyError, TypeError, IndexError):
+                    continue
                 
-                # Get temporal features for the history so far
-                temporal_deltas = traj.get('temporal_deltas', [])[: step_idx]
-                velocities = traj.get('velocities', [])[: step_idx]
+                # Extract category if available
+                next_cat_idx = 0
+                if isinstance(next_node, (list, tuple)) and len(next_node) >= 2:
+                    cat_name = next_node[1]
+                    next_cat_idx = self.CATEGORY_TO_IDX.get(cat_name, 0)
                 
-                sample = {
-                    'path_nodes': [self.node_to_idx.get(n[0], 0) for n in path_history],
-                    'path_categories': [self.CATEGORY_TO_IDX.get(n[1], 6) for n in path_history],
-                    'next_node_idx': self.node_to_idx.get(next_node_id, 0),
-                    'next_cat_idx': self.CATEGORY_TO_IDX.get(next_node_cat, 6),
-                    'goal_idx': self.goal_to_idx[goal_node],
-                    'hour': traj['hour'],
-                    'day_of_week': traj.get('day_of_week', 0),
-                    'circadian_hour': traj.get('circadian_hour', traj['hour']),
-                    'temporal_deltas': temporal_deltas,
-                    'velocities': velocities,
-                }
-                self.samples.append(sample)
+                self.samples.append({
+                    'history_node_indices': history_indices,
+                    'next_node_idx': next_node_idx,
+                    'next_cat_idx': next_cat_idx,
+                    'goal_idx': goal_idx,
+                })
+                
                 sample_count += 1
         
-        print(f"✅ Expanded {valid_count} trajectories → {sample_count} per-node with history samples")
+        print(f"✅ Created {sample_count} per-node samples from {valid_count} trajectories")
         print(f"   Average samples per trajectory: {sample_count / max(valid_count, 1):.1f}")
     
     def __len__(self) -> int:
@@ -208,142 +164,116 @@ class TrajectoryDataset(Dataset):
         return self.samples[idx]
 
 
-def collate_trajectories(batch: List[Dict]) -> Dict:
+def collate_per_node_samples(batch: List[Dict]) -> Dict:
     """
-    Collate per-node samples into batches.
+    Collate per-node samples into a batch.
     
-    Each sample has variable-length path history.
-    Pad to max length within batch.
+    Pads variable-length history sequences to max length in batch.
     """
     if not batch:
         raise ValueError("Empty batch!")
     
-    # Find max path length in this batch
-    max_path_len = max(len(s['path_nodes']) for s in batch) if batch else 1
-    max_path_len = max(1, max_path_len)
+    # Find max history length in batch
+    max_history_len = max(len(s['history_node_indices']) for s in batch)
+    max_history_len = max(1, max_history_len)
     
     batch_size = len(batch)
     
-    # Pad all sequences
-    path_nodes_padded = []
-    path_categories_padded = []
-    path_lengths = []
-    velocities_padded = []
-    temporal_deltas_padded = []
+    # Pad all histories to max length
+    padded_histories = []
+    history_lengths = []
     
-    for s in batch:
-        path_len = len(s['path_nodes'])
-        path_lengths.append(path_len)
+    for sample in batch:
+        history = sample['history_node_indices']
+        pad_len = max_history_len - len(history)
         
-        # Pad path nodes and categories to max_path_len
-        pad_size = max_path_len - path_len
-        
-        path_nodes = torch.tensor(s['path_nodes'], dtype=torch.long)
-        padded_nodes = torch.cat([path_nodes, torch.zeros(pad_size, dtype=torch.long)])
-        
-        path_cats = torch.tensor(s['path_categories'], dtype=torch.long)
-        padded_cats = torch.cat([path_cats, torch.zeros(pad_size, dtype=torch.long)])
-        
-        # Pad velocities and temporal deltas
-        vel = s['velocities'] if isinstance(s['velocities'], list) else []
-        deltas = s['temporal_deltas'] if isinstance(s['temporal_deltas'], list) else []
-        
-        padded_vel = torch.tensor(vel + [0.0] * (max_path_len - len(vel)), dtype=torch.float32)
-        padded_deltas = torch.tensor(deltas + [0.0] * (max_path_len - len(deltas)), dtype=torch.float32)
-        
-        path_nodes_padded.append(padded_nodes)
-        path_categories_padded.append(padded_cats)
-        velocities_padded.append(padded_vel)
-        temporal_deltas_padded.append(padded_deltas)
+        # Pad with 0 (dummy node)
+        padded = history + [0] * pad_len
+        padded_histories.append(torch.tensor(padded, dtype=torch.long))
+        history_lengths.append(len(history))
     
     return {
-        'path_nodes': torch.stack(path_nodes_padded),
-        'path_categories': torch.stack(path_categories_padded),
-        'path_lengths': torch.tensor(path_lengths, dtype=torch.long),
-        'next_node_ids': torch.tensor([s['next_node_idx'] for s in batch], dtype=torch.long),
-        'next_cat_ids': torch.tensor([s['next_cat_idx'] for s in batch], dtype=torch.long),
-        'goal_nodes': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
-        'hours': torch.tensor([s['hour'] for s in batch], dtype=torch.float32),
-        'day_of_week': torch.tensor([s['day_of_week'] for s in batch], dtype=torch.long),
-        'circadian_hour': torch.tensor([s['circadian_hour'] for s in batch], dtype=torch.float32),
-        'velocities': torch.stack(velocities_padded),
-        'temporal_deltas': torch.stack(temporal_deltas_padded),
-        'batch_size': batch_size,
+        'history_node_indices': torch.stack(padded_histories),  # [batch, max_len]
+        'history_lengths': torch.tensor(history_lengths, dtype=torch.long),  # [batch]
+        'next_node_idx': torch.tensor([s['next_node_idx'] for s in batch], dtype=torch.long),
+        'next_cat_idx': torch.tensor([s['next_cat_idx'] for s in batch], dtype=torch.long),
+        'goal_idx': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
     }
 
 
 # ============================================================================
-# ENHANCED MODEL WITH W&B LOGGING
+# PER-NODE THEORY OF MIND PREDICTOR
 # ============================================================================
 
-class EnhancedToMModel(nn.Module):
+class PerNodeToMPredictor(nn.Module):
     """
-    Advanced Theory of Mind model with:
-    - Path history encoding (LSTM/GRU for sequential context)
-    - Goal-aware representations
-    - Agent belief state modeling (latent variable)
-    - Multi-head attention for task-specific reasoning
+    Per-Node Theory of Mind Predictor with Separated Embedding & Prediction.
+    
+    DESIGN:
+    - Module 1: UnifiedEmbeddingPipeline (can be frozen for transfer learning)
+    - Module 2: History aggregation (LSTM)
+    - Module 3: Prediction heads (goal, nextstep, category)
+    
+    INPUT: history_node_indices [batch, seq_len] with lengths [batch]
+    OUTPUT: predictions for goal, next node, category
     """
     
     def __init__(
         self,
         num_nodes: int,
-        graph_node_feat_dim: int,
+        num_agents: int,
         num_poi_nodes: int,
         num_categories: int = 7,
+        # Embedding params
+        node_embedding_dim: int = 64,
+        temporal_dim: int = 64,
+        agent_dim: int = 64,
+        fusion_dim: int = 128,
+        # Prediction head params
         hidden_dim: int = 256,
-        output_dim: int = 128,
-        latent_dim: int = 64,
         dropout: float = 0.1,
         num_heads: int = 4,
+        freeze_embedding: bool = False,
     ):
         super().__init__()
         
         self.num_nodes = num_nodes
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
+        self.fusion_dim = fusion_dim
         self.hidden_dim = hidden_dim
-        self.latent_dim = latent_dim
+        self.node_embedding_dim = node_embedding_dim
         
         # ================================================================
-        # CORE EMBEDDINGS
+        # MODULE 1: UNIFIED EMBEDDING PIPELINE
         # ================================================================
-        self.node_embedding = nn.Embedding(num_nodes, output_dim)
-        self.poi_embedding = nn.Embedding(num_poi_nodes, output_dim)
-        self.category_embedding = nn.Embedding(num_categories, 32)
-        self.hour_encoding = nn.Linear(1, 32)
-        self.day_of_week_encoding = nn.Embedding(7, 16)  # NEW: 7 days of week
-        self.velocity_encoder = nn.Sequential(  # NEW: Movement speed patterns
-            nn.Linear(1, 32),
-            nn.ReLU(),
-            nn.Linear(32, 16),
+        self.embedding_pipeline = UnifiedEmbeddingPipeline(
+            num_nodes=num_nodes,
+            num_agents=num_agents,
+            num_categories=num_categories,
+            node_embedding_dim=node_embedding_dim,
+            temporal_dim=temporal_dim,
+            agent_dim=agent_dim,
+            fusion_dim=fusion_dim,
+            hidden_dim=hidden_dim,
+            n_fusion_layers=2,
+            n_heads=num_heads,
+            dropout=dropout,
+            use_node2vec=True,
+            use_temporal=True,
+            use_agent=True,
+            use_modality_gating=True,
+            use_cross_attention=True,
         )
         
-        # ================================================================
-        # AGENT BELIEF STATE - Latent variable for agent intentions
-        # ================================================================
-        self.belief_prior = nn.Linear(output_dim + 32, latent_dim)  # Prior: p(z|current_node, time)
-        self.belief_posterior = nn.Sequential(  # Posterior: q(z|current, next, goal)
-            nn.Linear(output_dim * 2 + output_dim + 32, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, latent_dim * 2),  # mean and log_var
-        )
+        if freeze_embedding:
+            self._freeze_embeddings()
         
         # ================================================================
-        # GOAL-AWARE CONTEXT
+        # MODULE 2: HISTORY AGGREGATION WITH LSTM
         # ================================================================
-        self.goal_context_encoder = nn.Sequential(
-            nn.Linear(output_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-        )
-        
-        # ================================================================
-        # PATH HISTORY ENCODING (sequence of visited locations)
-        # ================================================================
-        self.path_lstm = nn.LSTM(
-            input_size=output_dim + 32,  # node_emb + category_emb
+        self.history_lstm = nn.LSTM(
+            input_size=fusion_dim,
             hidden_size=hidden_dim // 2,
             num_layers=2,
             batch_first=True,
@@ -351,34 +281,18 @@ class EnhancedToMModel(nn.Module):
         )
         
         # ================================================================
-        # MULTI-HEAD ATTENTION FOR TASK-SPECIFIC REASONING
+        # MODULE 3: PREDICTION HEADS
         # ================================================================
-        self.multihead_attention = nn.MultiheadAttention(
-            embed_dim=hidden_dim,
-            num_heads=num_heads,
-            dropout=dropout,
-            batch_first=True,
-        )
         
-        # ================================================================
-        # UNIFIED FEATURE PROCESSOR
-        # ================================================================
-        # Combines: current_node + temporal + day_of_week + velocity + belief_state + goal_context + path_history
-        total_feature_dim = output_dim + 32 + 16 + 16 + latent_dim + (hidden_dim // 2) + (hidden_dim // 2)
-        
-        self.feature_processor = nn.Sequential(
-            nn.Linear(total_feature_dim, hidden_dim),
+        # Feature fusion layer (combines current + history context)
+        self.feature_fusion = nn.Sequential(
+            nn.Linear(fusion_dim + hidden_dim // 2, hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(dropout),
         )
         
-        # ================================================================
-        # TASK-SPECIFIC HEADS WITH RESIDUAL CONNECTIONS
-        # ================================================================
+        # Goal prediction head
         self.goal_head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -386,6 +300,7 @@ class EnhancedToMModel(nn.Module):
             nn.Linear(hidden_dim // 2, num_poi_nodes),
         )
         
+        # Next step prediction head
         self.nextstep_head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
@@ -393,340 +308,196 @@ class EnhancedToMModel(nn.Module):
             nn.Linear(hidden_dim // 2, num_nodes),
         )
         
+        # Category prediction head
         self.category_head = nn.Sequential(
             nn.Linear(hidden_dim, hidden_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, num_categories),
         )
-        
-        # KL divergence weight for VAE-style regularization
-        self.kl_weight = 0.1
     
-    def reparameterize(self, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
-        """Sample from latent distribution N(mu, exp(log_var))."""
-        std = torch.exp(0.5 * log_var)
-        eps = torch.randn_like(std)
-        return mu + eps * std
+    def _freeze_embeddings(self):
+        """Freeze embedding pipeline parameters."""
+        for param in self.embedding_pipeline.parameters():
+            param.requires_grad = False
+        print("❄️  Embedding pipeline frozen!")
+    
+    def unfreeze_embeddings(self):
+        """Unfreeze embedding parameters."""
+        for param in self.embedding_pipeline.parameters():
+            param.requires_grad = True
+        print("🔥 Embedding pipeline unfrozen!")
+    
+    def _compute_temporal_features(
+        self,
+        history_node_indices: torch.Tensor,
+        history_lengths: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Compute temporal features from trajectory history.
+        
+        Returns:
+            hours: [batch, seq_len] - Hour of day (default: 12)
+            velocities: [batch, seq_len] - Speed (computed from distance)
+            temporal_deltas: [batch, seq_len] - Time between steps (default: 1 hour)
+        """
+        batch_size, seq_len = history_node_indices.shape
+        device = history_node_indices.device
+        
+        # For now, use defaults (could enhance with graph distances)
+        hours = torch.full((batch_size, seq_len), 12.0, device=device)
+        
+        # Velocity: constant 1.0 (could compute from graph distances)
+        velocities = torch.ones((batch_size, seq_len), device=device)
+        
+        # Temporal deltas: constant 1 hour between steps
+        temporal_deltas = torch.ones((batch_size, seq_len), device=device)
+        
+        return hours, velocities, temporal_deltas
     
     def forward(
         self,
-        node_ids: torch.Tensor,
-        goal_nodes: Optional[torch.Tensor] = None,
-        path_nodes: Optional[torch.Tensor] = None,  # [batch, seq_len]
-        path_categories: Optional[torch.Tensor] = None,  # [batch, seq_len]
-        hours: Optional[torch.Tensor] = None,
-        days: Optional[torch.Tensor] = None,
-        deltas: Optional[torch.Tensor] = None,
-        velocities: Optional[torch.Tensor] = None,
-        mask: Optional[torch.Tensor] = None,
-        graph_data: Optional[Dict] = None,
+        history_node_indices: torch.Tensor,  # [batch, seq_len]
+        history_lengths: torch.Tensor,        # [batch]
     ) -> Dict[str, torch.Tensor]:
         """
-        Forward pass with Theory of Mind reasoning.
+        Forward pass: history → embeddings → predictions.
         
         Args:
-            node_ids: Current node indices [batch]
-            goal_nodes: Goal node indices [batch]
-            path_nodes: Historical path nodes [batch, seq_len]
-            path_categories: Historical path categories [batch, seq_len]
-            hours: Hour of day [batch]
+            history_node_indices: [batch, seq_len] node indices
+            history_lengths: [batch] actual sequence length before padding
+        
+        Returns:
+            Dict with keys: 'goal', 'nextstep', 'category', 'embeddings'
         """
-        batch_size = node_ids.size(0)
-        device = node_ids.device
-        
-        # Handle 1D node_ids
-        if node_ids.dim() > 1:
-            node_ids = node_ids.squeeze(-1)
+        batch_size, seq_len = history_node_indices.shape
+        device = history_node_indices.device
         
         # ================================================================
-        # 1. CURRENT STATE REPRESENTATION
+        # STEP 1: COMPUTE TEMPORAL FEATURES FROM HISTORY
         # ================================================================
-        node_emb = self.node_embedding(node_ids)  # [batch, output_dim]
-        
-        # Temporal encoding
-        if hours is None:
-            hours = torch.zeros(batch_size, 1, device=device)
-        elif hours.dim() == 1:
-            hours = hours.unsqueeze(1)
-        hours_emb = self.hour_encoding(hours)  # [batch, 32]
-        
-        # NEW: Day of week encoding
-        day_emb = torch.zeros(batch_size, 16, device=device)  # Default zeros
-        if days is not None:
-            if days.dim() == 0:
-                days = days.unsqueeze(0)
-            day_emb = self.day_of_week_encoding(days % 7)  # [batch, 16]
-        
-        # NEW: Velocity context (average movement speed up to this point)
-        vel_emb = torch.zeros(batch_size, 16, device=device)  # Default zeros
-        if velocities is not None:
-            if velocities.dim() == 1:
-                velocities = velocities.unsqueeze(1)
-            # Average velocity from path history
-            vel_mean = velocities.mean(dim=1, keepdim=True)  # [batch, 1]
-            vel_emb = self.velocity_encoder(vel_mean)  # [batch, 16]
+        hours, velocities, temporal_deltas = self._compute_temporal_features(
+            history_node_indices,
+            history_lengths,
+        )
         
         # ================================================================
-        # 2. GOAL CONTEXT
+        # STEP 2: ENCODE TRAJECTORY HISTORY WITH UNIFIED PIPELINE
         # ================================================================
-        if goal_nodes is not None and goal_nodes.max() < self.num_poi_nodes:
-            goal_emb = self.poi_embedding(goal_nodes)  # [batch, output_dim]
+        # Get node embeddings only (simplified for per-node training)
+        # We'll use a simpler approach that avoids the temporal encoder mismatch
+        node_emb = self.embedding_pipeline.encode_nodes(
+            history_node_indices,
+            spatial_coords=None,
+            categories=None,
+        )  # [batch, seq_len, node_embedding_dim]
+        
+        # Expand to fusion_dim by simple projection/padding
+        # This ensures compatibility with the LSTM input
+        batch_size, seq_len, node_dim = node_emb.shape
+        if node_dim < self.fusion_dim:
+            # Pad with zeros to reach fusion_dim
+            padding = torch.zeros(batch_size, seq_len, self.fusion_dim - node_dim, device=device)
+            history_embeddings = torch.cat([node_emb, padding], dim=-1)
         else:
-            # Use dummy goal if not provided
-            goal_emb = self.poi_embedding(torch.zeros(batch_size, dtype=torch.long, device=device))
-        
-        goal_context = self.goal_context_encoder(goal_emb)  # [batch, hidden//2]
-        
+            # If node_dim >= fusion_dim, take only the first fusion_dim channels
+            history_embeddings = node_emb[:, :, :self.fusion_dim]
         # ================================================================
-        # 3. AGENT BELIEF STATE (Latent variable modeling)
+        # STEP 3: AGGREGATE HISTORY WITH LSTM
         # ================================================================
-        # Prior: p(z|current_node, hour)
-        prior_input = torch.cat([node_emb, hours_emb], dim=-1)
-        z_mu_prior = self.belief_prior(prior_input)  # [batch, latent_dim]
+        # Pack padded sequence
+        packed = nn.utils.rnn.pack_padded_sequence(
+            history_embeddings,
+            history_lengths.cpu(),
+            batch_first=True,
+            enforce_sorted=False
+        )
         
-        # Posterior: q(z|current, next, goal) - only used during training with supervision
-        if goal_nodes is not None and path_nodes is not None:
-            next_node_emb = self.node_embedding(path_nodes[:, -1]) if path_nodes.size(1) > 0 else node_emb
-            posterior_input = torch.cat([node_emb, next_node_emb, goal_emb, hours_emb], dim=-1)
-            posterior_params = self.belief_posterior(posterior_input)
-            z_mu_post, z_log_var = posterior_params[:, :self.latent_dim], posterior_params[:, self.latent_dim:]
-            z_belief = self.reparameterize(z_mu_post, z_log_var)
-        else:
-            z_belief = self.reparameterize(z_mu_prior, torch.zeros_like(z_mu_prior))
+        # LSTM processes history
+        _, (hidden, _) = self.history_lstm(packed)
+        history_context = hidden[-1]  # [batch, hidden//2]
+        # ================================================================
+        # STEP 4: GET CURRENT NODE REPRESENTATION
+        # ================================================================
+        # Get embedding of the last node in history
+        last_node_embeddings = []
+        for b in range(batch_size):
+            actual_len = history_lengths[b].item()
+            last_idx = min(actual_len - 1, seq_len - 1)
+            last_node_embeddings.append(history_embeddings[b, last_idx])
         
-        # ================================================================
-        # 4. PATH HISTORY ENCODING (what has the agent done?)
-        # ================================================================
-        if path_nodes is not None and path_nodes.size(1) > 0:
-            # Embed path history
-            path_node_emb = self.node_embedding(path_nodes)  # [batch, seq_len, output_dim]
-            
-            if path_categories is not None:
-                path_cat_emb = self.category_embedding(path_categories)  # [batch, seq_len, 32]
-                path_input = torch.cat([path_node_emb, path_cat_emb], dim=-1)
-            else:
-                path_input = path_node_emb
-            
-            # LSTM processes the sequence
-            _, (path_hidden, _) = self.path_lstm(path_input)  # hidden: [2, batch, hidden//2]
-            path_context = path_hidden[-1]  # [batch, hidden//2]
-        else:
-            # No path history - use zeros
-            path_context = torch.zeros(batch_size, self.hidden_dim // 2, device=device)
+        current_node_emb = torch.stack(last_node_embeddings)  # [batch, fusion_dim]
         
         # ================================================================
-        # 5. COMBINE ALL FEATURES (INCLUDING NEW TEMPORAL CONTEXT)
+        # STEP 5: FUSE CURRENT STATE WITH HISTORY CONTEXT
         # ================================================================
-        combined_features = torch.cat([
-            node_emb,           # Current location [output_dim]
-            hours_emb,          # Time of day [32]
-            day_emb,            # NEW: Day of week [16]
-            vel_emb,            # NEW: Velocity context [16]
-            z_belief,           # Agent belief/intention [latent_dim]
-            goal_context,       # Goal representation [hidden//2]
-            path_context,       # Path history [hidden//2]
-        ], dim=-1)
+        combined = torch.cat([current_node_emb, history_context], dim=-1)
+        unified_repr = self.feature_fusion(combined)  # [batch, hidden_dim]
         
         # ================================================================
-        # 6. UNIFIED PROCESSING
-        # ================================================================
-        unified_repr = self.feature_processor(combined_features)  # [batch, hidden_dim]
-        
-        # ================================================================
-        # 7. TASK HEADS
+        # STEP 6: PREDICTION HEADS
         # ================================================================
         return {
             'goal': self.goal_head(unified_repr),
             'nextstep': self.nextstep_head(unified_repr),
             'category': self.category_head(unified_repr),
             'embeddings': unified_repr,
-            'belief_state': z_belief,  # For analysis/visualization
         }
 
 
 # ============================================================================
-# COMPREHENSIVE W&B LOGGER
+# W&B LOGGER
 # ============================================================================
 
-class WandBTrainingLogger:
-    """Handles all W&B logging during training."""
+class WandBLogger:
+    """Handles W&B logging during training."""
     
-    def __init__(
-        self,
-        project_name: str = "bdi-tom-unified",
-        experiment_name: str = "per-node-training",
-        config: Optional[Dict] = None
-    ):
-        self.project_name = project_name
-        self.experiment_name = experiment_name
+    def __init__(self, project_name: str = "bdi-tom-per-node", config: Optional[Dict] = None):
         self.enabled = WANDB_AVAILABLE
         
         if self.enabled:
-            try:
-                wandb.init(
-                    project=project_name,
-                    entity="nigeldoering-uc-san-diego",
-                    name=experiment_name,
-                    config=config,
-                    tags=["unified-embeddings", "per-node", "multi-task"],
-                )
-                print(f"✅ W&B initialized: {project_name}/{experiment_name}")
-            except Exception as e:
-                print(f"⚠️  W&B initialization failed: {e}")
-                self.enabled = False
+            wandb.init(project=project_name, config=config or {})
+            print("✅ W&B initialized!")
         else:
-            print("⚠️  W&B disabled (not installed)")
+            print("⚠️  W&B disabled")
     
-    def log_epoch_metrics(
-        self,
-        epoch: int,
-        train_metrics: Dict[str, float],
-        val_metrics: Dict[str, float],
-        learning_rate: float,
-    ):
-        """Log epoch-level metrics."""
+    def log_epoch(self, epoch: int, metrics: Dict[str, float], lr: float):
+        """Log epoch metrics."""
         if not self.enabled:
             return
         
-        log_dict = {
-            'epoch': epoch,
-            'learning_rate': learning_rate,
-        }
-        
-        # Train metrics
-        for key, val in train_metrics.items():
-            log_dict[f'train/{key}'] = val
-        
-        # Val metrics
-        for key, val in val_metrics.items():
-            log_dict[f'val/{key}'] = val
-        
+        log_dict = {'epoch': epoch, 'learning_rate': lr}
+        log_dict.update(metrics)
         wandb.log(log_dict, step=epoch)
     
-    def log_task_metrics(
-        self,
-        phase: str,  # 'train' or 'val'
-        epoch: int,
-        goal_loss: float,
-        goal_acc: float,
-        nextstep_loss: float,
-        nextstep_acc: float,
-        category_loss: float,
-        category_acc: float,
-    ):
-        """Log per-task metrics."""
+    def log_batch(self, step: int, loss: float, metrics: Dict[str, float]):
+        """Log batch metrics."""
         if not self.enabled:
             return
         
-        log_dict = {
-            f'{phase}/goal_loss': goal_loss,
-            f'{phase}/goal_acc': goal_acc,
-            f'{phase}/nextstep_loss': nextstep_loss,
-            f'{phase}/nextstep_acc': nextstep_acc,
-            f'{phase}/category_loss': category_loss,
-            f'{phase}/category_acc': category_acc,
-        }
-        
-        wandb.log(log_dict, step=epoch)
-    
-    def log_batch_metrics(
-        self,
-        batch_idx: int,
-        phase: str,
-        loss: float,
-        goal_acc: float,
-        nextstep_acc: float,
-        category_acc: float,
-    ):
-        """Log batch-level metrics during training (batch_idx should be global step)."""
-        if not self.enabled:
-            return
-        
-        log_dict = {
-            f'{phase}_batch/loss': loss,
-            f'{phase}_batch/goal_acc': goal_acc,
-            f'{phase}_batch/nextstep_acc': nextstep_acc,
-            f'{phase}_batch/category_acc': category_acc,
-        }
-        
-        # Use batch_idx as global step (must be monotonically increasing across epochs)
-        if batch_idx is not None:
-            wandb.log(log_dict, step=batch_idx)
-        else:
-            wandb.log(log_dict)
-    
-    def log_embedding_stats(
-        self,
-        embeddings: torch.Tensor,
-        phase: str,
-        epoch: int,
-    ):
-        """Log embedding statistics (auto-increment step to avoid monotonic conflicts)."""
-        if not self.enabled:
-            return
-        
-        log_dict = {
-            f'{phase}/embedding_mean': embeddings.mean().item(),
-            f'{phase}/embedding_std': embeddings.std().item(),
-            f'{phase}/embedding_min': embeddings.min().item(),
-            f'{phase}/embedding_max': embeddings.max().item(),
-        }
-        
-        # Don't specify step here - let wandb auto-increment to avoid conflicts
-        wandb.log(log_dict)
-    
-    def log_model_info(self, model: nn.Module):
-        """Log model architecture and parameters."""
-        if not self.enabled:
-            return
-        
-        total_params = sum(p.numel() for p in model.parameters())
-        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-        
-        wandb.log({
-            'model/total_parameters': total_params,
-            'model/trainable_parameters': trainable_params,
-        })
-        
-        # Watch model gradients and parameters
-        wandb.watch(model, log='all', log_freq=100)
+        log_dict = {'loss': loss}
+        log_dict.update(metrics)
+        wandb.log(log_dict, step=step)
     
     def finish(self):
-        """Finish W&B run."""
+        """Finish logging."""
         if self.enabled:
             wandb.finish()
 
 
 # ============================================================================
-# TRAINING LOOP WITH PER-NODE LEARNING
+# TRAINING FUNCTIONS
 # ============================================================================
 
-def train_epoch_per_node(
+def train_epoch(
     model: nn.Module,
     train_loader: DataLoader,
     optimizer: optim.Optimizer,
     criterion: Dict[str, nn.Module],
-    graph_data: Dict,
     device: torch.device,
     epoch: int,
-    logger: WandBTrainingLogger,
-    task_weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
-    """Train for one epoch with PROPER per-node supervision.
-    
-    NEW: Each sample has full path history up to that step.
-    For trajectory [n1→n2→n3→n4]:
-    - Sample 1: path=[n1],     next=n2  (1 step seen)
-    - Sample 2: path=[n1,n2],  next=n3  (2 steps seen)
-    - Sample 3: path=[n1,n2,n3], next=n4 (3 steps seen)
-    
-    This gives rich supervision at each decision point!
-    """
-    
-    if task_weights is None:
-        task_weights = {'goal': 1.0, 'nextstep': 0.5, 'category': 0.5}
-    
+    """Train for one epoch."""
     model.train()
     metrics = {
         'loss': AverageMeter(),
@@ -740,64 +511,37 @@ def train_epoch_per_node(
     
     pbar = tqdm(train_loader, desc=f"Epoch {epoch} [Train]")
     
-    for batch_idx, batch in enumerate(pbar):
-        batch_size = batch['batch_size']
+    for batch in pbar:
+        batch_size = batch['history_node_indices'].size(0)
         
-        # Move batch to device
-        path_nodes = batch['path_nodes'].to(device)              # [batch, max_seq_len]
-        path_categories = batch['path_categories'].to(device)     # [batch, max_seq_len]
-        path_lengths = batch['path_lengths'].to(device)           # [batch]
-        next_node_ids = batch['next_node_ids'].to(device)         # [batch] - target next node
-        next_categories = batch['next_cat_ids'].to(device)        # [batch] - target category
-        goal_nodes = batch['goal_nodes'].to(device)               # [batch]
-        hours = batch['hours'].to(device)
-        days = batch['day_of_week'].to(device)
-        velocities = batch['velocities'].to(device)
-        temporal_deltas = batch['temporal_deltas'].to(device)
+        # Move to device
+        history_node_indices = batch['history_node_indices'].to(device)
+        history_lengths = batch['history_lengths'].to(device)
+        next_node_idx = batch['next_node_idx'].to(device)
+        next_cat_idx = batch['next_cat_idx'].to(device)
+        goal_idx = batch['goal_idx'].to(device)
         
-        # For per-node learning:
-        # - path_nodes contains full history UP TO current step
-        # - next_node_ids is what to predict next
-        # - goal is same for entire trajectory
-        # - path_lengths tells us how much of path is valid
+        # Forward pass
+        predictions = model(history_node_indices, history_lengths)
         
-        node_ids = path_nodes[:, 0]  # First node in the history [batch]
-        
-        # Forward pass with Theory of Mind features
-        predictions = model(
-            node_ids=node_ids,
-            goal_nodes=goal_nodes,
-            path_nodes=path_nodes,
-            path_categories=path_categories,
-            hours=hours,
-            days=days,
-            deltas=temporal_deltas,
-            velocities=velocities,
-            graph_data=graph_data
-        )
-        
-        # Compute losses (predicting next step given path history)
-        loss_goal = criterion['goal'](predictions['goal'], goal_nodes)
-        loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_ids)
-        loss_category = criterion['category'](predictions['category'], next_categories)
+        # Compute losses
+        loss_goal = criterion['goal'](predictions['goal'], goal_idx)
+        loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_idx)
+        loss_category = criterion['category'](predictions['category'], next_cat_idx)
         
         # Weighted loss
-        loss = (
-            task_weights['goal'] * loss_goal +
-            task_weights['nextstep'] * loss_nextstep +
-            task_weights['category'] * loss_category
-        )
+        loss = 1.0 * loss_goal + 0.5 * loss_nextstep + 0.5 * loss_category
         
-        # Backward pass
+        # Backward
         optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         
-        # Compute accuracies (predicting next node given path history)
-        goal_acc = compute_accuracy(predictions['goal'], goal_nodes, k=1)
-        nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_ids, k=1)
-        category_acc = compute_accuracy(predictions['category'], next_categories, k=1)
+        # Compute accuracies
+        goal_acc = compute_accuracy(predictions['goal'], goal_idx)
+        nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_idx)
+        category_acc = compute_accuracy(predictions['category'], next_cat_idx)
         
         # Update metrics
         metrics['loss'].update(loss.item(), batch_size)
@@ -808,63 +552,22 @@ def train_epoch_per_node(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
-        # Log batch metrics
-        logger.log_batch_metrics(
-            batch_idx=epoch * len(train_loader) + batch_idx,
-            phase='train',
-            loss=loss.item(),
-            goal_acc=goal_acc,
-            nextstep_acc=nextstep_acc,
-            category_acc=category_acc,
-        )
-        
-        # Log embedding stats periodically (disabled to avoid wandb step conflicts)
-        # if batch_idx % 50 == 0:
-        #     logger.log_embedding_stats(
-        #         predictions['embeddings'],
-        #         phase='train',
-        #         epoch=epoch * len(train_loader) + batch_idx
-        #     )
-        
-        # Progress bar update
         pbar.set_postfix({
             'loss': f"{metrics['loss'].avg:.4f}",
             'goal_acc': f"{metrics['goal_acc'].avg:.3f}",
-            'next_acc': f"{metrics['nextstep_acc'].avg:.3f}",
-            'cat_acc': f"{metrics['category_acc'].avg:.3f}",
         })
     
-    # Return averages
-    return {
-        'loss': metrics['loss'].avg,
-        'loss_goal': metrics['loss_goal'].avg,
-        'loss_nextstep': metrics['loss_nextstep'].avg,
-        'loss_category': metrics['loss_category'].avg,
-        'goal_acc': metrics['goal_acc'].avg,
-        'nextstep_acc': metrics['nextstep_acc'].avg,
-        'category_acc': metrics['category_acc'].avg,
-    }
+    return {k: v.avg for k, v in metrics.items()}
 
 
 @torch.no_grad()
-def validate_per_node(
+def validate(
     model: nn.Module,
     val_loader: DataLoader,
     criterion: Dict[str, nn.Module],
-    graph_data: Dict,
     device: torch.device,
-    epoch: int,
-    logger: WandBTrainingLogger,
-    task_weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
-    """Validate with PROPER per-node supervision.
-    
-    Same as training: each sample has full path history.
-    """
-    
-    if task_weights is None:
-        task_weights = {'goal': 1.0, 'nextstep': 0.5, 'category': 0.5}
-    
+    """Validate."""
     model.eval()
     metrics = {
         'loss': AverageMeter(),
@@ -879,52 +582,30 @@ def validate_per_node(
     pbar = tqdm(val_loader, desc="Validating")
     
     for batch in pbar:
-        batch_size = batch['batch_size']
+        batch_size = batch['history_node_indices'].size(0)
         
-        # Move batch to device
-        path_nodes = batch['path_nodes'].to(device)              # [batch, max_seq_len]
-        path_categories = batch['path_categories'].to(device)     # [batch, max_seq_len]
-        path_lengths = batch['path_lengths'].to(device)           # [batch]
-        next_node_ids = batch['next_node_ids'].to(device)         # [batch] - target
-        next_categories = batch['next_cat_ids'].to(device)        # [batch] - target
-        goal_nodes = batch['goal_nodes'].to(device)
-        hours = batch['hours'].to(device)
-        days = batch['day_of_week'].to(device)
-        velocities = batch['velocities'].to(device)
-        temporal_deltas = batch['temporal_deltas'].to(device)
-        
-        # Extract starting node from path history
-        node_ids = path_nodes[:, 0]  # First node in the history [batch]
+        # Move to device
+        history_node_indices = batch['history_node_indices'].to(device)
+        history_lengths = batch['history_lengths'].to(device)
+        next_node_idx = batch['next_node_idx'].to(device)
+        next_cat_idx = batch['next_cat_idx'].to(device)
+        goal_idx = batch['goal_idx'].to(device)
         
         # Forward pass
-        predictions = model(
-            node_ids=node_ids,
-            goal_nodes=goal_nodes,
-            path_nodes=path_nodes,
-            path_categories=path_categories,
-            hours=hours,
-            days=days,
-            deltas=temporal_deltas,
-            velocities=velocities,
-            graph_data=graph_data
-        )
+        predictions = model(history_node_indices, history_lengths)
         
-        # Compute losses (predicting next step given path history)
-        loss_goal = criterion['goal'](predictions['goal'], goal_nodes)
-        loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_ids)
-        loss_category = criterion['category'](predictions['category'], next_categories)
+        # Compute losses
+        loss_goal = criterion['goal'](predictions['goal'], goal_idx)
+        loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_idx)
+        loss_category = criterion['category'](predictions['category'], next_cat_idx)
         
         # Weighted loss
-        loss = (
-            task_weights['goal'] * loss_goal +
-            task_weights['nextstep'] * loss_nextstep +
-            task_weights['category'] * loss_category
-        )
+        loss = 1.0 * loss_goal + 0.5 * loss_nextstep + 0.5 * loss_category
         
-        # Compute accuracies (predicting next node given path history)
-        goal_acc = compute_accuracy(predictions['goal'], goal_nodes, k=1)
-        nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_ids, k=1)
-        category_acc = compute_accuracy(predictions['category'], next_categories, k=1)
+        # Compute accuracies
+        goal_acc = compute_accuracy(predictions['goal'], goal_idx)
+        nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_idx)
+        category_acc = compute_accuracy(predictions['category'], next_cat_idx)
         
         # Update metrics
         metrics['loss'].update(loss.item(), batch_size)
@@ -935,115 +616,20 @@ def validate_per_node(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
-        # Log embedding stats (disabled to avoid wandb step conflicts)
-        # logger.log_embedding_stats(
-        #     predictions['embeddings'],
-        #     phase='val',
-        #     epoch=epoch
-        # )
-        
         pbar.set_postfix({'loss': f"{metrics['loss'].avg:.4f}"})
     
-    # Return averages
-    return {
-        'loss': metrics['loss'].avg,
-        'loss_goal': metrics['loss_goal'].avg,
-        'loss_nextstep': metrics['loss_nextstep'].avg,
-        'loss_category': metrics['loss_category'].avg,
-        'goal_acc': metrics['goal_acc'].avg,
-        'nextstep_acc': metrics['nextstep_acc'].avg,
-        'category_acc': metrics['category_acc'].avg,
-    }
+    return {k: v.avg for k, v in metrics.items()}
 
 
 # ============================================================================
 # MAIN TRAINING
 # ============================================================================
 
-def load_per_node_data(
-    run_dir: str,
-    graph_path: str,
-    batch_size: int = 32,
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.2,
-    test_ratio: float = 0.1,
-    seed: int = 42
-):
-    """Load trajectory data and create per-node samples."""
-    from models.training.data_loader import load_simulation_data, split_data
-    
-    print("\n" + "=" * 80)
-    print("PER-NODE DATA LOADING")
-    print("=" * 80)
-    
-    # Step 1: Load base trajectories
-    print("\n📂 Step 1: Loading simulation data...")
-    trajectories, graph, poi_nodes = load_simulation_data(run_dir, graph_path)
-    
-    # Create node-to-index mapping
-    print("\n🔧 Step 1a: Creating node-to-index mapping...")
-    node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
-    print(f"   ✅ {len(node_to_idx)} nodes mapped")
-    
-    # Step 2: Split data at trajectory level first
-    print("\n📊 Step 2: Splitting trajectories...")
-    train_trajs, val_trajs, test_trajs = split_data(
-        trajectories,
-        train_ratio=train_ratio,
-        val_ratio=val_ratio,
-        test_ratio=test_ratio,
-        seed=seed
-    )
-    
-    # Step 3: Create TRAJECTORY-LEVEL datasets
-    print("\n🔧 Step 3: Creating trajectory datasets...")
-    train_dataset = TrajectoryDataset(train_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
-    val_dataset = TrajectoryDataset(val_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
-    test_dataset = TrajectoryDataset(test_trajs, graph, poi_nodes, node_to_idx_map=node_to_idx)
-    
-    # Step 4: Create data loaders
-    print("\n🔌 Step 4: Creating data loaders...")
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        collate_fn=collate_trajectories,
-        num_workers=0,
-        pin_memory=False
-    )
-    
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=collate_trajectories,
-        num_workers=0,
-        pin_memory=False
-    )
-    
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        collate_fn=collate_trajectories,
-        num_workers=0,
-        pin_memory=False
-    )
-    
-    print(f"\n📦 Per-Node DataLoaders created:")
-    print(f"   Train batches: {len(train_loader)}")
-    print(f"   Val batches:   {len(val_loader)}")
-    print(f"   Test batches:  {len(test_loader)}")
-    print("=" * 80 + "\n")
-    
-    return train_loader, val_loader, test_loader, {'poi_nodes': len(poi_nodes), 'graph_nodes': len(graph.nodes)}
-
-
 def main(args):
     """Main training orchestration."""
     
     print("=" * 100)
-    print("🧠 PER-NODE TRAINING WITH COMPREHENSIVE W&B LOGGING")
+    print("🧠 PER-NODE TRAINING WITH UNIFIED EMBEDDING PIPELINE")
     print("=" * 100)
     
     device = get_device()
@@ -1053,78 +639,94 @@ def main(args):
     print(f"📍 Seed: {args.seed}")
     
     # ================================================================
-    # STEP 1: LOAD PER-NODE DATA
+    # STEP 1: LOAD DATA
     # ================================================================
-    print("\n1️⃣  Loading per-node trajectory data...")
+    print("\n1️⃣  Loading simulation data...")
     
-    train_loader, val_loader, test_loader, enrichment_stats = load_per_node_data(
+    trajectories, graph, poi_nodes = load_simulation_data(
         args.data_dir,
-        args.graph_path,
-        batch_size=args.batch_size,
+        args.graph_path
+    )
+    
+    # Split trajectories
+    train_trajs, val_trajs, test_trajs = split_data(
+        trajectories,
         train_ratio=0.7,
         val_ratio=0.2,
         test_ratio=0.1,
         seed=args.seed
     )
     
-    # ================================================================
-    # STEP 2: DATA VERIFICATION
-    # ================================================================
-    print("\n2️⃣  Verifying data structure...")
-    print("   ✅ Goal node: Available in trajectory data")
-    print("   ✅ Next node: Available at every step (path[step][0])")
-    print("   ✅ Category: Available at every step (path[step][1])")
-    print("   ✅ Per-node samples created: Ready for training")
+    # Create datasets
+    node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
+    
+    train_dataset = PerNodeTrajectoryDataset(train_trajs, graph, poi_nodes, node_to_idx)
+    val_dataset = PerNodeTrajectoryDataset(val_trajs, graph, poi_nodes, node_to_idx)
+    test_dataset = PerNodeTrajectoryDataset(test_trajs, graph, poi_nodes, node_to_idx)
+    
+    # Create loaders
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_per_node_samples,
+        num_workers=0,
+    )
+    
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_per_node_samples,
+        num_workers=0,
+    )
+    
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_per_node_samples,
+        num_workers=0,
+    )
+    
+    print(f"   ✅ Train: {len(train_loader)} batches")
+    print(f"   ✅ Val: {len(val_loader)} batches")
+    print(f"   ✅ Test: {len(test_loader)} batches")
     
     # ================================================================
-    # STEP 3: PREPARE GRAPH
+    # STEP 2: CREATE MODEL
     # ================================================================
-    print("\n3️⃣  Preparing graph data...")
+    print("\n2️⃣  Creating per-node predictor...")
     
-    import networkx as nx
-    graph = nx.read_graphml(args.graph_path)
-    world_graph = WorldGraph(graph)
-    graph_prep = GraphDataPreparator(graph)
-    graph_data = graph_prep.prepare_graph_data()
-    graph_data = {
-        k: v.to(device) if isinstance(v, torch.Tensor) else v
-        for k, v in graph_data.items()
-    }
-    
-    print(f"   ✅ Graph nodes: {graph_data['num_nodes']}")
-    print(f"   ✅ Graph edges: {graph_data['edge_index'].shape[1]}")
-    print(f"   ✅ POI nodes: {len(world_graph.poi_nodes)}")
-    
-    # ================================================================
-    # STEP 4: CREATE MODEL
-    # ================================================================
-    print("\n4️⃣  Creating Advanced Theory of Mind model...")
-    
-    model = EnhancedToMModel(
-        num_nodes=graph_data['num_nodes'],
-        graph_node_feat_dim=graph_data['x'].shape[1],
-        num_poi_nodes=len(world_graph.poi_nodes),
+    model = PerNodeToMPredictor(
+        num_nodes=len(graph.nodes()),
+        num_agents=1,  # Single agent for simplicity
+        num_poi_nodes=len(poi_nodes),
         num_categories=7,
+        node_embedding_dim=args.node_embedding_dim,
+        temporal_dim=args.temporal_dim,
+        agent_dim=args.agent_dim,
+        fusion_dim=args.fusion_dim,
         hidden_dim=args.hidden_dim,
-        output_dim=args.output_dim,
-        latent_dim=64,
         dropout=args.dropout,
-        num_heads=4,
+        num_heads=args.num_heads,
+        freeze_embedding=args.freeze_embedding,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
-    print(f"   ✅ Model parameters: {total_params:,}")
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"   ✅ Total params: {total_params:,}")
+    print(f"   ✅ Trainable params: {trainable_params:,}")
     
     # ================================================================
-    # STEP 5: SETUP OPTIMIZATION
+    # STEP 3: SETUP OPTIMIZATION
     # ================================================================
-    print("\n5️⃣  Setting up optimization...")
+    print("\n3️⃣  Setting up optimization...")
     
     optimizer = optim.AdamW(
         model.parameters(),
         lr=args.learning_rate,
         weight_decay=args.weight_decay,
-        betas=(0.9, 0.999)
     )
     
     scheduler = CosineAnnealingLR(
@@ -1140,41 +742,21 @@ def main(args):
     }
     
     # ================================================================
-    # STEP 6: INITIALIZE W&B LOGGING
+    # STEP 4: TRAINING LOOP
     # ================================================================
-    print("\n6️⃣  Initializing W&B logging...")
-    
-    config = {
-        'model': 'EnhancedBDIToMWithLogging',
-        'hidden_dim': args.hidden_dim,
-        'embedding_dim': args.embedding_dim,
-        'output_dim': args.output_dim,
-        'n_layers': args.n_layers,
-        'n_heads': args.n_heads,
-        'dropout': args.dropout,
-        'batch_size': args.batch_size,
-        'learning_rate': args.learning_rate,
-        'weight_decay': args.weight_decay,
-        'num_epochs': args.num_epochs,
-        'task_weights': {'goal': 1.0, 'nextstep': 0.5, 'category': 0.5},
-    }
-    
-    logger = WandBTrainingLogger(
-        project_name="bdi-tom-unified",
-        experiment_name="per-node-training",
-        config=config
-    )
-    
-    logger.log_model_info(model)
-    
-    # ================================================================
-    # STEP 7: TRAINING LOOP
-    # ================================================================
-    print("\n7️⃣  Starting training loop...")
+    print("\n4️⃣  Starting training...")
     print("=" * 100)
     
-    best_val_loss = float('inf')
-    best_goal_acc = 0
+    logger = WandBLogger(config={
+        'model': 'PerNodeToMPredictor',
+        'num_nodes': len(graph.nodes()),
+        'num_poi_nodes': len(poi_nodes),
+        'batch_size': args.batch_size,
+        'learning_rate': args.learning_rate,
+        'hidden_dim': args.hidden_dim,
+    })
+    
+    best_val_acc = 0
     patience = 10
     patience_counter = 0
     
@@ -1182,102 +764,56 @@ def main(args):
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
     for epoch in range(args.num_epochs):
-        print(f"\n🔄 Epoch {epoch+1}/{args.num_epochs}")
-        
-        # Train
-        train_metrics = train_epoch_per_node(
-            model, train_loader, optimizer, criterion, graph_data, device,
-            epoch, logger
-        )
-        
-        # Validate
-        val_metrics = validate_per_node(
-            model, val_loader, criterion, graph_data, device,
-            epoch, logger
-        )
-        
-        # Step scheduler
+        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, epoch)
+        val_metrics = validate(model, val_loader, criterion, device)
         scheduler.step()
         
-        # Log epoch metrics
-        logger.log_task_metrics(
-            phase='train',
-            epoch=epoch,
-            goal_loss=train_metrics['loss_goal'],
-            goal_acc=train_metrics['goal_acc'],
-            nextstep_loss=train_metrics['loss_nextstep'],
-            nextstep_acc=train_metrics['nextstep_acc'],
-            category_loss=train_metrics['loss_category'],
-            category_acc=train_metrics['category_acc'],
-        )
+        lr = optimizer.param_groups[0]['lr']
+        logger.log_epoch(epoch, {**train_metrics, **{f'val_{k}': v for k, v in val_metrics.items()}}, lr)
         
-        logger.log_task_metrics(
-            phase='val',
-            epoch=epoch,
-            goal_loss=val_metrics['loss_goal'],
-            goal_acc=val_metrics['goal_acc'],
-            nextstep_loss=val_metrics['loss_nextstep'],
-            nextstep_acc=val_metrics['nextstep_acc'],
-            category_loss=val_metrics['loss_category'],
-            category_acc=val_metrics['category_acc'],
-        )
-        
-        logger.log_epoch_metrics(
-            epoch=epoch,
-            train_metrics=train_metrics,
-            val_metrics=val_metrics,
-            learning_rate=optimizer.param_groups[0]['lr']
-        )
-        
-        # Print summary
-        print(f"\n📊 Epoch {epoch+1} Summary:")
+        print(f"\n📊 Epoch {epoch+1}/{args.num_epochs}")
         print(f"   Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f}")
         print(f"   Train Goal Acc: {train_metrics['goal_acc']:.3f} | Val Goal Acc: {val_metrics['goal_acc']:.3f}")
-        print(f"   Train NextStep Acc: {train_metrics['nextstep_acc']:.3f} | Val NextStep Acc: {val_metrics['nextstep_acc']:.3f}")
-        print(f"   Train Category Acc: {train_metrics['category_acc']:.3f} | Val Category Acc: {val_metrics['category_acc']:.3f}")
         
-        # Checkpointing
-        if val_metrics['goal_acc'] > best_goal_acc:
-            best_goal_acc = val_metrics['goal_acc']
-            best_val_loss = val_metrics['loss']
+        # Save checkpoint
+        if val_metrics['goal_acc'] > best_val_acc:
+            best_val_acc = val_metrics['goal_acc']
             patience_counter = 0
             
             checkpoint_path = checkpoint_dir / "best_model.pt"
-            save_checkpoint(
-                model, optimizer, epoch, val_metrics['loss'],
-                val_metrics, str(checkpoint_path)
-            )
-            print(f"   ✨ New best model! Goal Acc: {best_goal_acc:.3f}")
+            save_checkpoint(model, optimizer, epoch, val_metrics['loss'], val_metrics, str(checkpoint_path))
+            print(f"   ✨ New best model! Val Goal Acc: {best_val_acc:.3f}")
         else:
             patience_counter += 1
             if patience_counter >= patience:
-                print(f"\n⏸️  Early stopping triggered (patience={patience})")
+                print(f"\n⏸️  Early stopping (patience={patience})")
                 break
     
     print("\n" + "=" * 100)
-    print(f"✅ Training complete! Best Goal Accuracy: {best_goal_acc:.3f}")
+    print(f"✅ Training complete! Best Goal Accuracy: {best_val_acc:.3f}")
     print("=" * 100)
     
-    # Finish W&B
     logger.finish()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Per-Node Training with W&B Logging"
-    )
+    parser = argparse.ArgumentParser(description="Per-Node Training with Unified Embeddings")
     
     # Data
     parser.add_argument('--data_dir', type=str, default='data/simulation_data/run_8_enriched')
     parser.add_argument('--graph_path', type=str, default='data/processed/ucsd_walk_full.graphml')
-    parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/per_node_v1')
+    parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/per_node_v2')
     
-    # Model
+    # Model - Embedding
+    parser.add_argument('--node_embedding_dim', type=int, default=64)
+    parser.add_argument('--temporal_dim', type=int, default=64)
+    parser.add_argument('--agent_dim', type=int, default=64)
+    parser.add_argument('--fusion_dim', type=int, default=128)
+    parser.add_argument('--freeze_embedding', type=bool, default=False)
+    
+    # Model - Prediction
     parser.add_argument('--hidden_dim', type=int, default=256)
-    parser.add_argument('--embedding_dim', type=int, default=128)
-    parser.add_argument('--output_dim', type=int, default=128)
-    parser.add_argument('--n_layers', type=int, default=3)
-    parser.add_argument('--n_heads', type=int, default=4)
+    parser.add_argument('--num_heads', type=int, default=4)
     parser.add_argument('--dropout', type=float, default=0.1)
     
     # Training

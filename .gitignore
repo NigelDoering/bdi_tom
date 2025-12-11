@@ -34,5 +34,6 @@ checkpoints/*
 
 docs/
 .legacy/
+.vscode/
 
 # End of .gitignore
