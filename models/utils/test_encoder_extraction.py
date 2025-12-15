@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from models.training.extract_encoder import extract_encoder_from_checkpoint, load_frozen_encoder
+from models.utils.extract_encoder import extract_encoder_from_checkpoint, load_frozen_encoder
 
 
 def test_extraction(checkpoint_path: str):

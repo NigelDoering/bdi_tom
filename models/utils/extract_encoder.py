@@ -20,7 +20,7 @@ from typing import Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from models.training.train_per_node import PerNodeToMPredictor
+from models.utils.train_per_node import PerNodeToMPredictor
 from models.en_encoders.unified_embedding_pipeline import UnifiedEmbeddingPipeline
 
 
