@@ -41,8 +41,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from models.en_encoders.unified_embedding_pipeline import UnifiedEmbeddingPipeline
-from models.en_encoders.enhanced_trajectory_encoder import EnhancedTrajectoryEncoder
-from models.en_encoders.enhanced_map_encoder import EnhancedWorldGraphEncoder
+from archive.enhanced_trajectory_encoder import EnhancedTrajectoryEncoder
+from archive.enhanced_map_encoder import EnhancedWorldGraphEncoder
 
 
 # ============================================================================
@@ -247,7 +247,7 @@ class EnhancedToMGraphEncoder(nn.Module):
                 'trajectory_repr': traj_repr,
                 'graph_repr': graph_repr,
                 'combined': combined,
-            }
+            } # type: ignore
         
         return final_repr
     
