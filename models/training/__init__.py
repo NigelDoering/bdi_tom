@@ -8,7 +8,7 @@ This module provides complete infrastructure for training the goal prediction mo
 - Checkpointing and metrics tracking
 """
 
-from ...archive.utils import (
+from .utils import (
     get_device,
     set_seed,
     save_checkpoint,
@@ -16,14 +16,6 @@ from ...archive.utils import (
     compute_accuracy,
     AverageMeter,
     MetricsTracker
-)
-
-from ...archive.data_loader import (
-    TrajectoryDataset,
-    load_simulation_data,
-    split_data,
-    create_dataloaders,
-    collate_trajectories
 )
 
 __all__ = [
@@ -34,9 +26,4 @@ __all__ = [
     'compute_accuracy',
     'AverageMeter',
     'MetricsTracker',
-    'TrajectoryDataset',
-    'load_simulation_data',
-    'split_data',
-    'create_dataloaders',
-    'collate_trajectories'
 ]
