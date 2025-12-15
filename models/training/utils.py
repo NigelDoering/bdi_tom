@@ -45,10 +45,11 @@ def save_checkpoint(
     epoch: int,
     loss: float,
     metrics: Dict,
-    filepath: str
+    filepath: str,
+    config: Optional[Dict] = None,
 ):
     """
-    Save model checkpoint.
+    Save model checkpoint with optional config metadata.
     
     Args:
         model: Model to save
@@ -57,6 +58,7 @@ def save_checkpoint(
         loss: Current loss value
         metrics: Dictionary of metrics
         filepath: Path to save checkpoint
+        config: Optional configuration dictionary (useful for model reconstruction)
     """
     checkpoint = {
         'epoch': epoch,
@@ -65,6 +67,10 @@ def save_checkpoint(
         'loss': loss,
         'metrics': metrics
     }
+    
+    if config is not None:
+        checkpoint['config'] = config
+    
     torch.save(checkpoint, filepath)
     print(f"💾 Checkpoint saved: {filepath}")
 

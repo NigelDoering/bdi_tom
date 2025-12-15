@@ -16,6 +16,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Tuple, Optional, List
 from datetime import datetime
+import time
 
 # Set MPS fallback for Mac compatibility
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
@@ -454,6 +455,7 @@ class WandBLogger:
     
     def __init__(self, project_name: str = "bdi-tom-per-node", config: Optional[Dict] = None):
         self.enabled = WANDB_AVAILABLE
+        self.global_step = 0
         
         if self.enabled:
             wandb.init(project=project_name, config=config or {})
@@ -461,23 +463,118 @@ class WandBLogger:
         else:
             print("⚠️  W&B disabled")
     
-    def log_epoch(self, epoch: int, metrics: Dict[str, float], lr: float):
-        """Log epoch metrics."""
+    def log_batch(self, epoch: int, batch_idx: int, batch_size: int, metrics: Dict[str, float], lr: float):
+        """Log batch-level metrics."""
         if not self.enabled:
             return
         
-        log_dict = {'epoch': epoch, 'learning_rate': lr}
-        log_dict.update(metrics)
+        log_dict = {
+            'epoch': epoch,
+            'batch_idx': batch_idx,
+            'batch_size': batch_size,
+            'learning_rate': lr,
+            'global_step': self.global_step,
+        }
+        
+        # Prefix batch metrics with 'batch/'
+        for key, value in metrics.items():
+            log_dict[f'batch/{key}'] = value
+        
+        wandb.log(log_dict, step=self.global_step)
+        self.global_step += 1
+    
+    def log_epoch(self, epoch: int, train_metrics: Dict[str, float], val_metrics: Dict[str, float], lr: float):
+        """Log epoch-level metrics with train/val separation."""
+        if not self.enabled:
+            return
+        
+        log_dict = {
+            'epoch': epoch,
+            'learning_rate': lr,
+        }
+        
+        # Add train metrics with 'train/' prefix
+        for key, value in train_metrics.items():
+            log_dict[f'train/{key}'] = value
+        
+        # Add val metrics with 'val/' prefix
+        for key, value in val_metrics.items():
+            log_dict[f'val/{key}'] = value
+        
+        # Compute and log key ratios and differences
+        if 'loss' in train_metrics and 'loss' in val_metrics:
+            log_dict['metrics/train_val_loss_ratio'] = train_metrics['loss'] / (val_metrics['loss'] + 1e-8)
+            log_dict['metrics/val_train_loss_diff'] = val_metrics['loss'] - train_metrics['loss']
+        
+        # Log individual task metrics for easy comparison
+        for task in ['goal', 'nextstep', 'category']:
+            if f'loss_{task}' in train_metrics and f'loss_{task}' in val_metrics:
+                log_dict[f'loss_comparison/{task}_train'] = train_metrics[f'loss_{task}']
+                log_dict[f'loss_comparison/{task}_val'] = val_metrics[f'loss_{task}']
+                log_dict[f'loss_comparison/{task}_diff'] = val_metrics[f'loss_{task}'] - train_metrics[f'loss_{task}']
+            
+            if f'{task}_acc' in train_metrics and f'{task}_acc' in val_metrics:
+                log_dict[f'accuracy_comparison/{task}_train'] = train_metrics[f'{task}_acc']
+                log_dict[f'accuracy_comparison/{task}_val'] = val_metrics[f'{task}_acc']
+                log_dict[f'accuracy_comparison/{task}_diff'] = val_metrics[f'{task}_acc'] - train_metrics[f'{task}_acc']
+        
         wandb.log(log_dict, step=epoch)
     
-    def log_batch(self, step: int, loss: float, metrics: Dict[str, float]):
-        """Log batch metrics."""
+    def log_model_info(self, total_params: int, trainable_params: int, model_config: Dict):
+        """Log model architecture information."""
         if not self.enabled:
             return
         
-        log_dict = {'loss': loss}
-        log_dict.update(metrics)
-        wandb.log(log_dict, step=step)
+        info_dict = {
+            'model/total_parameters': total_params,
+            'model/trainable_parameters': trainable_params,
+            'model/parameter_ratio': trainable_params / (total_params + 1e-8),
+        }
+        
+        # Log architecture details
+        for key, value in model_config.items():
+            info_dict[f'model_config/{key}'] = value
+        
+        wandb.log(info_dict)
+    
+    def log_summary(self, best_epoch: int, best_val_acc: float, total_epochs: int, total_time_hours: float):
+        """Log training summary statistics."""
+        if not self.enabled:
+            return
+        
+        summary_dict = {
+            'summary/best_epoch': best_epoch,
+            'summary/best_val_goal_acc': best_val_acc,
+            'summary/total_epochs_trained': total_epochs,
+            'summary/total_training_time_hours': total_time_hours,
+            'summary/avg_time_per_epoch': total_time_hours / (total_epochs + 1e-8),
+        }
+        
+        wandb.log(summary_dict)
+    
+    def log_checkpoint(self, epoch: int, checkpoint_path: str, best: bool = False):
+        """Log checkpoint information."""
+        if not self.enabled:
+            return
+        
+        checkpoint_dict = {
+            'checkpoint/epoch': epoch,
+            'checkpoint/path': checkpoint_path,
+            'checkpoint/is_best': best,
+        }
+        
+        wandb.log(checkpoint_dict)
+    
+    def log_test_results(self, test_metrics: Dict[str, float]):
+        """Log test set results."""
+        if not self.enabled:
+            return
+        
+        test_dict = {}
+        for key, value in test_metrics.items():
+            test_dict[f'test/{key}'] = value
+        
+        wandb.log(test_dict)
     
     def finish(self):
         """Finish logging."""
@@ -496,6 +593,7 @@ def train_epoch(
     criterion: Dict[str, nn.Module],
     device: torch.device,
     epoch: int,
+    wandb_logger: Optional['WandBLogger'] = None,
 ) -> Dict[str, float]:
     """Train for one epoch."""
     model.train()
@@ -511,7 +609,7 @@ def train_epoch(
     
     pbar = tqdm(train_loader, desc=f"Epoch {epoch} [Train]")
     
-    for batch in pbar:
+    for batch_idx, batch in enumerate(pbar):
         batch_size = batch['history_node_indices'].size(0)
         
         # Move to device
@@ -552,6 +650,21 @@ def train_epoch(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
+        # Log batch metrics to W&B
+        if wandb_logger is not None:
+            batch_metrics = {
+                'loss': loss.item(),
+                'loss_goal': loss_goal.item(),
+                'loss_nextstep': loss_nextstep.item(),
+                'loss_category': loss_category.item(),
+                'goal_acc': goal_acc,
+                'nextstep_acc': nextstep_acc,
+                'category_acc': category_acc,
+                'gradient_norm': torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0),
+            }
+            lr = optimizer.param_groups[0]['lr']
+            wandb_logger.log_batch(epoch, batch_idx, batch_size, batch_metrics, lr)
+        
         pbar.set_postfix({
             'loss': f"{metrics['loss'].avg:.4f}",
             'goal_acc': f"{metrics['goal_acc'].avg:.3f}",
@@ -566,6 +679,7 @@ def validate(
     val_loader: DataLoader,
     criterion: Dict[str, nn.Module],
     device: torch.device,
+    wandb_logger: Optional['WandBLogger'] = None,
 ) -> Dict[str, float]:
     """Validate."""
     model.eval()
@@ -581,7 +695,7 @@ def validate(
     
     pbar = tqdm(val_loader, desc="Validating")
     
-    for batch in pbar:
+    for batch_idx, batch in enumerate(pbar):
         batch_size = batch['history_node_indices'].size(0)
         
         # Move to device
@@ -718,6 +832,27 @@ def main(args):
     print(f"   ✅ Total params: {total_params:,}")
     print(f"   ✅ Trainable params: {trainable_params:,}")
     
+    # Store config for checkpoint saving
+    model_config = {
+        'num_nodes': len(graph.nodes()),
+        'num_agents': 1,
+        'num_poi_nodes': len(poi_nodes),
+        'num_categories': 7,
+        'node_embedding_dim': args.node_embedding_dim,
+        'temporal_dim': args.temporal_dim,
+        'agent_dim': args.agent_dim,
+        'fusion_dim': args.fusion_dim,
+        'hidden_dim': args.hidden_dim,
+        'dropout': args.dropout,
+        'num_heads': args.num_heads,
+        'n_fusion_layers': 2,
+        'use_node2vec': True,
+        'use_temporal': True,
+        'use_agent': True,
+        'use_modality_gating': True,
+        'use_cross_attention': True,
+    }
+    
     # ================================================================
     # STEP 3: SETUP OPTIMIZATION
     # ================================================================
@@ -754,22 +889,41 @@ def main(args):
         'batch_size': args.batch_size,
         'learning_rate': args.learning_rate,
         'hidden_dim': args.hidden_dim,
+        'num_epochs': args.num_epochs,
+        'weight_decay': args.weight_decay,
+        'optimizer': 'AdamW',
+        'scheduler': 'CosineAnnealingLR',
+    })
+    
+    # Log model information
+    logger.log_model_info(total_params, trainable_params, {
+        'node_embedding_dim': args.node_embedding_dim,
+        'temporal_dim': args.temporal_dim,
+        'agent_dim': args.agent_dim,
+        'fusion_dim': args.fusion_dim,
+        'hidden_dim': args.hidden_dim,
+        'num_heads': args.num_heads,
+        'dropout': args.dropout,
+        'freeze_embedding': args.freeze_embedding,
     })
     
     best_val_acc = 0
+    best_epoch = 0
     patience = 10
     patience_counter = 0
     
     checkpoint_dir = Path(args.checkpoint_dir)
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
+    start_time = time.time()
+    
     for epoch in range(args.num_epochs):
-        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, epoch)
-        val_metrics = validate(model, val_loader, criterion, device)
+        train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, epoch, logger)
+        val_metrics = validate(model, val_loader, criterion, device, logger)
         scheduler.step()
         
         lr = optimizer.param_groups[0]['lr']
-        logger.log_epoch(epoch, {**train_metrics, **{f'val_{k}': v for k, v in val_metrics.items()}}, lr)
+        logger.log_epoch(epoch, train_metrics, val_metrics, lr)
         
         print(f"\n📊 Epoch {epoch+1}/{args.num_epochs}")
         print(f"   Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f}")
@@ -778,10 +932,20 @@ def main(args):
         # Save checkpoint
         if val_metrics['goal_acc'] > best_val_acc:
             best_val_acc = val_metrics['goal_acc']
+            best_epoch = epoch
             patience_counter = 0
             
             checkpoint_path = checkpoint_dir / "best_model.pt"
-            save_checkpoint(model, optimizer, epoch, val_metrics['loss'], val_metrics, str(checkpoint_path))
+            save_checkpoint(
+                model, 
+                optimizer, 
+                epoch, 
+                val_metrics['loss'], 
+                val_metrics, 
+                str(checkpoint_path),
+                config=model_config  # ← Pass config for encoder extraction
+            )
+            logger.log_checkpoint(epoch, str(checkpoint_path), best=True)
             print(f"   ✨ New best model! Val Goal Acc: {best_val_acc:.3f}")
         else:
             patience_counter += 1
@@ -789,9 +953,18 @@ def main(args):
                 print(f"\n⏸️  Early stopping (patience={patience})")
                 break
     
+    # Calculate training time
+    elapsed_time = time.time() - start_time
+    elapsed_hours = elapsed_time / 3600
+    
     print("\n" + "=" * 100)
     print(f"✅ Training complete! Best Goal Accuracy: {best_val_acc:.3f}")
+    print(f"   Best Epoch: {best_epoch}")
+    print(f"   Total Time: {elapsed_hours:.2f} hours")
     print("=" * 100)
+    
+    # Log training summary
+    logger.log_summary(best_epoch, best_val_acc, epoch + 1, elapsed_hours)
     
     logger.finish()
 
