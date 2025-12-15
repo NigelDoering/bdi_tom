@@ -81,7 +81,7 @@ class TrajectoryDataset(Dataset):
 def load_simulation_data(
     run_dir: str,
     graph_path: str,
-    trajectory_file: str = 'trajectories.json'
+    trajectory_filename: str = 'trajectories.json'
 ) -> Tuple[List[Dict], nx.Graph, List[str]]:
     """
     Load simulation data from a run directory.
@@ -107,12 +107,12 @@ def load_simulation_data(
     print(f"   Categories: {world_graph.relevant_categories}")
     
     # Construct trajectory path
-    traj_path = os.path.join(run_dir, trajectory_file)
+    traj_path = os.path.join(run_dir, trajectory_filename)
     
     if not os.path.exists(traj_path):
         raise FileNotFoundError(
             f"Could not find trajectory file: {traj_path}\n"
-            f"Specified: run_dir='{run_dir}', trajectory_file='{trajectory_file}'"
+            f"Specified: run_dir='{run_dir}', trajectory_file='{trajectory_filename}'"
         )
     
     print(f"📂 Loading trajectories from {traj_path}")
