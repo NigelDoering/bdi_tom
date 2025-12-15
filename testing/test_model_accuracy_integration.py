@@ -19,8 +19,8 @@ import networkx as nx
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from models.training.utils import compute_accuracy, load_checkpoint, get_device
-from models.training.data_loader import load_simulation_data, split_data, create_dataloaders
+from archive.utils import compute_accuracy, load_checkpoint, get_device
+from archive.data_loader import load_simulation_data, split_data, create_dataloaders
 from models.transformer_predictor import GoalPredictionModel
 from models.encoders.trajectory_encoder import TrajectoryDataPreparator
 from models.encoders.map_encoder import GraphDataPreparator

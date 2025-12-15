@@ -10,7 +10,7 @@ import sys
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from graph_controller.world_graph import WorldGraph
-from models.training.temporal_feature_enricher import TemporalFeatureEnricher, EnrichedTrajectoryDataset as ToMEnrichedDataset
+from archive.temporal_feature_enricher import TemporalFeatureEnricher, EnrichedTrajectoryDataset as ToMEnrichedDataset
 
 
 class TrajectoryDataset(Dataset):

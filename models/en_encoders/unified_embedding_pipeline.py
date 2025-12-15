@@ -451,7 +451,7 @@ class UnifiedEmbeddingPipeline(nn.Module):
         # Step 3: Return per-node if requested
         if return_per_node:
             if return_components:
-                return fused_emb, components
+                return fused_emb, components # type: ignore
             return fused_emb
         
         # Step 4: Aggregate to trajectory level
@@ -465,7 +465,7 @@ class UnifiedEmbeddingPipeline(nn.Module):
                 'fused_per_node': fused_emb,
                 'trajectory_embedding': trajectory_emb,
                 **components
-            }
+            } # type: ignore
         
         return trajectory_emb
     
