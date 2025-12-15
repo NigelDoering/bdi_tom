@@ -115,6 +115,7 @@ class PerNodeTrajectoryDataset(Dataset):
                 continue
             
             if goal_node not in self.goal_to_idx:
+                print(f"   ⚠️  Trajectory {traj_idx} has unknown goal node '{goal_node}'. Skipping.")
                 continue
             
             valid_count += 1
@@ -140,16 +141,16 @@ class PerNodeTrajectoryDataset(Dataset):
                 except (KeyError, TypeError, IndexError):
                     continue
                 
-                # Extract category if available
-                next_cat_idx = 0
-                if isinstance(next_node, (list, tuple)) and len(next_node) >= 2:
-                    cat_name = next_node[1]
-                    next_cat_idx = self.CATEGORY_TO_IDX.get(cat_name, 0)
+                # Extract goal category from graph
+                goal_cat_idx = 0
+                if goal_node in self.graph.nodes:
+                    cat_name = self.graph.nodes[goal_node].get('Category', 'other')
+                    goal_cat_idx = self.CATEGORY_TO_IDX.get(cat_name, 0)
                 
                 self.samples.append({
                     'history_node_indices': history_indices,
                     'next_node_idx': next_node_idx,
-                    'next_cat_idx': next_cat_idx,
+                    'goal_cat_idx': goal_cat_idx,
                     'goal_idx': goal_idx,
                 })
                 
@@ -197,7 +198,7 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
         'history_node_indices': torch.stack(padded_histories),  # [batch, max_len]
         'history_lengths': torch.tensor(history_lengths, dtype=torch.long),  # [batch]
         'next_node_idx': torch.tensor([s['next_node_idx'] for s in batch], dtype=torch.long),
-        'next_cat_idx': torch.tensor([s['next_cat_idx'] for s in batch], dtype=torch.long),
+        'goal_cat_idx': torch.tensor([s['goal_cat_idx'] for s in batch], dtype=torch.long),
         'goal_idx': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
     }
 
@@ -616,7 +617,7 @@ def train_epoch(
         history_node_indices = batch['history_node_indices'].to(device)
         history_lengths = batch['history_lengths'].to(device)
         next_node_idx = batch['next_node_idx'].to(device)
-        next_cat_idx = batch['next_cat_idx'].to(device)
+        goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
         
         # Forward pass
@@ -625,7 +626,7 @@ def train_epoch(
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
         loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_idx)
-        loss_category = criterion['category'](predictions['category'], next_cat_idx)
+        loss_category = criterion['category'](predictions['category'], goal_cat_idx)
         
         # Weighted loss
         loss = 1.0 * loss_goal + 0.5 * loss_nextstep + 0.5 * loss_category
@@ -639,7 +640,7 @@ def train_epoch(
         # Compute accuracies
         goal_acc = compute_accuracy(predictions['goal'], goal_idx)
         nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_idx)
-        category_acc = compute_accuracy(predictions['category'], next_cat_idx)
+        category_acc = compute_accuracy(predictions['category'], goal_cat_idx)
         
         # Update metrics
         metrics['loss'].update(loss.item(), batch_size)
@@ -702,7 +703,7 @@ def validate(
         history_node_indices = batch['history_node_indices'].to(device)
         history_lengths = batch['history_lengths'].to(device)
         next_node_idx = batch['next_node_idx'].to(device)
-        next_cat_idx = batch['next_cat_idx'].to(device)
+        goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
         
         # Forward pass
@@ -711,7 +712,7 @@ def validate(
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
         loss_nextstep = criterion['nextstep'](predictions['nextstep'], next_node_idx)
-        loss_category = criterion['category'](predictions['category'], next_cat_idx)
+        loss_category = criterion['category'](predictions['category'], goal_cat_idx)
         
         # Weighted loss
         loss = 1.0 * loss_goal + 0.5 * loss_nextstep + 0.5 * loss_category
@@ -719,7 +720,7 @@ def validate(
         # Compute accuracies
         goal_acc = compute_accuracy(predictions['goal'], goal_idx)
         nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_idx)
-        category_acc = compute_accuracy(predictions['category'], next_cat_idx)
+        category_acc = compute_accuracy(predictions['category'], goal_cat_idx)
         
         # Update metrics
         metrics['loss'].update(loss.item(), batch_size)
