@@ -29,7 +29,7 @@ from typing import Dict, List, Tuple
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from archive.utils import get_device, load_checkpoint, compute_accuracy
-from archive.data_loader import load_simulation_data, split_data, create_dataloaders
+from models.training.data_loader import load_simulation_data, split_data, create_dataloaders
 from models.transformer_predictor import GoalPredictionModel
 from models.encoders.trajectory_encoder import TrajectoryDataPreparator
 from models.encoders.map_encoder import GraphDataPreparator

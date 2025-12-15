@@ -1,0 +1,10 @@
+- [x] Review earlier Experiment 2 workflow to confirm next implementation focus
+- [x] Design data loader utilities to read distractor episodes and prepare batches per observation fraction
+- [x] Implement evaluation script harness for Experiment 2 (model inference over fractions, metrics collection)
+- [x] Run smoke test of evaluation script using existing checkpoints (or stub) and document output location
+- [x] Draft visualization plan for Experiment 2 metrics
+- [x] Implement plotting script to render distractor probability curves and peak comparison
+- [x] Generate plots from current metrics and verify artifacts saved to exp_2 directory
+- [x] Sanity check Experiment 2 evaluation: run baseline (full-trajectory) metrics and compare
+- [x] Inspect POI index alignment between training mappings and evaluation mapping
+- [ ] Log sample probabilities for true goal vs distractor across fractions

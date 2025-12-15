@@ -80,7 +80,8 @@ class TrajectoryDataset(Dataset):
 
 def load_simulation_data(
     run_dir: str,
-    graph_path: str
+    graph_path: str,
+    trajectory_file: str = 'trajectories.json'
 ) -> Tuple[List[Dict], nx.Graph, List[str]]:
     """
     Load simulation data from a run directory.
@@ -88,6 +89,8 @@ def load_simulation_data(
     Args:
         run_dir: Path to simulation run directory (e.g., 'data/simulation_data/run_8')
         graph_path: Path to the graph file (e.g., 'data/processed/ucsd_walk_semantic.graphml')
+        trajectory_file: Name of trajectory file to load (default: 'trajectories.json')
+                        Can also be a relative path like 'trajectories/enriched_trajectories.json'
     
     Returns:
         Tuple of (trajectories, graph, poi_nodes)
@@ -103,24 +106,13 @@ def load_simulation_data(
     print(f"📍 Found {len(poi_nodes)} POI nodes")
     print(f"   Categories: {world_graph.relevant_categories}")
     
-    # Load trajectories - check for both possible locations
-    possible_paths = [
-        os.path.join(run_dir, 'enriched_trajectories.json'),  # run_8_enriched format
-        os.path.join(run_dir, 'trajectories', 'all_trajectories.json'),  # run_8 format
-        os.path.join(run_dir, 'all_trajectories.json'),
-        os.path.join(run_dir, 'trajectories.json')
-    ]
+    # Construct trajectory path
+    traj_path = os.path.join(run_dir, trajectory_file)
     
-    traj_path = None
-    for path in possible_paths:
-        if os.path.exists(path):
-            traj_path = path
-            break
-    
-    if traj_path is None:
+    if not os.path.exists(traj_path):
         raise FileNotFoundError(
-            f"Could not find trajectories file in {run_dir}. "
-            f"Tried: {possible_paths}"
+            f"Could not find trajectory file: {traj_path}\n"
+            f"Specified: run_dir='{run_dir}', trajectory_file='{trajectory_file}'"
         )
     
     print(f"📂 Loading trajectories from {traj_path}")
