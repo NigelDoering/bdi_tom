@@ -81,7 +81,7 @@ class TrajectoryDataset(Dataset):
 def load_simulation_data(
     run_dir: str,
     graph_path: str,
-    trajectory_filename: str = 'trajectories.json'
+    trajectory_filename: str = 'all_trajectories.json'
 ) -> Tuple[List[Dict], nx.Graph, List[str]]:
     """
     Load simulation data from a run directory.
@@ -123,15 +123,16 @@ def load_simulation_data(
     # Handle different trajectory file formats
     if isinstance(data, dict) and all(isinstance(v, list) for v in data.values()):
         # Format: {"agent_000": [traj1, traj2, ...], "agent_001": [...], ...}
-        # Flatten all agent trajectories into a single list
+        # Flatten all agent trajectories into a single list while preserving agent IDs
         trajectories = []
-        for agent_id, agent_trajs in data.items():
-            trajectories.extend(agent_trajs)
-        print(f"🚶 Loaded {len(trajectories)} trajectories from {len(data)} agents")
-        # print an example trajectory
-        if len(trajectories) > 0:
-            # print(f"   Example trajectory: {trajectories[0]}")
-            print(f"Len of Trajectory variable: {len(trajectories)}")
+        agent_keys = sorted(data.keys())  # Sort for consistent agent ID assignment
+        for agent_idx, agent_key in enumerate(agent_keys):
+            agent_trajs = data[agent_key]
+            for traj in agent_trajs:
+                traj['agent_id'] = agent_idx  # Assign enumerated index as agent ID (0-99)
+                trajectories.append(traj)
+        print(f"🚶 Loaded {len(trajectories)} trajectories from {len(agent_keys)} agents")
+        print(f"   Agent IDs assigned: 0-{len(agent_keys)-1}")
     elif isinstance(data, list):
         # Format: [traj1, traj2, traj3, ...]
         trajectories = data
