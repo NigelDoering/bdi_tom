@@ -39,7 +39,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from models.baseline_lstm import PerNodeToMPredictor, PerNodeTrajectoryDataset, collate_per_node_samples
 from models.utils.data_loader import load_simulation_data
-from models.utils.utils import get_device, set_seed, save_checkpoint, compute_accuracy, AverageMeter
+from models.utils.utils import get_device, set_seed, save_checkpoint, save_embedding_pipeline, compute_accuracy, AverageMeter
 
 # W&B imports
 try:
@@ -597,14 +597,27 @@ def main(args):
             
             checkpoint_path = checkpoint_dir / "best_model.pt"
             save_checkpoint(
+                str(checkpoint_path),
                 model,
                 optimizer,
                 epoch,
-                val_metrics['loss'],
-                val_metrics,
-                str(checkpoint_path),
+                val_metrics['goal_acc'],
+                is_best=True,
                 config=model_config
             )
+            
+            # Save embedding pipeline separately if requested
+            if args.save_embedding_pipeline:
+                embedding_path = checkpoint_dir / "best_embedding_pipeline.pt"
+                embedding_config = {
+                    'node_embedding_dim': args.node_embedding_dim,
+                    'use_temporal': False,  # LSTM doesn't use temporal/agent encoders
+                    'use_agent': False,
+                    'num_nodes': len(graph.nodes),
+                    'num_categories': 7,
+                }
+                save_embedding_pipeline(str(embedding_path), model, epoch, config=embedding_config)
+            
             logger.log_checkpoint(epoch, str(checkpoint_path), best=True)
             print(f"   ✨ New best model! Val Goal Acc: {best_val_acc:.3f}")
         else:
@@ -666,6 +679,11 @@ if __name__ == '__main__':
         type=str,
         default='checkpoints/baseline_lstm',
         help='Directory to save model checkpoints'
+    )
+    parser.add_argument(
+        '--save_embedding_pipeline',
+        action='store_true',
+        help='Save embedding pipeline separately for transfer learning'
     )
     
     # Model - Embedding
