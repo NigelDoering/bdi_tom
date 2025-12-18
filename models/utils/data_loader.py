@@ -107,7 +107,12 @@ def load_simulation_data(
     print(f"   Categories: {world_graph.relevant_categories}")
     
     # Construct trajectory path
-    traj_path = os.path.join(run_dir, trajectory_filename)
+    # Check if trajectory_filename is already a full path or just filename
+    if os.path.isabs(trajectory_filename) or trajectory_filename.startswith('trajectories/'):
+        traj_path = os.path.join(run_dir, trajectory_filename)
+    else:
+        # Default: trajectories are in trajectories/ subdirectory
+        traj_path = os.path.join(run_dir, 'trajectories', trajectory_filename)
     
     if not os.path.exists(traj_path):
         raise FileNotFoundError(
