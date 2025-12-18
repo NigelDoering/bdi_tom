@@ -329,21 +329,28 @@ class UnifiedEmbeddingPipeline(nn.Module):
         # Expand agent embeddings to match sequence length
         agent_emb_expanded = agent_embeddings.unsqueeze(1).expand(-1, seq_len, -1)
         
+        # Reshape to (batch * seq_len, dim) for fusion
+        node_flat = node_embeddings.reshape(-1, node_embeddings.shape[-1])
+        temp_flat = temporal_embeddings.reshape(-1, temporal_embeddings.shape[-1])
+        agent_flat = agent_emb_expanded.reshape(-1, agent_emb_expanded.shape[-1])
+        
         # Fuse spatial, temporal, and agent modalities
         fused = self.fusion_encoder(
-            node_embeddings,
-            temporal_embeddings,
-            agent_emb_expanded,
+            node_flat,
+            temp_flat,
+            agent_flat,
             return_components=True
         )
         
-        # Unpack if dict (contains components)
-        if isinstance(fused, dict):
-            fused_embeddings = fused.get('fused', None)
-            components = fused
+        # Unpack if tuple (fused, components)
+        if isinstance(fused, tuple):
+            fused_embeddings, components = fused
         else:
             fused_embeddings = fused
             components = {}
+        
+        # Reshape back to (batch, seq_len, fusion_dim)
+        fused_embeddings = fused_embeddings.reshape(batch_size, seq_len, -1)
         
         return fused_embeddings, components
     
