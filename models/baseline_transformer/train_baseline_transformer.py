@@ -846,7 +846,7 @@ def main():
                     'node_embedding_dim': args.node_embedding_dim,
                     'num_nodes': len(graph.nodes),
                     'num_categories': 7,
-                    'num_agents': 1,
+                    'num_agents': 100,
                 }
                 save_embedding_pipeline(embedding_path, model, epoch, config=embedding_config)
             
@@ -875,7 +875,7 @@ def main():
                     'node_embedding_dim': args.node_embedding_dim,
                     'num_nodes': len(graph.nodes),
                     'num_categories': 7,
-                    'num_agents': 1,
+                    'num_agents': 100,
                 }
                 save_embedding_pipeline(embedding_path, model, epoch, config=embedding_config)
             
