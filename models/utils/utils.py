@@ -40,39 +40,76 @@ def set_seed(seed: int = 42):
 
 
 def save_checkpoint(
+    filepath: str,
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
     epoch: int,
-    loss: float,
-    metrics: Dict,
-    filepath: str,
+    val_metric: float,
+    is_best: bool = False,
     config: Optional[Dict] = None,
 ):
     """
     Save model checkpoint with optional config metadata.
     
     Args:
+        filepath: Path to save checkpoint
         model: Model to save
         optimizer: Optimizer state
         epoch: Current epoch
-        loss: Current loss value
-        metrics: Dictionary of metrics
-        filepath: Path to save checkpoint
+        val_metric: Validation metric (e.g., accuracy)
+        is_best: Whether this is the best model so far
         config: Optional configuration dictionary (useful for model reconstruction)
     """
     checkpoint = {
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-        'loss': loss,
-        'metrics': metrics
+        'val_metric': val_metric,
+        'is_best': is_best,
     }
     
     if config is not None:
         checkpoint['config'] = config
     
     torch.save(checkpoint, filepath)
-    print(f"💾 Checkpoint saved: {filepath}")
+    if is_best:
+        print(f"💾 Best checkpoint saved: {filepath}")
+    else:
+        print(f"💾 Checkpoint saved: {filepath}")
+
+
+def save_embedding_pipeline(
+    filepath: str,
+    model: torch.nn.Module,
+    epoch: int,
+    config: Optional[Dict] = None,
+):
+    """
+    Save only the embedding pipeline from a model for transfer learning.
+    
+    This extracts and saves the embedding_pipeline component, which can be
+    loaded into other models (LSTM, VAE, etc.) for transfer learning.
+    
+    Args:
+        filepath: Path to save embedding pipeline
+        model: Model containing embedding_pipeline attribute
+        epoch: Current epoch
+        config: Optional configuration dictionary
+    """
+    if not hasattr(model, 'embedding_pipeline'):
+        print(f"⚠️  Model does not have 'embedding_pipeline' attribute. Skipping save.")
+        return
+    
+    checkpoint = {
+        'epoch': epoch,
+        'embedding_pipeline_state_dict': model.embedding_pipeline.state_dict(),
+    }
+    
+    if config is not None:
+        checkpoint['config'] = config
+    
+    torch.save(checkpoint, filepath)
+    print(f"📦 Embedding pipeline saved: {filepath}")
 
 
 def load_checkpoint(
@@ -105,6 +142,33 @@ def load_checkpoint(
     print(f"   Epoch: {epoch}, Loss: {loss:.4f}")
     
     return epoch, loss, metrics
+
+
+def load_embedding_pipeline(
+    filepath: str,
+    model: torch.nn.Module,
+) -> int:
+    """
+    Load embedding pipeline into a model for transfer learning.
+    
+    Args:
+        filepath: Path to embedding pipeline checkpoint
+        model: Model with embedding_pipeline attribute to load into
+    
+    Returns:
+        int: Epoch the embedding pipeline was trained to
+    """
+    if not hasattr(model, 'embedding_pipeline'):
+        raise ValueError("Model does not have 'embedding_pipeline' attribute")
+    
+    checkpoint = torch.load(filepath, map_location='cpu')
+    model.embedding_pipeline.load_state_dict(checkpoint['embedding_pipeline_state_dict'])
+    
+    epoch = checkpoint.get('epoch', 0)
+    print(f"📥 Embedding pipeline loaded: {filepath}")
+    print(f"   Trained to epoch: {epoch}")
+    
+    return epoch
 
 
 def compute_accuracy(predictions: torch.Tensor, targets: torch.Tensor, k: int = 1) -> float:
