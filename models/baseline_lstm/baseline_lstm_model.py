@@ -83,9 +83,9 @@ class PerNodeToMPredictor(nn.Module):
             dropout=dropout,
             use_node2vec=True,
             use_temporal=False,
-            use_agent=False,
-            use_modality_gating=False,
-            use_cross_attention=False,
+            use_agent=True,              # Enable agent encoder (100 agents)
+            use_modality_gating=True,    # Enable modality gating
+            use_cross_attention=True,    # Enable cross-attention
         )
         
         if freeze_embedding:

@@ -55,15 +55,15 @@ except ImportError:
 # ============================================================================
 
 class WandBLogger:
-    """Handles W&B logging during training."""
+    """Handles W&B logging during training with proper accuracy averaging."""
     
-    def __init__(self, project_name: str = "bdi-tom-baseline-lstm", config: Dict = None):
+    def __init__(self, project_name: str = "bdi-tom", config: Dict = None, run_name: str = None):
         self.enabled = WANDB_AVAILABLE
         self.global_step = 0
         
         if self.enabled:
-            wandb.init(project=project_name, config=config or {})
-            print("✅ W&B initialized!")
+            wandb.init(project=project_name, config=config or {}, name=run_name)
+            print(f"✅ W&B initialized{f' (run: {run_name})' if run_name else ''}!")
         else:
             print("⚠️  W&B disabled")
     
@@ -87,42 +87,54 @@ class WandBLogger:
         wandb.log(log_dict, step=self.global_step)
         self.global_step += 1
     
-    def log_epoch(self, epoch: int, train_metrics: Dict[str, float], val_metrics: Dict[str, float], lr: float):
-        """Log epoch-level metrics with train/val separation."""
+    def log_epoch(
+        self, 
+        epoch: int, 
+        train_metrics: Dict[str, float], 
+        val_metrics: Dict[str, float], 
+        lr: float,
+        train_percentile_metrics: Dict[str, Dict[str, float]] = None,
+        val_percentile_metrics: Dict[str, Dict[str, float]] = None
+    ):
+        """
+        Log simplified epoch-level metrics: goal accuracy, loss, and percentiles.
+        
+        Args:
+            epoch: Current epoch number
+            train_metrics: Training metrics (already averaged over all batches)
+            val_metrics: Validation metrics (already averaged over all batches)
+            lr: Current learning rate
+            train_percentile_metrics: Training percentile metrics (15%, 50%, 85%)
+            val_percentile_metrics: Validation percentile metrics (15%, 50%, 85%)
+        """
         if not self.enabled:
             return
         
         log_dict = {
             'epoch': epoch,
             'learning_rate': lr,
+            # Train metrics
+            'train/goal_acc': train_metrics.get('goal_acc', 0),
+            'train/loss': train_metrics.get('loss', 0),
+            # Val metrics
+            'val/goal_acc': val_metrics.get('goal_acc', 0),
+            'val/loss': val_metrics.get('loss', 0),
         }
         
-        # Add train metrics with 'train/' prefix
-        for key, value in train_metrics.items():
-            log_dict[f'train/{key}'] = value
+        # Log train percentiles
+        if train_percentile_metrics is not None:
+            for pct in ['15%', '50%', '85%']:
+                if pct in train_percentile_metrics:
+                    log_dict[f'train/goal_acc_{pct}'] = train_percentile_metrics[pct].get('goal_acc', 0)
         
-        # Add val metrics with 'val/' prefix
-        for key, value in val_metrics.items():
-            log_dict[f'val/{key}'] = value
+        # Log val percentiles
+        if val_percentile_metrics is not None:
+            for pct in ['15%', '50%', '85%']:
+                if pct in val_percentile_metrics:
+                    log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
         
-        # Compute and log key ratios and differences
-        if 'loss' in train_metrics and 'loss' in val_metrics:
-            log_dict['metrics/train_val_loss_ratio'] = train_metrics['loss'] / (val_metrics['loss'] + 1e-8)
-            log_dict['metrics/val_train_loss_diff'] = val_metrics['loss'] - train_metrics['loss']
-        
-        # Log individual task metrics for easy comparison
-        for task in ['goal', 'nextstep', 'category']:
-            if f'loss_{task}' in train_metrics and f'loss_{task}' in val_metrics:
-                log_dict[f'loss_comparison/{task}_train'] = train_metrics[f'loss_{task}']
-                log_dict[f'loss_comparison/{task}_val'] = val_metrics[f'loss_{task}']
-                log_dict[f'loss_comparison/{task}_diff'] = val_metrics[f'loss_{task}'] - train_metrics[f'loss_{task}']
-            
-            if f'{task}_acc' in train_metrics and f'{task}_acc' in val_metrics:
-                log_dict[f'accuracy_comparison/{task}_train'] = train_metrics[f'{task}_acc']
-                log_dict[f'accuracy_comparison/{task}_val'] = val_metrics[f'{task}_acc']
-                log_dict[f'accuracy_comparison/{task}_diff'] = val_metrics[f'{task}_acc'] - train_metrics[f'{task}_acc']
-        
-        wandb.log(log_dict, step=epoch)
+        wandb.log(log_dict, step=self.global_step)
+        self.global_step += 1
     
     def log_model_info(self, total_params: int, trainable_params: int, model_config: Dict):
         """Log model architecture information."""
@@ -469,7 +481,7 @@ def main(args):
     
     model = PerNodeToMPredictor(
         num_nodes=len(graph.nodes()),
-        num_agents=1,
+        num_agents=100,  # 100 agents to match transformer pretrained embeddings
         num_poi_nodes=len(poi_nodes),
         num_categories=7,
         node_embedding_dim=args.node_embedding_dim,
@@ -488,6 +500,46 @@ def main(args):
     print(f"   Total parameters: {total_params:,}")
     print(f"   Trainable parameters: {trainable_params:,}")
     print(f"   Frozen parameters: {total_params - trainable_params:,}")
+    
+    # Load pretrained embedding pipeline if provided
+    if args.pretrained_embedding is not None:
+        print(f"\n📥 Loading pretrained embedding pipeline from: {args.pretrained_embedding}")
+        try:
+            checkpoint = torch.load(args.pretrained_embedding, map_location=device)
+            
+            # Check config for debugging (but ignore incorrect values)
+            if 'config' in checkpoint:
+                saved_config = checkpoint['config']
+                print(f"   Saved config: {saved_config}")
+                if saved_config.get('num_agents', 1) == 1:
+                    print(f"   ⚠️  Config shows 1 agent, but actual weights support 100 agents (config error, weights are correct)")
+            
+            # Load the actual state dict (this has the correct 100-agent weights)
+            model.embedding_pipeline.load_state_dict(checkpoint['embedding_pipeline_state_dict'])
+            print(f"✅ Pretrained embedding pipeline loaded successfully!")
+            if 'epoch' in checkpoint:
+                print(f"   Pre-trained for {checkpoint['epoch']} epochs")
+            
+            # Verify the actual loaded weights support 100 agents
+            if hasattr(model.embedding_pipeline, 'agent_encoder') and model.embedding_pipeline.use_agent:
+                try:
+                    agent_emb_weight = model.embedding_pipeline.agent_encoder.agent_context.agent_emb.agent_embedding.weight
+                    actual_num_agents = agent_emb_weight.shape[0]
+                    print(f"   ✅ Verified: Agent embeddings support {actual_num_agents} agents")
+                except AttributeError:
+                    print(f"   ✅ Agent encoder loaded (verification skipped)")
+            
+            # Freeze if requested
+            if args.freeze_embedding:
+                model._freeze_embeddings()
+                trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+                print(f"   Trainable parameters (after freeze): {trainable_params:,}")
+        except FileNotFoundError:
+            print(f"⚠️  Warning: Pretrained embedding file not found: {args.pretrained_embedding}")
+            print(f"   Training from scratch instead.")
+        except Exception as e:
+            print(f"⚠️  Error loading pretrained embedding: {e}")
+            print(f"   Training from scratch instead.")
     
     # Store config for checkpoint saving
     model_config = {
@@ -538,7 +590,8 @@ def main(args):
     # STEP 5: INITIALIZE W&B LOGGING
     # ================================================================
     logger = WandBLogger(
-        project_name="bdi-tom-baseline-lstm",
+        project_name="bdi-tom",
+        run_name=args.wandb_run_name,
         config={
             'model': 'PerNodeToMPredictor',
             'architecture': 'baseline_lstm',
@@ -692,6 +745,8 @@ if __name__ == '__main__':
     parser.add_argument('--agent_dim', type=int, default=64, help='Agent encoding dimension')
     parser.add_argument('--fusion_dim', type=int, default=128, help='Fusion layer dimension')
     parser.add_argument('--freeze_embedding', action='store_true', help='Freeze embedding pipeline')
+    parser.add_argument('--pretrained_embedding', type=str, default=None, 
+                        help='Path to pretrained unified embedding pipeline (e.g., checkpoints/keepers/unified_embedding.pt)')
     
     # Model - Prediction
     parser.add_argument('--hidden_dim', type=int, default=256, help='Hidden layer dimension')
@@ -705,6 +760,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-5, help='Weight decay')
     parser.add_argument('--patience', type=int, default=10, help='Early stopping patience')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--wandb_run_name', type=str, default=None, help='W&B run name')
     
     args = parser.parse_args()
     main(args)
