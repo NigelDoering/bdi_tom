@@ -35,7 +35,7 @@ from experiments.exp_2_data import (
 from graph_controller.world_graph import WorldGraph
 from models.encoders.map_encoder import GraphDataPreparator
 from models.encoders.trajectory_encoder import TrajectoryDataPreparator
-from models.training.utils import get_device
+from models.utils.utils import get_device
 
 
 def parse_fractions(spec: str) -> List[float]:

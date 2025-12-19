@@ -244,24 +244,8 @@ class UnifiedEmbeddingPipeline(nn.Module):
         if node_ids.dim() == 3:
             node_ids = node_ids.squeeze(-1)
         
-        # Encode each node in the batch and sequence
-        batch_size, seq_len = node_ids.shape
-        node_embeddings = []
-        
-        for b in range(batch_size):
-            seq_embeddings = []
-            for s in range(seq_len):
-                node_id_tensor = node_ids[b:b+1, s:s+1]
-                spatial = spatial_coords[b:b+1, s:s+1, :] if spatial_coords is not None else None
-                cat = categories[b:b+1, s:s+1] if categories is not None else None
-                
-                emb = self.node2vec_encoder(node_id_tensor, spatial, cat)  # (1, 1, node_emb_dim)
-                seq_embeddings.append(emb.squeeze(1))  # (1, node_emb_dim)
-            
-            seq_embeddings = torch.cat(seq_embeddings, dim=0)  # (seq_len, node_emb_dim)
-            node_embeddings.append(seq_embeddings)
-        
-        node_embeddings = torch.stack(node_embeddings, dim=0)  # (batch, seq_len, node_emb_dim)
+        # Batch encode all nodes at once (MUCH faster!)
+        node_embeddings = self.node2vec_encoder(node_ids, spatial_coords, categories)
         return node_embeddings
     
     def encode_temporal(
@@ -345,21 +329,28 @@ class UnifiedEmbeddingPipeline(nn.Module):
         # Expand agent embeddings to match sequence length
         agent_emb_expanded = agent_embeddings.unsqueeze(1).expand(-1, seq_len, -1)
         
+        # Reshape to (batch * seq_len, dim) for fusion
+        node_flat = node_embeddings.reshape(-1, node_embeddings.shape[-1])
+        temp_flat = temporal_embeddings.reshape(-1, temporal_embeddings.shape[-1])
+        agent_flat = agent_emb_expanded.reshape(-1, agent_emb_expanded.shape[-1])
+        
         # Fuse spatial, temporal, and agent modalities
         fused = self.fusion_encoder(
-            node_embeddings,
-            temporal_embeddings,
-            agent_emb_expanded,
+            node_flat,
+            temp_flat,
+            agent_flat,
             return_components=True
         )
         
-        # Unpack if dict (contains components)
-        if isinstance(fused, dict):
-            fused_embeddings = fused.get('fused', None)
-            components = fused
+        # Unpack if tuple (fused, components)
+        if isinstance(fused, tuple):
+            fused_embeddings, components = fused
         else:
             fused_embeddings = fused
             components = {}
+        
+        # Reshape back to (batch, seq_len, fusion_dim)
+        fused_embeddings = fused_embeddings.reshape(batch_size, seq_len, -1)
         
         return fused_embeddings, components
     
