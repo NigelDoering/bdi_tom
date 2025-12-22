@@ -70,6 +70,20 @@ class WandBLogger:
         
         if self.enabled:
             wandb.init(project=project_name, config=config or {}, name=run_name)
+            
+            # Define custom x-axes for different metric types
+            # Batch metrics use global_step, epoch metrics use epoch
+            wandb.define_metric("global_step")
+            wandb.define_metric("epoch")
+            
+            # Batch metrics are on global_step axis
+            wandb.define_metric("batch/*", step_metric="global_step")
+            
+            # Epoch metrics are on epoch axis  
+            wandb.define_metric("train/*", step_metric="epoch")
+            wandb.define_metric("val/*", step_metric="epoch")
+            wandb.define_metric("learning_rate", step_metric="epoch")
+            
             print(f"✅ W&B initialized{f' (run: {run_name})' if run_name else ''}!")
         else:
             print("⚠️  W&B disabled")
@@ -104,7 +118,7 @@ class WandBLogger:
         val_percentile_metrics: Dict[str, Dict[str, float]] = None
     ):
         """
-        Log simplified epoch-level metrics: goal accuracy, loss, and percentiles.
+        Log epoch-level metrics: loss, goal accuracy, and percentiles.
         
         Args:
             epoch: Current epoch number
@@ -120,28 +134,23 @@ class WandBLogger:
         log_dict = {
             'epoch': epoch,
             'learning_rate': lr,
-            # Train metrics
-            'train/goal_acc': train_metrics.get('goal_acc', 0),
+            # Train metrics - loss and goal accuracy
             'train/loss': train_metrics.get('loss', 0),
-            # Val metrics
-            'val/goal_acc': val_metrics.get('goal_acc', 0),
+            'train/goal_acc': train_metrics.get('goal_acc', 0),
+            # Val metrics - loss and goal accuracy
             'val/loss': val_metrics.get('loss', 0),
+            'val/goal_acc': val_metrics.get('goal_acc', 0),
         }
         
-        # Log train percentiles
-        if train_percentile_metrics is not None:
-            for pct in ['15%', '50%', '85%']:
-                if pct in train_percentile_metrics:
-                    log_dict[f'train/goal_acc_{pct}'] = train_percentile_metrics[pct].get('goal_acc', 0)
-        
-        # Log val percentiles
+        # Log val percentiles (15%, 50%, 85%)
         if val_percentile_metrics is not None:
             for pct in ['15%', '50%', '85%']:
                 if pct in val_percentile_metrics:
-                    log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
+                    # Convert to percentage (percentile metrics are in 0-1 range)
+                    log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0) * 100
         
-        # Use epoch for x-axis to enable easy comparison across models
-        wandb.log(log_dict, step=epoch)
+        # Don't specify step parameter - let W&B auto-increment
+        wandb.log(log_dict)
     
     def log_model_info(self, total_params: int, trainable_params: int, model_config: Dict):
         """Log model architecture information."""
@@ -564,33 +573,39 @@ def main():
                        default='all_trajectories.json',
                        help='Name of trajectory file')
     
-    # Model hyperparameters
-    parser.add_argument('--d_model', type=int, default=256,
-                       help='Transformer model dimension')
+    # Model hyperparameters (ENHANCED for better learning)
+    parser.add_argument('--d_model', type=int, default=384,
+                       help='Transformer model dimension (increased from 256)')
     parser.add_argument('--nhead', type=int, default=8,
                        help='Number of attention heads')
-    parser.add_argument('--num_layers', type=int, default=4,
-                       help='Number of transformer layers')
-    parser.add_argument('--dim_feedforward', type=int, default=1024,
-                       help='Feedforward dimension')
+    parser.add_argument('--num_layers', type=int, default=6,
+                       help='Number of transformer layers (increased from 4)')
+    parser.add_argument('--dim_feedforward', type=int, default=1536,
+                       help='Feedforward dimension (increased from 1024)')
     parser.add_argument('--dropout', type=float, default=0.1,
                        help='Dropout rate')
     
-    # Embedding configuration
+    # Embedding configuration (ALL INCREASED for richer representations)
     parser.add_argument('--node_embedding_dim', type=int, default=128,
                        help='Node embedding dimension')
+    parser.add_argument('--temporal_dim', type=int, default=128,
+                       help='Temporal embedding dimension')
+    parser.add_argument('--agent_dim', type=int, default=128,
+                       help='Agent embedding dimension')
+    parser.add_argument('--fusion_dim', type=int, default=256,
+                       help='Fusion dimension (unified embedding output, increased from 128)')
     
     # Training hyperparameters
-    parser.add_argument('--num_epochs', type=int, default=50,
-                       help='Number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=64,
-                       help='Batch size (can be larger than LSTM since no expansion)')
+    parser.add_argument('--num_epochs', type=int, default=75,
+                       help='Number of training epochs (increased for larger model)')
+    parser.add_argument('--batch_size', type=int, default=48,
+                       help='Batch size (reduced from 64 due to larger model)')
     parser.add_argument('--lr', type=float, default=1e-3,
                        help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1e-4,
                        help='Weight decay')
-    parser.add_argument('--patience', type=int, default=10,
-                       help='Early stopping patience')
+    parser.add_argument('--patience', type=int, default=15,
+                       help='Early stopping patience (increased for larger model)')
     
     # Data processing
     parser.add_argument('--min_traj_length', type=int, default=2,
@@ -709,7 +724,12 @@ def main():
         num_agents=100,  # 100 agents from simulation
         num_poi_nodes=len(poi_nodes),
         num_categories=7,
+        # Embedding parameters (ALL NOW CONFIGURABLE)
         node_embedding_dim=args.node_embedding_dim,
+        temporal_dim=args.temporal_dim,
+        agent_dim=args.agent_dim,
+        fusion_dim=args.fusion_dim,
+        # Transformer parameters
         d_model=args.d_model,
         nhead=args.nhead,
         num_layers=args.num_layers,
@@ -721,9 +741,16 @@ def main():
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     
-    print(f"✅ Model created!")
+    print(f"✅ Enhanced Baseline Transformer Model created!")
+    print(f"   🔥 IMPROVEMENTS: Temporal embeddings + Deeper architecture + Larger capacity")
     print(f"   Total parameters:     {total_params:,}")
     print(f"   Trainable parameters: {trainable_params:,}")
+    print(f"   Architecture:")
+    print(f"      - Transformer: d_model={args.d_model}, layers={args.num_layers}, heads={args.nhead}")
+    print(f"      - Feedforward: {args.dim_feedforward}")
+    print(f"      - Embeddings: node={args.node_embedding_dim}, temporal={args.temporal_dim}, agent={args.agent_dim}")
+    print(f"      - Fusion: {args.fusion_dim}")
+    print(f"      - Temporal enabled: ✅ (captures time-of-day patterns)")
     print("=" * 100 + "\n")
     
     # Create optimizer and scheduler
