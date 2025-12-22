@@ -28,6 +28,68 @@ import torch.nn.functional as F
 from typing import Tuple, Dict
 
 
+def check_encoder_health(mu: torch.Tensor, log_var: torch.Tensor, name: str = "VAE") -> Dict[str, float]:
+    """
+    Diagnostic function to check if VAE encoder is healthy or collapsing.
+    
+    Signs of collapse:
+    - mu variance near zero (all latents same)
+    - log_var near large negative (variance -> 0, deterministic)
+    - std (exp(0.5 * log_var)) near zero
+    
+    Healthy VAE:
+    - mu variance > 0.01 (latents differ across samples)
+    - log_var in range [-2, 2] (std in [0.37, 2.72])
+    - KL per dim > 0.1 (encodes information)
+    
+    Args:
+        mu: [batch, latent_dim] latent means
+        log_var: [batch, latent_dim] latent log variances
+        name: Name for logging
+    
+    Returns:
+        Dict with diagnostic metrics
+    """
+    with torch.no_grad():
+        # Compute statistics
+        mu_mean = mu.mean().item()
+        mu_std = mu.std().item()
+        mu_var = mu.var().item()
+        
+        log_var_mean = log_var.mean().item()
+        log_var_std = log_var.std().item()
+        
+        # Compute actual std from log_var
+        std = torch.exp(0.5 * log_var)
+        std_mean = std.mean().item()
+        std_std = std.std().item()
+        
+        # KL per dimension
+        kl_per_dim = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp())
+        kl_mean = kl_per_dim.mean().item()
+        
+        # Check for collapse
+        is_collapsed = (
+            mu_var < 0.01 or  # All latents same
+            std_mean < 0.1 or  # Variance collapsed
+            kl_mean < 0.01     # No information encoded
+        )
+        
+        diagnostics = {
+            f'{name}_mu_mean': mu_mean,
+            f'{name}_mu_std': mu_std,
+            f'{name}_mu_var': mu_var,
+            f'{name}_log_var_mean': log_var_mean,
+            f'{name}_log_var_std': log_var_std,
+            f'{name}_std_mean': std_mean,
+            f'{name}_std_std': std_std,
+            f'{name}_kl_per_dim_mean': kl_mean,
+            f'{name}_is_collapsed': 1.0 if is_collapsed else 0.0,
+        }
+        
+        return diagnostics
+
+
 class VAEEncoder(nn.Module):
     """
     VAE Encoder: Maps input to latent distribution parameters (μ, log σ²).
@@ -76,6 +138,16 @@ class VAEEncoder(nn.Module):
         # Latent distribution parameters
         self.fc_mu = nn.Linear(hidden_dim, latent_dim)
         self.fc_log_var = nn.Linear(hidden_dim, latent_dim)
+        
+        # Initialize weights to prevent collapse
+        # Small initialization for mu (encourages exploration)
+        nn.init.xavier_normal_(self.fc_mu.weight, gain=0.01)
+        nn.init.zeros_(self.fc_mu.bias)
+        
+        # Initialize log_var to encode uncertainty (not collapse to deterministic)
+        # Start with log_var ≈ 0 (variance ≈ 1) for healthy exploration
+        nn.init.xavier_normal_(self.fc_log_var.weight, gain=0.01)
+        nn.init.zeros_(self.fc_log_var.bias)
     
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
@@ -94,6 +166,11 @@ class VAEEncoder(nn.Module):
         # Compute distribution parameters
         mu = self.fc_mu(h)
         log_var = self.fc_log_var(h)
+        
+        # Clamp log_var to prevent numerical instability and collapse
+        # Prevent variance from becoming too small (collapse) or too large (instability)
+        # log_var in [-10, 2] means std in [exp(-5), exp(1)] = [0.0067, 2.718]
+        log_var = torch.clamp(log_var, min=-10.0, max=2.0)
         
         return mu, log_var
 
@@ -429,9 +506,18 @@ def vae_loss(
     mu: torch.Tensor,
     log_var: torch.Tensor,
     beta: float = 1.0,
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    free_bits: float = 0.0,
+    recon_scale: float = 100.0,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Compute VAE loss: Reconstruction + β * KL Divergence.
+    Compute VAE loss: Reconstruction + β * KL Divergence with free bits.
+    
+    Free bits prevents posterior collapse by setting a minimum KL per dimension.
+    The model is not penalized for KL until it exceeds the threshold.
+    
+    CRITICAL: Free bits is applied PER DIMENSION, not total KL!
+    This forces the model to encode at least free_bits nats of information
+    in EACH latent dimension, preventing collapse to uninformative posterior.
     
     Args:
         recon: [batch, dim] reconstructed output
@@ -439,21 +525,51 @@ def vae_loss(
         mu: [batch, latent_dim] latent mean
         log_var: [batch, latent_dim] latent log variance
         beta: Weight for KL divergence term (β-VAE)
+               Set to 0.0 to disable KL penalty (free bits provides floor)
+        free_bits: Free bits threshold in nats per dimension.
+                   Recommended: 0.5-2.0 nats/dim to force information encoding.
+                   Each dimension must encode at least this much info before penalty.
+        recon_scale: Scale factor for reconstruction loss to prevent it from being too small.
+                     Default: 100.0 (makes recon loss comparable to KL)
     
     Returns:
         total_loss: Scalar total loss
-        recon_loss: Scalar reconstruction loss
-        kl_loss: Scalar KL divergence loss
+        recon_loss: Scalar reconstruction loss (unscaled, for monitoring)
+        kl_loss: Scalar KL divergence loss (after free bits, used in optimization)
+        kl_raw: Scalar raw KL divergence (before free bits, for monitoring)
     """
     # Reconstruction loss (MSE)
-    recon_loss = F.mse_loss(recon, x, reduction='mean')
+    recon_loss_raw = F.mse_loss(recon, x, reduction='mean')
+    
+    # Scale reconstruction loss to make it significant
+    # This prevents the model from ignoring reconstruction
+    recon_loss = recon_loss_raw * recon_scale
     
     # KL divergence: KL(q(z|x) || p(z)) where p(z) = N(0,1)
-    # KL = -0.5 * sum(1 + log_var - mu^2 - exp(log_var))
-    kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=-1)
-    kl_loss = kl_loss.mean()
+    # KL per dimension: KL_d = -0.5 * (1 + log_var_d - mu_d^2 - exp(log_var_d))
+    # This gives KL for each latent dimension separately
+    kl_per_dim = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp())  # [batch, latent_dim]
+    
+    # Total KL per sample (sum over dimensions)
+    kl_per_sample = kl_per_dim.sum(dim=-1)  # [batch]
+    
+    # Raw KL (before free bits) for monitoring
+    kl_raw = kl_per_sample.mean()
+    
+    # Apply free bits PER DIMENSION to prevent collapse
+    # This is CRITICAL: we threshold each dimension independently
+    if free_bits > 0.0:
+        # Clamp each dimension's KL to be at least 0 after subtracting threshold
+        # max(0, KL_d - free_bits) for each dimension
+        kl_per_dim_clamped = torch.clamp(kl_per_dim - free_bits, min=0.0)  # [batch, latent_dim]
+        
+        # Sum over dimensions to get total clamped KL per sample
+        kl_per_sample = kl_per_dim_clamped.sum(dim=-1)  # [batch]
+    
+    kl_loss = kl_per_sample.mean()
     
     # Total loss
     total_loss = recon_loss + beta * kl_loss
     
-    return total_loss, recon_loss, kl_loss
+    # Return unscaled recon_loss for monitoring
+    return total_loss, recon_loss_raw, kl_loss, kl_raw

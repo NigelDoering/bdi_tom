@@ -139,14 +139,16 @@ class WandBLogger:
             'learning_rate': lr,
         }
         
-        # === ACCURACY METRICS ===
-        # Train accuracies
+        # === ACCURACY METRICS (match baseline transformer format) ===
+        # Train accuracies - PRIMARY METRICS
+        log_dict['train/goal_acc'] = train_metrics.get('goal_acc', 0)  # Primary metric for comparison
         log_dict['train/accuracy/goal_top1'] = train_metrics.get('goal_acc', 0)
         log_dict['train/accuracy/goal_top5'] = train_metrics.get('goal_top5_acc', 0)
         log_dict['train/accuracy/next_node'] = train_metrics.get('nextstep_acc', 0)
         log_dict['train/accuracy/goal_category'] = train_metrics.get('category_acc', 0)
         
-        # Val accuracies
+        # Val accuracies - PRIMARY METRICS
+        log_dict['val/goal_acc'] = val_metrics.get('goal_acc', 0)  # Primary metric for comparison
         log_dict['val/accuracy/goal_top1'] = val_metrics.get('goal_acc', 0)
         log_dict['val/accuracy/goal_top5'] = val_metrics.get('goal_top5_acc', 0)
         log_dict['val/accuracy/next_node'] = val_metrics.get('nextstep_acc', 0)
@@ -180,17 +182,50 @@ class WandBLogger:
             if key in val_metrics:
                 log_dict[f'val/vae/{key}'] = val_metrics[key]
         
-        # === PERCENTILE METRICS ===
+        # === VAE DIAGNOSTICS (KL per dimension - CRITICAL for monitoring collapse) ===
+        diagnostic_keys = ['belief_kl_raw', 'belief_kl_per_dim',
+                          'desire_kl_raw', 'desire_kl_per_dim',
+                          'intention_kl_raw', 'intention_kl_per_dim']
+        
+        for key in diagnostic_keys:
+            if key in train_metrics:
+                log_dict[f'train/vae/diagnostics/{key}'] = train_metrics[key]
+            if key in val_metrics:
+                log_dict[f'val/vae/diagnostics/{key}'] = val_metrics[key]
+        
+        # === ENCODER HEALTH METRICS (detect posterior collapse) ===
+        encoder_health_keys = [
+            'belief_mu_mean', 'belief_mu_std', 'belief_mu_var',
+            'belief_log_var_mean', 'belief_std_mean', 'belief_is_collapsed',
+            'desire_mu_mean', 'desire_mu_std', 'desire_mu_var',
+            'desire_log_var_mean', 'desire_std_mean', 'desire_is_collapsed',
+            'intention_mu_mean', 'intention_mu_std', 'intention_mu_var',
+            'intention_log_var_mean', 'intention_std_mean', 'intention_is_collapsed',
+        ]
+        
+        for key in encoder_health_keys:
+            if key in train_metrics:
+                log_dict[f'train/vae/encoder_health/{key}'] = train_metrics[key]
+            if key in val_metrics:
+                log_dict[f'val/vae/encoder_health/{key}'] = val_metrics[key]
+        
+        # === PERCENTILE METRICS (match baseline transformer format) ===
         # Log train percentiles
         if train_percentile_metrics is not None:
             for pct in ['15%', '50%', '85%']:
                 if pct in train_percentile_metrics:
+                    # Primary format for comparison
+                    log_dict[f'train/goal_acc_{pct}'] = train_percentile_metrics[pct].get('goal_acc', 0)
+                    # Detailed format
                     log_dict[f'train/accuracy/goal_top1_{pct}'] = train_percentile_metrics[pct].get('goal_acc', 0)
         
         # Log val percentiles
         if val_percentile_metrics is not None:
             for pct in ['15%', '50%', '85%']:
                 if pct in val_percentile_metrics:
+                    # Primary format for comparison
+                    log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
+                    # Detailed format
                     log_dict[f'val/accuracy/goal_top1_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
         
         # Log all metrics (will automatically use epoch as step due to define_metric)
@@ -284,6 +319,33 @@ def train_epoch(
         'intention_loss': AverageMeter(),
         'intention_recon_loss': AverageMeter(),
         'intention_kl_loss': AverageMeter(),
+        # Diagnostic metrics (KL per dimension - CRITICAL for monitoring collapse)
+        'belief_kl_raw': AverageMeter(),
+        'belief_kl_per_dim': AverageMeter(),
+        'desire_kl_raw': AverageMeter(),
+        'desire_kl_per_dim': AverageMeter(),
+        'intention_kl_raw': AverageMeter(),
+        'intention_kl_per_dim': AverageMeter(),
+        # Encoder health metrics (detect collapse)
+        'belief_mu_mean': AverageMeter(),
+        'belief_mu_std': AverageMeter(),
+        'belief_mu_var': AverageMeter(),
+        'belief_log_var_mean': AverageMeter(),
+        'belief_std_mean': AverageMeter(),
+        'belief_is_collapsed': AverageMeter(),
+        'desire_mu_mean': AverageMeter(),
+        'desire_mu_std': AverageMeter(),
+        'desire_mu_var': AverageMeter(),
+        'desire_log_var_mean': AverageMeter(),
+        'desire_std_mean': AverageMeter(),
+        'desire_is_collapsed': AverageMeter(),
+        'intention_mu_mean': AverageMeter(),
+        'intention_mu_std': AverageMeter(),
+        'intention_mu_var': AverageMeter(),
+        'intention_log_var_mean': AverageMeter(),
+        'intention_std_mean': AverageMeter(),
+        'intention_is_collapsed': AverageMeter(),
+        # Prediction losses and accuracies
         'loss_goal': AverageMeter(),
         'loss_nextstep': AverageMeter(),
         'loss_category': AverageMeter(),
@@ -371,6 +433,28 @@ def train_epoch(
         metrics['intention_loss'].update(intention_loss.item(), batch_size)
         metrics['intention_recon_loss'].update(intention_recon.item(), batch_size)
         metrics['intention_kl_loss'].update(intention_kl.item(), batch_size)
+        # Diagnostic metrics (KL per dimension)
+        metrics['belief_kl_raw'].update(outputs['belief_kl_raw'].item(), batch_size)
+        metrics['belief_kl_per_dim'].update(outputs['belief_kl_per_dim'].item(), batch_size)
+        metrics['desire_kl_raw'].update(outputs['desire_kl_raw'].item(), batch_size)
+        metrics['desire_kl_per_dim'].update(outputs['desire_kl_per_dim'].item(), batch_size)
+        metrics['intention_kl_raw'].update(outputs['intention_kl_raw'].item(), batch_size)
+        metrics['intention_kl_per_dim'].update(outputs['intention_kl_per_dim'].item(), batch_size)
+        
+        # Encoder health metrics
+        health_keys = [
+            'belief_mu_mean', 'belief_mu_std', 'belief_mu_var',
+            'belief_log_var_mean', 'belief_std_mean', 'belief_is_collapsed',
+            'desire_mu_mean', 'desire_mu_std', 'desire_mu_var',
+            'desire_log_var_mean', 'desire_std_mean', 'desire_is_collapsed',
+            'intention_mu_mean', 'intention_mu_std', 'intention_mu_var',
+            'intention_log_var_mean', 'intention_std_mean', 'intention_is_collapsed',
+        ]
+        for key in health_keys:
+            if key in outputs:
+                metrics[key].update(outputs[key], batch_size)
+        
+        # Prediction metrics
         metrics['loss_goal'].update(loss_goal.item(), batch_size)
         metrics['loss_nextstep'].update(loss_nextstep.item(), batch_size)
         metrics['loss_category'].update(loss_category.item(), batch_size)
@@ -443,6 +527,33 @@ def validate(
         'intention_loss': AverageMeter(),
         'intention_recon_loss': AverageMeter(),
         'intention_kl_loss': AverageMeter(),
+        # Diagnostic metrics (KL per dimension)
+        'belief_kl_raw': AverageMeter(),
+        'belief_kl_per_dim': AverageMeter(),
+        'desire_kl_raw': AverageMeter(),
+        'desire_kl_per_dim': AverageMeter(),
+        'intention_kl_raw': AverageMeter(),
+        'intention_kl_per_dim': AverageMeter(),
+        # Encoder health metrics (detect collapse)
+        'belief_mu_mean': AverageMeter(),
+        'belief_mu_std': AverageMeter(),
+        'belief_mu_var': AverageMeter(),
+        'belief_log_var_mean': AverageMeter(),
+        'belief_std_mean': AverageMeter(),
+        'belief_is_collapsed': AverageMeter(),
+        'desire_mu_mean': AverageMeter(),
+        'desire_mu_std': AverageMeter(),
+        'desire_mu_var': AverageMeter(),
+        'desire_log_var_mean': AverageMeter(),
+        'desire_std_mean': AverageMeter(),
+        'desire_is_collapsed': AverageMeter(),
+        'intention_mu_mean': AverageMeter(),
+        'intention_mu_std': AverageMeter(),
+        'intention_mu_var': AverageMeter(),
+        'intention_log_var_mean': AverageMeter(),
+        'intention_std_mean': AverageMeter(),
+        'intention_is_collapsed': AverageMeter(),
+        # Prediction metrics
         'loss_goal': AverageMeter(),
         'loss_nextstep': AverageMeter(),
         'loss_category': AverageMeter(),
@@ -515,6 +626,28 @@ def validate(
         metrics['intention_loss'].update(outputs['intention_loss'].item(), batch_size)
         metrics['intention_recon_loss'].update(outputs['intention_recon_loss'].item(), batch_size)
         metrics['intention_kl_loss'].update(outputs['intention_kl_loss'].item(), batch_size)
+        # Diagnostic metrics (KL per dimension)
+        metrics['belief_kl_raw'].update(outputs['belief_kl_raw'].item(), batch_size)
+        metrics['belief_kl_per_dim'].update(outputs['belief_kl_per_dim'].item(), batch_size)
+        metrics['desire_kl_raw'].update(outputs['desire_kl_raw'].item(), batch_size)
+        metrics['desire_kl_per_dim'].update(outputs['desire_kl_per_dim'].item(), batch_size)
+        metrics['intention_kl_raw'].update(outputs['intention_kl_raw'].item(), batch_size)
+        metrics['intention_kl_per_dim'].update(outputs['intention_kl_per_dim'].item(), batch_size)
+        
+        # Encoder health metrics
+        health_keys = [
+            'belief_mu_mean', 'belief_mu_std', 'belief_mu_var',
+            'belief_log_var_mean', 'belief_std_mean', 'belief_is_collapsed',
+            'desire_mu_mean', 'desire_mu_std', 'desire_mu_var',
+            'desire_log_var_mean', 'desire_std_mean', 'desire_is_collapsed',
+            'intention_mu_mean', 'intention_mu_std', 'intention_mu_var',
+            'intention_log_var_mean', 'intention_std_mean', 'intention_is_collapsed',
+        ]
+        for key in health_keys:
+            if key in outputs:
+                metrics[key].update(outputs[key], batch_size)
+        
+        # Prediction metrics
         metrics['loss_goal'].update(loss_goal.item(), batch_size)
         metrics['loss_nextstep'].update(loss_nextstep.item(), batch_size)
         metrics['loss_category'].update(loss_category.item(), batch_size)
@@ -624,7 +757,7 @@ def main():
     # Data paths
     parser.add_argument('--data_dir', type=str, 
                        default='data/simulation_data/run_8',
-                       help='Directory containing trajectory data')
+                       help='Directory containing trajectory data (e.g., data/simulation_data/run_8)')
     parser.add_argument('--graph_path', type=str,
                        default='data/processed/ucsd_walk_full.graphml',
                        help='Path to graph file')
@@ -632,8 +765,8 @@ def main():
                        default='data/simulation_data/run_8/split_data/split_indices_seed42.json',
                        help='Path to split indices file')
     parser.add_argument('--trajectory_filename', type=str,
-                       default='all_trajectories.json',
-                       help='Name of trajectory file')
+                       default='trajectories/all_trajectories.json',
+                       help='Trajectory filename relative to data_dir (e.g., trajectories/all_trajectories.json)')
     
     # Model hyperparameters - Embedding
     parser.add_argument('--node_embedding_dim', type=int, default=64,
@@ -650,14 +783,14 @@ def main():
                        help='Path to pretrained unified embedding pipeline (e.g., checkpoints/keepers/unified_embedding.pt)')
     
     # Model hyperparameters - VAE
-    parser.add_argument('--belief_latent_dim', type=int, default=32,
-                       help='Belief VAE latent dimension')
-    parser.add_argument('--desire_latent_dim', type=int, default=32,
-                       help='Desire VAE latent dimension')
-    parser.add_argument('--intention_latent_dim', type=int, default=64,
-                       help='Intention VAE latent dimension')
-    parser.add_argument('--vae_hidden_dim', type=int, default=128,
-                       help='VAE hidden layer dimension')
+    parser.add_argument('--belief_latent_dim', type=int, default=256,
+                       help='Belief VAE latent dimension (increased for more capacity)')
+    parser.add_argument('--desire_latent_dim', type=int, default=256,
+                       help='Desire VAE latent dimension (increased for more capacity)')
+    parser.add_argument('--intention_latent_dim', type=int, default=512,
+                       help='Intention VAE latent dimension (increased for more capacity)')
+    parser.add_argument('--vae_hidden_dim', type=int, default=256,
+                       help='VAE hidden layer dimension (increased for larger latents)')
     parser.add_argument('--vae_num_layers', type=int, default=2,
                        help='Number of VAE hidden layers')
     
@@ -670,16 +803,24 @@ def main():
                        help='Number of attention heads (for fusion)')
     
     # β-VAE weights
-    parser.add_argument('--beta_belief', type=float, default=1.0,
-                       help='β weight for belief VAE KL loss')
-    parser.add_argument('--beta_desire', type=float, default=1.0,
-                       help='β weight for desire VAE KL loss')
-    parser.add_argument('--beta_intention', type=float, default=1.0,
-                       help='β weight for intention VAE KL loss')
+    parser.add_argument('--beta_belief', type=float, default=0.0,
+                       help='β weight for belief VAE KL loss (set to 0 initially, free bits provides floor)')
+    parser.add_argument('--beta_desire', type=float, default=0.0,
+                       help='β weight for desire VAE KL loss (set to 0 initially, free bits provides floor)')
+    parser.add_argument('--beta_intention', type=float, default=0.0,
+                       help='β weight for intention VAE KL loss (set to 0 initially, free bits provides floor)')
     
-    # Loss weighting
-    parser.add_argument('--vae_loss_weight', type=float, default=0.1,
-                       help='Weight for VAE losses (lower = focus more on predictions)')
+    # Free bits (prevent posterior collapse)
+    parser.add_argument('--free_bits_belief', type=float, default=0.5,
+                       help='Free bits threshold for belief VAE (nats per dimension). Start small: 0.5')
+    parser.add_argument('--free_bits_desire', type=float, default=0.5,
+                       help='Free bits threshold for desire VAE (nats per dimension). Start small: 0.5')
+    parser.add_argument('--free_bits_intention', type=float, default=0.5,
+                       help='Free bits threshold for intention VAE (nats per dimension). Start small: 0.5')
+    
+    # Loss weighting (REBALANCED for posterior collapse fix)
+    parser.add_argument('--vae_loss_weight', type=float, default=1000.0,
+                       help='Weight for VAE losses (dramatically increased to fix collapse). Target: VAE loss should be 10-20%% of total.')
     parser.add_argument('--pred_loss_weight', type=float, default=1.0,
                        help='Weight for prediction losses')
     parser.add_argument('--use_kl_annealing', action='store_true',
@@ -824,6 +965,9 @@ def main():
         beta_belief=args.beta_belief,
         beta_desire=args.beta_desire,
         beta_intention=args.beta_intention,
+        free_bits_belief=args.free_bits_belief,
+        free_bits_desire=args.free_bits_desire,
+        free_bits_intention=args.free_bits_intention,
         freeze_embedding=args.freeze_embedding,
     ).to(device)
     
@@ -835,9 +979,9 @@ def main():
     print(f"   Total parameters:     {total_params:,}")
     print(f"   Trainable parameters: {trainable_params:,}")
     print(f"   Frozen parameters:    {total_params - trainable_params:,}")
-    print(f"   Belief latent dim:    {args.belief_latent_dim}")
-    print(f"   Desire latent dim:    {args.desire_latent_dim}")
-    print(f"   Intention latent dim: {args.intention_latent_dim}")
+    print(f"   Belief latent dim:    {args.belief_latent_dim} (free bits: {args.free_bits_belief:.1f} nats/dim)")
+    print(f"   Desire latent dim:    {args.desire_latent_dim} (free bits: {args.free_bits_desire:.1f} nats/dim)")
+    print(f"   Intention latent dim: {args.intention_latent_dim} (free bits: {args.free_bits_intention:.1f} nats/dim)")
     print("=" * 100 + "\n")
     
     # Load pretrained embedding pipeline if provided
@@ -927,6 +1071,9 @@ def main():
             'beta_belief': args.beta_belief,
             'beta_desire': args.beta_desire,
             'beta_intention': args.beta_intention,
+            'free_bits_belief': args.free_bits_belief,
+            'free_bits_desire': args.free_bits_desire,
+            'free_bits_intention': args.free_bits_intention,
         }
         wandb_logger.log_model_info(total_params, trainable_params, model_config)
     

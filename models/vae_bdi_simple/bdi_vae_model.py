@@ -91,6 +91,7 @@ from models.vae_bdi_simple.vae_components import (
     DesireVAE,
     IntentionVAE,
     vae_loss,
+    check_encoder_health,
 )
 
 
@@ -120,10 +121,10 @@ class BDIVAEPredictor(nn.Module):
         agent_dim: int = 64,
         fusion_dim: int = 128,
         # VAE params
-        belief_latent_dim: int = 32,
-        desire_latent_dim: int = 32,
-        intention_latent_dim: int = 64,
-        vae_hidden_dim: int = 128,
+        belief_latent_dim: int = 256,  # Increased from 32 for more capacity
+        desire_latent_dim: int = 256,  # Increased from 32 for more capacity
+        intention_latent_dim: int = 512,  # Increased from 64 for more capacity
+        vae_hidden_dim: int = 256,  # Increased for larger latents
         vae_num_layers: int = 2,
         # Prediction head params
         hidden_dim: int = 256,
@@ -133,6 +134,10 @@ class BDIVAEPredictor(nn.Module):
         beta_belief: float = 1.0,
         beta_desire: float = 1.0,
         beta_intention: float = 1.0,
+        # Free bits for preventing posterior collapse
+        free_bits_belief: float = 3.0,  # nats per dimension
+        free_bits_desire: float = 3.0,  # nats per dimension
+        free_bits_intention: float = 3.0,  # nats per dimension
         freeze_embedding: bool = False,
     ):
         super().__init__()
@@ -150,6 +155,11 @@ class BDIVAEPredictor(nn.Module):
         self.beta_belief = beta_belief
         self.beta_desire = beta_desire
         self.beta_intention = beta_intention
+        
+        # Free bits (prevent posterior collapse)
+        self.free_bits_belief = free_bits_belief
+        self.free_bits_desire = free_bits_desire
+        self.free_bits_intention = free_bits_intention
         
         # ================================================================
         # MODULE 1: UNIFIED EMBEDDING PIPELINE
@@ -295,19 +305,27 @@ class BDIVAEPredictor(nn.Module):
             categories=None,
         )  # [batch, seq_len, node_embedding_dim]
         
-        # Expand to fusion_dim if needed
-        if node_emb.shape[-1] < self.fusion_dim:
-            padding = torch.zeros(
-                batch_size, node_emb.shape[1], self.fusion_dim - node_emb.shape[-1],
-                device=device
-            )
-            node_emb = torch.cat([node_emb, padding], dim=-1)
-        
         # Extract last valid embedding for each sequence
         # Use history_lengths to get correct position
         batch_indices = torch.arange(batch_size, device=device)
         last_indices = (history_lengths - 1).clamp(min=0)
-        unified_embedding = node_emb[batch_indices, last_indices]  # [batch, fusion_dim]
+        last_node_emb = node_emb[batch_indices, last_indices]  # [batch, node_embedding_dim]
+        
+        # Project to fusion_dim instead of padding with zeros
+        # This ensures the embedding has meaningful variance across all dimensions
+        if last_node_emb.shape[-1] != self.fusion_dim:
+            if not hasattr(self, 'embedding_projection'):
+                self.embedding_projection = nn.Linear(
+                    last_node_emb.shape[-1], 
+                    self.fusion_dim
+                ).to(device)
+            unified_embedding = self.embedding_projection(last_node_emb)
+        else:
+            unified_embedding = last_node_emb
+        
+        # Add noise to prevent perfect reconstruction (forces VAE to learn)
+        if self.training:
+            unified_embedding = unified_embedding + torch.randn_like(unified_embedding) * 0.01
         
         # ================================================================
         # STEP 2: PARALLEL BELIEF + DESIRE VAEs
@@ -360,48 +378,75 @@ class BDIVAEPredictor(nn.Module):
         }
         
         if compute_loss:
-            # Belief VAE loss
-            belief_loss, belief_recon, belief_kl = vae_loss(
+            # Check encoder health (diagnostic for collapse detection)
+            belief_health = check_encoder_health(belief_out['mu'], belief_out['log_var'], 'belief')
+            desire_health = check_encoder_health(desire_out['mu'], desire_out['log_var'], 'desire')
+            intention_health = check_encoder_health(intention_out['mu'], intention_out['log_var'], 'intention')
+            
+            # Belief VAE loss (with free bits to prevent collapse)
+            belief_loss, belief_recon, belief_kl, belief_kl_raw = vae_loss(
                 recon=belief_out['recon'],
                 x=unified_embedding,
                 mu=belief_out['mu'],
                 log_var=belief_out['log_var'],
                 beta=self.beta_belief,
+                free_bits=self.free_bits_belief,
+                recon_scale=100.0,  # Scale reconstruction loss
             )
             
-            # Desire VAE loss
-            desire_loss, desire_recon, desire_kl = vae_loss(
+            # Desire VAE loss (with free bits to prevent collapse)
+            desire_loss, desire_recon, desire_kl, desire_kl_raw = vae_loss(
                 recon=desire_out['recon'],
                 x=unified_embedding,
                 mu=desire_out['mu'],
                 log_var=desire_out['log_var'],
                 beta=self.beta_desire,
+                free_bits=self.free_bits_desire,
+                recon_scale=100.0,  # Scale reconstruction loss
             )
             
-            # Intention VAE loss
-            intention_loss, intention_recon, intention_kl = vae_loss(
+            # Intention VAE loss (with free bits to prevent collapse)
+            intention_loss, intention_recon, intention_kl, intention_kl_raw = vae_loss(
                 recon=intention_out['recon'],
                 x=intention_out['input'],  # Full concatenated input
                 mu=intention_out['mu'],
                 log_var=intention_out['log_var'],
                 beta=self.beta_intention,
+                free_bits=self.free_bits_intention,
+                recon_scale=100.0,  # Scale reconstruction loss
             )
             
             # Total VAE loss
             total_vae_loss = belief_loss + desire_loss + intention_loss
             
+            # Compute KL per dimension for diagnostics
+            belief_kl_per_dim = belief_kl_raw / self.belief_latent_dim
+            desire_kl_per_dim = desire_kl_raw / self.desire_latent_dim
+            intention_kl_per_dim = intention_kl_raw / self.intention_latent_dim
+            
             outputs.update({
                 'belief_loss': belief_loss,
                 'belief_recon_loss': belief_recon,
                 'belief_kl_loss': belief_kl,
+                'belief_kl_raw': belief_kl_raw,
+                'belief_kl_per_dim': belief_kl_per_dim,
                 'desire_loss': desire_loss,
                 'desire_recon_loss': desire_recon,
                 'desire_kl_loss': desire_kl,
+                'desire_kl_raw': desire_kl_raw,
+                'desire_kl_per_dim': desire_kl_per_dim,
                 'intention_loss': intention_loss,
                 'intention_recon_loss': intention_recon,
                 'intention_kl_loss': intention_kl,
+                'intention_kl_raw': intention_kl_raw,
+                'intention_kl_per_dim': intention_kl_per_dim,
                 'total_vae_loss': total_vae_loss,
             })
+            
+            # Add encoder health diagnostics
+            outputs.update(belief_health)
+            outputs.update(desire_health)
+            outputs.update(intention_health)
         
         return outputs
     
