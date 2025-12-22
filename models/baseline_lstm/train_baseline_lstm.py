@@ -133,8 +133,8 @@ class WandBLogger:
                 if pct in val_percentile_metrics:
                     log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
         
-        wandb.log(log_dict, step=self.global_step)
-        self.global_step += 1
+        # Use epoch for x-axis to enable easy comparison across models
+        wandb.log(log_dict, step=epoch)
     
     def log_model_info(self, total_params: int, trainable_params: int, model_config: Dict):
         """Log model architecture information."""
@@ -283,8 +283,21 @@ def validate(
     val_loader: DataLoader,
     criterion: Dict[str, nn.Module],
     device: torch.device,
-) -> Dict[str, float]:
-    """Validate the model."""
+    compute_percentiles: bool = False,
+) -> tuple:
+    """
+    Validate the model.
+    
+    Args:
+        model: Model to validate
+        val_loader: Validation data loader
+        criterion: Loss functions
+        device: Device to use
+        compute_percentiles: If True, compute goal accuracy at 15%, 50%, 85% history lengths
+    
+    Returns:
+        Tuple of (average_metrics, percentile_metrics)
+    """
     model.eval()
     metrics = {
         'loss': AverageMeter(),
@@ -295,6 +308,10 @@ def validate(
         'nextstep_acc': AverageMeter(),
         'category_acc': AverageMeter(),
     }
+    
+    # For percentile tracking (by history length)
+    all_history_lengths = []
+    all_goal_correct = []
     
     pbar = tqdm(val_loader, desc="Validating")
     
@@ -333,9 +350,40 @@ def validate(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
+        # Track for percentile computation
+        if compute_percentiles:
+            goal_correct = (predictions['goal'].argmax(dim=1) == goal_idx).cpu().numpy()
+            lengths = history_lengths.cpu().numpy()
+            all_history_lengths.extend(lengths)
+            all_goal_correct.extend(goal_correct)
+        
         pbar.set_postfix({'loss': f"{metrics['loss'].avg:.4f}"})
     
-    return {k: v.avg for k, v in metrics.items()}
+    # Compute percentile metrics
+    percentile_metrics = None
+    if compute_percentiles and len(all_history_lengths) > 0:
+        import numpy as np
+        all_history_lengths = np.array(all_history_lengths)
+        all_goal_correct = np.array(all_goal_correct)
+        
+        # Get 15th, 50th, 85th percentiles of history lengths
+        p15 = np.percentile(all_history_lengths, 15)
+        p50 = np.percentile(all_history_lengths, 50)
+        p85 = np.percentile(all_history_lengths, 85)
+        
+        percentile_metrics = {}
+        for pct_name, pct_value in [('15%', p15), ('50%', p50), ('85%', p85)]:
+            # Find samples within ±10% of this percentile
+            lower = pct_value * 0.9
+            upper = pct_value * 1.1
+            mask = (all_history_lengths >= lower) & (all_history_lengths <= upper)
+            
+            if mask.sum() > 0:
+                percentile_metrics[pct_name] = {
+                    'goal_acc': all_goal_correct[mask].mean() * 100,
+                }
+    
+    return {k: v.avg for k, v in metrics.items()}, percentile_metrics
 
 
 # ============================================================================
@@ -631,16 +679,27 @@ def main(args):
     
     for epoch in range(args.num_epochs):
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, epoch, logger)
-        val_metrics = validate(model, val_loader, criterion, device)
+        val_metrics, val_percentile_metrics = validate(
+            model, val_loader, criterion, device, 
+            compute_percentiles=args.log_percentiles
+        )
         scheduler.step()
         
         lr = optimizer.param_groups[0]['lr']
-        logger.log_epoch(epoch, train_metrics, val_metrics, lr)
+        logger.log_epoch(epoch, train_metrics, val_metrics, lr,
+                        train_percentile_metrics=None,
+                        val_percentile_metrics=val_percentile_metrics)
         
         print(f"\n📊 Epoch {epoch+1}/{args.num_epochs}")
         print(f"   Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f}")
         print(f"   Train Goal Acc: {train_metrics['goal_acc']:.3f} | Val Goal Acc: {val_metrics['goal_acc']:.3f}")
         print(f"   Train Cat Acc: {train_metrics['category_acc']:.3f} | Val Cat Acc: {val_metrics['category_acc']:.3f}")
+        
+        if val_percentile_metrics is not None:
+            print(f"\n   📈 Validation Goal Accuracy by History Length Percentile:")
+            print(f"      15%: {val_percentile_metrics['15%']['goal_acc']:.3f}")
+            print(f"      50%: {val_percentile_metrics['50%']['goal_acc']:.3f}")
+            print(f"      85%: {val_percentile_metrics['85%']['goal_acc']:.3f}")
         
         # Save checkpoint
         if val_metrics['goal_acc'] > best_val_acc:
@@ -761,6 +820,8 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, default=10, help='Early stopping patience')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
     parser.add_argument('--wandb_run_name', type=str, default=None, help='W&B run name')
+    parser.add_argument('--log_percentiles', action='store_true', 
+                       help='Log accuracy at 15%%, 50%%, 85%% history length percentiles')
     
     args = parser.parse_args()
     main(args)

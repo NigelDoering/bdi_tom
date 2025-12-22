@@ -140,8 +140,8 @@ class WandBLogger:
                 if pct in val_percentile_metrics:
                     log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
         
-        wandb.log(log_dict, step=self.global_step)
-        self.global_step += 1
+        # Use epoch for x-axis to enable easy comparison across models
+        wandb.log(log_dict, step=epoch)
     
     def log_model_info(self, total_params: int, trainable_params: int, model_config: Dict):
         """Log model architecture information."""
