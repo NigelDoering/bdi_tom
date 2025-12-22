@@ -80,6 +80,7 @@ class PerNodeTransformerPredictor(nn.Module):
         # MODULE 1: UNIFIED EMBEDDING PIPELINE
         # ================================================================
         # Match train_per_node configuration with all modalities enabled
+        # NOW WITH TEMPORAL EMBEDDINGS for time-of-day awareness
         self.embedding_pipeline = UnifiedEmbeddingPipeline(
             num_nodes=num_nodes,
             num_agents=num_agents,
@@ -93,7 +94,7 @@ class PerNodeTransformerPredictor(nn.Module):
             n_heads=nhead,
             dropout=dropout,
             use_node2vec=True,
-            use_temporal=False,
+            use_temporal=False,  # ✅ DISABLED: No time-of-day patterns available
             use_agent=True,
             use_modality_gating=True,
             use_cross_attention=True,
@@ -131,31 +132,40 @@ class PerNodeTransformerPredictor(nn.Module):
         )
         
         # ================================================================
-        # MODULE 4: PREDICTION HEADS
+        # MODULE 4: PREDICTION HEADS (DEEPER for more capacity)
         # ================================================================
         
-        # Goal prediction head
+        # Goal prediction head (3 layers instead of 2)
         self.goal_head = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_model // 2, num_poi_nodes),
+            nn.Linear(d_model // 2, d_model // 4),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 4, num_poi_nodes),
         )
         
-        # Next step prediction head
+        # Next step prediction head (3 layers instead of 2)
         self.nextstep_head = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_model // 2, num_nodes),
+            nn.Linear(d_model // 2, d_model // 4),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 4, num_nodes),
         )
         
-        # Category prediction head
+        # Category prediction head (3 layers instead of 2)
         self.category_head = nn.Sequential(
             nn.Linear(d_model, d_model // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(d_model // 2, num_categories),
+            nn.Linear(d_model // 2, d_model // 4),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_model // 4, num_categories),
         )
     
     def _freeze_embeddings(self):
@@ -202,6 +212,8 @@ class PerNodeTransformerPredictor(nn.Module):
         hours_seq = hours.unsqueeze(1).expand(batch_size, seq_len)  # [batch, seq_len]
         
         # Create dummy velocities (could be computed from graph distances in future)
+        # Note: days and deltas are not computed/passed - temporal encoder is configured
+        # to only use hours and velocities (day-of-week and deltas are disabled)
         velocities = torch.ones(batch_size, seq_len, device=device) * 1.0  # Walking pace
         
         # Use provided agent_ids or default to zeros
