@@ -210,18 +210,25 @@ def train_epoch(
     device: torch.device,
     epoch: int,
     wandb_logger: WandBLogger = None,
+    kl_warmup_epochs: int = 50,
+    free_bits: float = 0.5,
 ) -> Dict[str, float]:
     """
     Train for one epoch with BDI VAE model.
     
     Computes:
-    - VAE losses (belief, desire, intention)
+    - VAE losses (belief, desire, intention) with KL annealing
     - Prediction losses (goal, nextstep, category)
     - Total loss = VAE losses + Prediction losses
     """
     model.train()
+    
+    # KL annealing schedule: gradually increase from 0 to 1 over warmup_epochs
+    kl_annealing_factor = min(1.0, epoch / kl_warmup_epochs) if kl_warmup_epochs > 0 else 1.0
+    
     metrics = {
         'loss': AverageMeter(),
+        'kl_annealing_factor': AverageMeter(),
         'total_vae_loss': AverageMeter(),
         'total_pred_loss': AverageMeter(),
         'belief_loss': AverageMeter(),
@@ -254,12 +261,14 @@ def train_epoch(
         goal_cat_idx = batch['goal_cat_idx'].to(device)                  # [batch]
         agent_id = batch['agent_id'].to(device)                          # [batch]
         
-        # Forward pass
+        # Forward pass with KL annealing and free bits
         outputs = model(
             history_node_indices=history_node_indices,
             history_lengths=history_lengths,
             agent_ids=agent_id,
             compute_loss=True,
+            free_bits=free_bits,
+            kl_annealing_factor=kl_annealing_factor,
         )
         
         # Extract predictions
@@ -303,6 +312,7 @@ def train_epoch(
         
         # Update metrics
         metrics['loss'].update(loss.item(), batch_size)
+        metrics['kl_annealing_factor'].update(kl_annealing_factor, batch_size)
         metrics['total_vae_loss'].update(total_vae_loss.item(), batch_size)
         metrics['total_pred_loss'].update(total_pred_loss.item(), batch_size)
         metrics['belief_loss'].update(belief_loss.item(), batch_size)
@@ -561,14 +571,20 @@ def main():
     parser.add_argument('--beta_intention', type=float, default=1.0,
                        help='β weight for intention VAE KL loss')
     
+    # KL collapse prevention
+    parser.add_argument('--kl_warmup_epochs', type=int, default=50,
+                       help='Number of epochs for KL annealing warmup (0 = no annealing)')
+    parser.add_argument('--free_bits', type=float, default=0.5,
+                       help='Free bits per latent dimension to prevent KL collapse')
+    
     # Training hyperparameters
     parser.add_argument('--num_epochs', type=int, default=50,
                        help='Number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=32,
                        help='Batch size (per-node training)')
-    parser.add_argument('--lr', type=float, default=1e-3,
+    parser.add_argument('--lr', type=float, default=0.001,
                        help='Learning rate')
-    parser.add_argument('--weight_decay', type=float, default=1e-4,
+    parser.add_argument('--weight_decay', type=float, default=1e-5,
                        help='Weight decay')
     parser.add_argument('--patience', type=int, default=10,
                        help='Early stopping patience')
@@ -777,7 +793,9 @@ def main():
         
         # Train
         train_metrics = train_epoch(
-            model, train_loader, optimizer, criterion, device, epoch, wandb_logger
+            model, train_loader, optimizer, criterion, device, epoch, wandb_logger,
+            kl_warmup_epochs=args.kl_warmup_epochs,
+            free_bits=args.free_bits,
         )
         
         # Validate
@@ -797,6 +815,7 @@ def main():
         
         # Print epoch summary
         print(f"\n📊 Epoch {epoch} Summary:")
+        print(f"   KL Annealing Factor: {train_metrics['kl_annealing_factor']:.3f} (warmup: {args.kl_warmup_epochs} epochs)")
         print(f"   Train - Loss: {train_metrics['loss']:.4f} | VAE: {train_metrics['total_vae_loss']:.4f} | Pred: {train_metrics['total_pred_loss']:.4f} | Goal: {train_metrics['goal_acc']:.1f}%")
         print(f"   Val   - Loss: {val_metrics['loss']:.4f} | VAE: {val_metrics['total_vae_loss']:.4f} | Pred: {val_metrics['total_pred_loss']:.4f} | Goal: {val_metrics['goal_acc']:.1f}%")
         print(f"   VAE Breakdown:")

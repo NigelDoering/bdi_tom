@@ -423,15 +423,50 @@ class IntentionVAE(nn.Module):
         }
 
 
+def free_bits_kl(
+    mu: torch.Tensor,
+    log_var: torch.Tensor,
+    free_bits: float = 0.5,
+) -> torch.Tensor:
+    """
+    Compute KL divergence with free bits to prevent KL collapse.
+    
+    Free bits enforces a minimum KL per latent dimension, preventing the
+    posterior from collapsing to the prior. This ensures each latent dimension
+    encodes at least free_bits nats of information.
+    
+    Args:
+        mu: [batch, latent_dim] latent mean
+        log_var: [batch, latent_dim] latent log variance
+        free_bits: Minimum KL per dimension (default: 0.5 nats)
+    
+    Returns:
+        kl_loss: Scalar KL divergence loss
+    """
+    # KL per dimension: KL(q(z|x) || p(z)) where p(z) = N(0,1)
+    # KL_i = -0.5 * (1 + log_var_i - mu_i^2 - exp(log_var_i))
+    kl_per_dim = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp())
+    
+    # Clamp each dimension to minimum free_bits
+    kl_per_dim = torch.clamp(kl_per_dim, min=free_bits)
+    
+    # Sum over latent dimensions, mean over batch
+    kl_loss = kl_per_dim.sum(dim=-1).mean()
+    
+    return kl_loss
+
+
 def vae_loss(
     recon: torch.Tensor,
     x: torch.Tensor,
     mu: torch.Tensor,
     log_var: torch.Tensor,
     beta: float = 1.0,
+    free_bits: float = 0.5,
+    kl_annealing_factor: float = 1.0,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Compute VAE loss: Reconstruction + β * KL Divergence.
+    Compute VAE loss: Reconstruction + β * KL Divergence (with free bits and annealing).
     
     Args:
         recon: [batch, dim] reconstructed output
@@ -439,21 +474,21 @@ def vae_loss(
         mu: [batch, latent_dim] latent mean
         log_var: [batch, latent_dim] latent log variance
         beta: Weight for KL divergence term (β-VAE)
+        free_bits: Minimum KL per dimension to prevent collapse (default: 0.5)
+        kl_annealing_factor: Multiplicative factor for KL annealing (0→1 over warmup)
     
     Returns:
         total_loss: Scalar total loss
         recon_loss: Scalar reconstruction loss
-        kl_loss: Scalar KL divergence loss
+        kl_loss: Scalar KL divergence loss (before annealing)
     """
     # Reconstruction loss (MSE)
     recon_loss = F.mse_loss(recon, x, reduction='mean')
     
-    # KL divergence: KL(q(z|x) || p(z)) where p(z) = N(0,1)
-    # KL = -0.5 * sum(1 + log_var - mu^2 - exp(log_var))
-    kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=-1)
-    kl_loss = kl_loss.mean()
+    # KL divergence with free bits to prevent collapse
+    kl_loss = free_bits_kl(mu, log_var, free_bits=free_bits)
     
-    # Total loss
-    total_loss = recon_loss + beta * kl_loss
+    # Total loss with β-VAE weighting and annealing
+    total_loss = recon_loss + (beta * kl_annealing_factor) * kl_loss
     
     return total_loss, recon_loss, kl_loss

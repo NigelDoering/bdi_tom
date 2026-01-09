@@ -248,6 +248,8 @@ class BDIVAEPredictor(nn.Module):
         history_lengths: torch.Tensor,        # [batch]
         agent_ids: torch.Tensor = None,       # [batch] agent indices
         compute_loss: bool = True,
+        free_bits: float = 0.5,               # Free bits for KL collapse prevention
+        kl_annealing_factor: float = 1.0,     # KL annealing schedule (0→1)
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass through hierarchical BDI VAE.
@@ -367,6 +369,8 @@ class BDIVAEPredictor(nn.Module):
                 mu=belief_out['mu'],
                 log_var=belief_out['log_var'],
                 beta=self.beta_belief,
+                free_bits=free_bits,
+                kl_annealing_factor=kl_annealing_factor,
             )
             
             # Desire VAE loss
@@ -376,6 +380,8 @@ class BDIVAEPredictor(nn.Module):
                 mu=desire_out['mu'],
                 log_var=desire_out['log_var'],
                 beta=self.beta_desire,
+                free_bits=free_bits,
+                kl_annealing_factor=kl_annealing_factor,
             )
             
             # Intention VAE loss
@@ -385,6 +391,8 @@ class BDIVAEPredictor(nn.Module):
                 mu=intention_out['mu'],
                 log_var=intention_out['log_var'],
                 beta=self.beta_intention,
+                free_bits=free_bits,
+                kl_annealing_factor=kl_annealing_factor,
             )
             
             # Total VAE loss
