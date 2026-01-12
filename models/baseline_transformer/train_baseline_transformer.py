@@ -595,7 +595,7 @@ def main():
     # Data processing
     parser.add_argument('--min_traj_length', type=int, default=2,
                        help='Minimum trajectory length')
-    parser.add_argument('--max_traj_length', type=int, default=50,
+    parser.add_argument('--max_traj_length', type=int, default=60,
                        help='Maximum trajectory length')
     
     # Checkpointing
