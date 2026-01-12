@@ -248,7 +248,7 @@ class BDIVAEPredictor(nn.Module):
         history_lengths: torch.Tensor,        # [batch]
         agent_ids: torch.Tensor = None,       # [batch] agent indices
         compute_loss: bool = True,
-        free_bits: float = 0.5,               # Free bits for KL collapse prevention
+        free_bits: float = 2.0,               # Free bits for KL collapse prevention
         kl_annealing_factor: float = 1.0,     # KL annealing schedule (0→1)
     ) -> Dict[str, torch.Tensor]:
         """

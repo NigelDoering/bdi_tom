@@ -426,7 +426,7 @@ class IntentionVAE(nn.Module):
 def free_bits_kl(
     mu: torch.Tensor,
     log_var: torch.Tensor,
-    free_bits: float = 0.5,
+    free_bits: float = 2.0,
 ) -> torch.Tensor:
     """
     Compute KL divergence with free bits to prevent KL collapse.
