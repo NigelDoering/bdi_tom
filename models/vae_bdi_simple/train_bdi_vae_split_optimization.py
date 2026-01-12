@@ -1,8 +1,15 @@
 """
-BDI VAE TRAINING SCRIPT
+BDI VAE TRAINING SCRIPT WITH SPLIT ENCODER-DECODER OPTIMIZATION
 
 This script trains the hierarchical BDI (Belief-Desire-Intention) VAE model
-on the UCSD campus navigation dataset with pre-defined train/val/test splits.
+using a split encoder-decoder optimization strategy to prevent posterior collapse.
+
+OPTIMIZATION STRATEGY:
+- Two separate optimizers: one for encoders (high LR), one for decoders (low LR)
+- Encoders update N times per batch (default: 3x)
+- Decoders update once per batch
+- Encoder LR is M times higher than decoder LR (default: 5x)
+- This keeps encoders "ahead" of decoders, preventing collapse
 
 ARCHITECTURE:
 - Unified Embedding Pipeline → [Belief VAE, Desire VAE] → Intention VAE → Predictions
@@ -13,10 +20,22 @@ LOSS COMPONENTS:
 - Prediction Losses (goal, next step, category)
 
 Usage:
-    python -m models.vae_bdi_simple.train_bdi_vae [OPTIONS]
+    python -m models.vae_bdi_simple.train_bdi_vae_split_optimization [OPTIONS]
 
-Example:
-    python -m models.vae_bdi_simple.train_bdi_vae --num_epochs 50 --batch_size 128
+Examples:
+    # Default split (5x LR, 3x updates)
+    python -m models.vae_bdi_simple.train_bdi_vae_split_optimization \
+        --num_epochs 30 --batch_size 32 --wandb_run_name "bdi_vae_split_5x3"
+    
+    # Aggressive split (10x LR, 5x updates)
+    python -m models.vae_bdi_simple.train_bdi_vae_split_optimization \
+        --encoder_lr_multiplier 10.0 --encoder_updates_per_batch 5 \
+        --wandb_run_name "bdi_vae_split_10x5"
+    
+    # Ablation: no split (for comparison)
+    python -m models.vae_bdi_simple.train_bdi_vae_split_optimization \
+        --encoder_lr_multiplier 1.0 --encoder_updates_per_batch 1 \
+        --wandb_run_name "bdi_vae_no_split"
 
 Data:
     - Trajectories: data/simulation_data/run_8/trajectories/all_trajectories.json
@@ -205,13 +224,15 @@ class WandBLogger:
 def train_epoch(
     model: nn.Module,
     train_loader: DataLoader,
-    optimizer: optim.Optimizer,
+    encoder_optimizer: optim.Optimizer,
+    decoder_optimizer: optim.Optimizer,
     criterion: Dict[str, nn.Module],
     device: torch.device,
     epoch: int,
     wandb_logger: WandBLogger = None,
     kl_warmup_epochs: int = 50,
     free_bits: float = 2.0,
+    encoder_updates_per_batch: int = 3,
 ) -> Dict[str, float]:
     """
     Train for one epoch with BDI VAE model.
@@ -298,12 +319,84 @@ def train_epoch(
         
         # Total loss = VAE losses + Prediction losses
         loss = total_vae_loss + total_pred_loss
+
+        # SPLIT ENCODER-DECODER OPTIMIZATION:
+        # Update encoders multiple times with higher learning rate
+        for encoder_step in range(encoder_updates_per_batch):
+            encoder_optimizer.zero_grad()
+            
+            # Forward pass for encoder update
+            encoder_outputs = model(
+                history_node_indices=history_node_indices,
+                history_lengths=history_lengths,
+                agent_ids=agent_id,
+                compute_loss=True,
+                free_bits=free_bits,
+                kl_annealing_factor=kl_annealing_factor,
+            )
+            
+            # Encoder loss: VAE losses + prediction losses
+            encoder_goal_logits = encoder_outputs['goal']
+            encoder_nextstep_logits = encoder_outputs['nextstep']
+            encoder_category_logits = encoder_outputs['category']
+            
+            encoder_loss_goal = criterion['goal'](encoder_goal_logits, goal_idx)
+            encoder_loss_nextstep = criterion['nextstep'](encoder_nextstep_logits, next_node_idx)
+            encoder_loss_category = criterion['category'](encoder_category_logits, goal_cat_idx)
+            encoder_pred_loss = 1.0 * encoder_loss_goal + 0.5 * encoder_loss_nextstep + 0.5 * encoder_loss_category
+            
+            encoder_loss = encoder_outputs['total_vae_loss'] + encoder_pred_loss
+            encoder_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            encoder_optimizer.step()
         
-        # Standard optimization: single update per batch
-        optimizer.zero_grad()
-        loss.backward()
+        # Update decoders once (with lower learning rate)
+        decoder_optimizer.zero_grad()
+        
+        # Forward pass for decoder update
+        decoder_outputs = model(
+            history_node_indices=history_node_indices,
+            history_lengths=history_lengths,
+            agent_ids=agent_id,
+            compute_loss=True,
+            free_bits=free_bits,
+            kl_annealing_factor=kl_annealing_factor,
+        )
+        
+        # Decoder loss: VAE losses + prediction losses
+        decoder_goal_logits = decoder_outputs['goal']
+        decoder_nextstep_logits = decoder_outputs['nextstep']
+        decoder_category_logits = decoder_outputs['category']
+        
+        decoder_loss_goal = criterion['goal'](decoder_goal_logits, goal_idx)
+        decoder_loss_nextstep = criterion['nextstep'](decoder_nextstep_logits, next_node_idx)
+        decoder_loss_category = criterion['category'](decoder_category_logits, goal_cat_idx)
+        decoder_pred_loss = 1.0 * decoder_loss_goal + 0.5 * decoder_loss_nextstep + 0.5 * decoder_loss_category
+        
+        decoder_loss = decoder_outputs['total_vae_loss'] + decoder_pred_loss
+        decoder_loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-        optimizer.step()
+        decoder_optimizer.step()
+        
+        # Use decoder outputs for metrics (final update)
+        goal_logits = decoder_goal_logits
+        nextstep_logits = decoder_nextstep_logits
+        category_logits = decoder_category_logits
+        loss = decoder_loss
+        total_vae_loss = decoder_outputs['total_vae_loss']
+        total_pred_loss = decoder_pred_loss
+        belief_loss = decoder_outputs['belief_loss']
+        belief_recon = decoder_outputs['belief_recon_loss']
+        belief_kl = decoder_outputs['belief_kl_loss']
+        desire_loss = decoder_outputs['desire_loss']
+        desire_recon = decoder_outputs['desire_recon_loss']
+        desire_kl = decoder_outputs['desire_kl_loss']
+        intention_loss = decoder_outputs['intention_loss']
+        intention_recon = decoder_outputs['intention_recon_loss']
+        intention_kl = decoder_outputs['intention_kl_loss']
+        loss_goal = decoder_loss_goal
+        loss_nextstep = decoder_loss_nextstep
+        loss_category = decoder_loss_category
         
         # Compute accuracies
         goal_acc = (goal_logits.argmax(dim=1) == goal_idx).float().mean().item() * 100
@@ -343,8 +436,9 @@ def train_epoch(
                 'loss_goal': loss_goal.item(),
                 'goal_acc': goal_acc,
             }
-            lr = optimizer.param_groups[0]['lr']
-            wandb_logger.log_batch(epoch, batch_idx, batch_size, batch_metrics, lr)
+            encoder_lr = encoder_optimizer.param_groups[0]['lr']
+            decoder_lr = decoder_optimizer.param_groups[0]['lr']
+            wandb_logger.log_batch(epoch, batch_idx, batch_size, batch_metrics, encoder_lr)
         
         pbar.set_postfix({
             'loss': f"{metrics['loss'].avg:.4f}",
@@ -583,7 +677,11 @@ def main():
     parser.add_argument('--batch_size', type=int, default=32,
                        help='Batch size (per-node training)')
     parser.add_argument('--lr', type=float, default=0.001,
-                       help='Learning rate')
+                       help='Base learning rate (for decoder)')
+    parser.add_argument('--encoder_lr_multiplier', type=float, default=5.0,
+                       help='Encoder learning rate multiplier (encoder_lr = lr * multiplier)')
+    parser.add_argument('--encoder_updates_per_batch', type=int, default=3,
+                       help='Number of encoder updates per decoder update')
     parser.add_argument('--weight_decay', type=float, default=1e-5,
                        help='Weight decay')
     parser.add_argument('--patience', type=int, default=10,
@@ -726,15 +824,80 @@ def main():
     print(f"   Intention latent dim: {args.intention_latent_dim}")
     print("=" * 100 + "\n")
     
-    # Create optimizer and scheduler
-    optimizer = optim.AdamW(
-        model.parameters(),
-        lr=args.lr,
+    # ================================================================
+    # SPLIT ENCODER-DECODER OPTIMIZATION
+    # ================================================================
+    # Separate encoder and decoder parameters
+    encoder_params = []
+    decoder_params = []
+    prediction_params = []
+    
+    # Collect encoder parameters (belief_vae, desire_vae encoders + embedding pipeline)
+    encoder_modules = [
+        model.embedding_pipeline,
+        model.belief_vae.encoder,
+        model.desire_vae.encoder,
+        model.intention_vae.encoder,
+    ]
+    
+    # Collect decoder parameters (belief_vae, desire_vae decoders)
+    decoder_modules = [
+        model.belief_vae.decoder,
+        model.desire_vae.decoder,
+        model.intention_vae.decoder,
+    ]
+    
+    # Collect prediction head parameters
+    prediction_modules = [
+        model.goal_head,
+        model.nextstep_head,
+        model.category_head,
+    ]
+    
+    for module in encoder_modules:
+        encoder_params.extend(list(module.parameters()))
+    
+    for module in decoder_modules:
+        decoder_params.extend(list(module.parameters()))
+    
+    for module in prediction_modules:
+        prediction_params.extend(list(module.parameters()))
+    
+    # Calculate encoder/decoder learning rates
+    decoder_lr = args.lr
+    encoder_lr = args.lr * args.encoder_lr_multiplier
+    
+    print("\n" + "=" * 100)
+    print("🔧 SPLIT ENCODER-DECODER OPTIMIZATION SETUP")
+    print("=" * 100)
+    print(f"   Decoder LR:  {decoder_lr:.6f}")
+    print(f"   Encoder LR:  {encoder_lr:.6f} ({args.encoder_lr_multiplier}x multiplier)")
+    print(f"   Encoder updates per batch: {args.encoder_updates_per_batch}")
+    print(f"   Strategy: Encoders learn {args.encoder_updates_per_batch}x faster to stay 'ahead' of decoders")
+    print("=" * 100 + "\n")
+    
+    # Create separate optimizers
+    encoder_optimizer = optim.AdamW(
+        encoder_params + prediction_params,  # Encoders + prediction heads get high LR
+        lr=encoder_lr,
         weight_decay=args.weight_decay
     )
     
-    scheduler = CosineAnnealingLR(
-        optimizer,
+    decoder_optimizer = optim.AdamW(
+        decoder_params,  # Decoders get lower LR
+        lr=decoder_lr,
+        weight_decay=args.weight_decay
+    )
+    
+    # Schedulers for both optimizers
+    encoder_scheduler = CosineAnnealingLR(
+        encoder_optimizer,
+        T_max=args.num_epochs,
+        eta_min=1e-6
+    )
+    
+    decoder_scheduler = CosineAnnealingLR(
+        decoder_optimizer,
         T_max=args.num_epochs,
         eta_min=1e-6
     )
@@ -793,9 +956,10 @@ def main():
         
         # Train
         train_metrics = train_epoch(
-            model, train_loader, optimizer, criterion, device, epoch, wandb_logger,
+            model, train_loader, encoder_optimizer, decoder_optimizer, criterion, device, epoch, wandb_logger,
             kl_warmup_epochs=args.kl_warmup_epochs,
             free_bits=args.free_bits,
+            encoder_updates_per_batch=args.encoder_updates_per_batch,
         )
         
         # Validate
@@ -803,19 +967,22 @@ def main():
             model, val_loader, criterion, device
         )
         
-        # Step scheduler
-        scheduler.step()
-        current_lr = scheduler.get_last_lr()[0]
+        # Step both schedulers
+        encoder_scheduler.step()
+        decoder_scheduler.step()
+        current_encoder_lr = encoder_scheduler.get_last_lr()[0]
+        current_decoder_lr = decoder_scheduler.get_last_lr()[0]
         
-        # Log to W&B
+        # Log to W&B (use encoder LR for logging)
         if wandb_logger is not None:
             wandb_logger.log_epoch(
-                epoch, train_metrics, val_metrics, current_lr
+                epoch, train_metrics, val_metrics, current_encoder_lr
             )
         
         # Print epoch summary
         print(f"\n📊 Epoch {epoch} Summary:")
         print(f"   KL Annealing Factor: {train_metrics['kl_annealing_factor']:.3f} (warmup: {args.kl_warmup_epochs} epochs)")
+        print(f"   Learning Rates: Encoder={current_encoder_lr:.6f}, Decoder={current_decoder_lr:.6f} (ratio: {current_encoder_lr/current_decoder_lr:.1f}x)")
         print(f"   Train - Loss: {train_metrics['loss']:.4f} | VAE: {train_metrics['total_vae_loss']:.4f} | Pred: {train_metrics['total_pred_loss']:.4f} | Goal: {train_metrics['goal_acc']:.1f}%")
         print(f"   Val   - Loss: {val_metrics['loss']:.4f} | VAE: {val_metrics['total_vae_loss']:.4f} | Pred: {val_metrics['total_pred_loss']:.4f} | Goal: {val_metrics['goal_acc']:.1f}%")
         print(f"   VAE Breakdown:")
@@ -829,16 +996,17 @@ def main():
             best_epoch = epoch
             patience_counter = 0
             
-            # Save best checkpoint
+            # Save best checkpoint (save both optimizers)
             checkpoint_path = os.path.join(args.checkpoint_dir, 'best_model.pt')
-            save_checkpoint(
-                checkpoint_path,
-                model,
-                optimizer,
-                epoch,
-                val_metrics['goal_acc'],
-                is_best=True
-            )
+            checkpoint = {
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'encoder_optimizer_state_dict': encoder_optimizer.state_dict(),
+                'decoder_optimizer_state_dict': decoder_optimizer.state_dict(),
+                'val_acc': val_metrics['goal_acc'],
+                'is_best': True
+            }
+            torch.save(checkpoint, checkpoint_path)
             print(f"   ✅ New best model! Val Goal Acc: {best_val_goal_acc:.1f}%")
             
             if wandb_logger is not None:
@@ -850,14 +1018,15 @@ def main():
         # Save periodic checkpoint
         if epoch % args.save_every == 0:
             checkpoint_path = os.path.join(args.checkpoint_dir, f'checkpoint_epoch_{epoch}.pt')
-            save_checkpoint(
-                checkpoint_path,
-                model,
-                optimizer,
-                epoch,
-                val_metrics['goal_acc'],
-                is_best=False
-            )
+            checkpoint = {
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'encoder_optimizer_state_dict': encoder_optimizer.state_dict(),
+                'decoder_optimizer_state_dict': decoder_optimizer.state_dict(),
+                'val_acc': val_metrics['goal_acc'],
+                'is_best': False
+            }
+            torch.save(checkpoint, checkpoint_path)
             
             if wandb_logger is not None:
                 wandb_logger.log_checkpoint(epoch, checkpoint_path, best=False)
