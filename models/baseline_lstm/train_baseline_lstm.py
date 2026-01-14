@@ -62,7 +62,7 @@ class WandBLogger:
         self.global_step = 0
         
         if self.enabled:
-            wandb.init(project=project_name, config=config or {}, name=run_name)
+            wandb.init(project=project_name, entity="nigeldoering-uc-san-diego", config=config or {}, name=run_name)
             print(f"✅ W&B initialized{f' (run: {run_name})' if run_name else ''}!")
         else:
             print("⚠️  W&B disabled")

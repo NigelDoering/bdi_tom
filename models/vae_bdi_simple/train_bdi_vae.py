@@ -72,7 +72,7 @@ class WandBLogger:
         self.global_step = 0
         
         if self.enabled:
-            wandb.init(project=project_name, config=config or {}, name=run_name)
+            wandb.init(project=project_name, entity="nigeldoering-uc-san-diego", config=config or {}, name=run_name)
             print(f"✅ W&B initialized{f' (run: {run_name})' if run_name else ''}!")
         else:
             print("⚠️  W&B disabled")
@@ -511,7 +511,7 @@ def main():
     
     # Data paths
     parser.add_argument('--data_dir', type=str, 
-                       default='data/simulation_data/run_8/trajectories',
+                       default='data/simulation_data/run_8',
                        help='Directory containing trajectory data')
     parser.add_argument('--graph_path', type=str,
                        default='data/processed/ucsd_walk_full.graphml',
