@@ -56,18 +56,9 @@ class Simulation:
         returned_home = plan_result['returned_home']
         attempted_goals = plan_result['attempted_goals']
         
-        # Store the generated trajectory with new format
-        trajectory_data = {
-            "path": annotated_path,  # List of (node_id, goal_node) tuples
-            "goal_node": goal_node,
-            "start_node": start_node,
-            "hour": current_hour,
-            "attempts": attempts,
-            "returned_home": returned_home,
-            "attempted_goals": attempted_goals
-        }
-        self.trajectories[agent_id].append(trajectory_data)
-
+        # Initialize belief snapshots list
+        belief_snapshots = []
+        
         # Traverse the path and update beliefs periodically
         for i, (node, _) in enumerate(annotated_path):
             # Update beliefs every 5 nodes along the path
@@ -77,6 +68,32 @@ class Simulation:
                     hour=current_hour, 
                     distance=belief_update_dist
                 )
+                
+                # Capture belief snapshot after update
+                temporal_beliefs = {}
+                for node_id, belief_data in agent.belief_state.items():
+                    # Convert numpy array to list for JSON serialization
+                    temporal_beliefs[node_id] = belief_data["temporal_belief"].tolist()
+                
+                belief_snapshots.append({
+                    "step_index": i,
+                    "node": node,
+                    "temporal_beliefs": temporal_beliefs
+                })
+        
+        # Store the generated trajectory with belief snapshots
+        trajectory_data = {
+            "path": annotated_path,  # List of (node_id, goal_node) tuples
+            "goal_node": goal_node,
+            "start_node": start_node,
+            "hour": current_hour,
+            "agent_id": agent_id,  # Add agent_id for clarity
+            "attempts": attempts,
+            "returned_home": returned_home,
+            "attempted_goals": attempted_goals,
+            "belief_snapshots": belief_snapshots  # Add belief history
+        }
+        self.trajectories[agent_id].append(trajectory_data)
         
         if self.verbose:
             path_len = len(annotated_path)
