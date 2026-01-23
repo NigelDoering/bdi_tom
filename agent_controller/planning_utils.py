@@ -164,11 +164,8 @@ def _sample_stochastic_path(agent, start_node, goal_node, temperature=100.0):
     if agent.G.is_multigraph():
         G_simple = nx.Graph()
         G_simple.add_nodes_from(agent.G.nodes(data=True))
-        
-        # For each pair of nodes with edges, keep only the shortest one
         for u, v, data in agent.G.edges(data=True):
             if G_simple.has_edge(u, v):
-                # Compare with existing edge and keep shorter one
                 existing_length = G_simple[u][v].get('length', float('inf'))
                 new_length = data.get('length', float('inf'))
                 if new_length < existing_length:
@@ -176,58 +173,191 @@ def _sample_stochastic_path(agent, start_node, goal_node, temperature=100.0):
             else:
                 G_simple.add_edge(u, v, **data)
 
-    # Find the top K shortest paths
+    # --- Robust path existence check ---
+    if not G_simple.has_node(start_node) or not G_simple.has_node(goal_node):
+        raise RuntimeError(f"Start or goal node does not exist in the graph: {start_node}, {goal_node}")
+    if not nx.has_path(G_simple, start_node, goal_node):
+        raise RuntimeError(f"No path exists between {start_node} and {goal_node} in the graph.")
+    # -----------------------------------
+
+    # Find the top K shortest paths (fast and robust approach)
     K = 5
+    candidate_paths = []
+
     try:
-        # nx.shortest_simple_paths returns a generator of paths sorted by length
-        paths_generator = nx.shortest_simple_paths(
-            G_simple, 
-            source=start_node, 
-            target=goal_node, 
-            weight='length'
-        )
-        
-        # Take the first K paths
-        candidate_paths = []
-        for i, path in enumerate(paths_generator):
-            if i >= K:
-                break
-            candidate_paths.append(path)
-        
-        if not candidate_paths:
-            raise RuntimeError(f"No path found from {start_node} to {goal_node}.")
-            
+        # Primary shortest path (fast)
+        main_path = nx.shortest_path(G_simple, source=start_node, target=goal_node, weight='length')
+        candidate_paths.append(main_path)
     except (nx.NetworkXNoPath, nx.NodeNotFound):
         raise RuntimeError(f"No path found from {start_node} to {goal_node}.")
-    
-    # Calculate the length of each path
+    except Exception as e:
+        # Any unexpected error, try to fail gracefully
+        raise RuntimeError(f"Error computing shortest path: {e}")
+
+    # If we only need one path, return it quickly
+    if K == 1:
+        return candidate_paths[0]
+
+    # Attempt to find simple alternative paths by removing single edges from the main path
+    # This is cheaper than full Yen's algorithm and avoids complex graph copying.
+    try:
+        for i in range(len(main_path) - 1):
+            if len(candidate_paths) >= K:
+                break
+            u = main_path[i]
+            v = main_path[i + 1]
+
+            # Create a lightweight view copy of the graph and remove the edge (u,v)
+            G_mod = G_simple.copy()
+            if G_mod.has_edge(u, v):
+                try:
+                    G_mod.remove_edge(u, v)
+                except Exception:
+                    continue
+
+            try:
+                alt_path = nx.shortest_path(G_mod, source=start_node, target=goal_node, weight='length')
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                continue
+            except Exception:
+                # If any error occurs, skip this alternate
+                continue
+
+            tup = tuple(alt_path)
+            if tup not in (tuple(p) for p in candidate_paths):
+                candidate_paths.append(alt_path)
+                if len(candidate_paths) >= K:
+                    break
+    except Exception:
+        # If anything goes wrong in alternate generation, just proceed with whatever we have
+        pass
+
+    if not candidate_paths:
+        raise RuntimeError(f"No path found from {start_node} to {goal_node} after attempts.")
+
+    # Calculate the length of each path using stored base lengths (avoid repeated get_edge_data calls)
+    edge_base = {}
+    for u, v, d in G_simple.edges(data=True):
+        base_len = float(d.get('length', 1e6))
+        edge_base[(u, v)] = base_len
+        edge_base[(v, u)] = base_len
+
     path_lengths = []
     for path in candidate_paths:
-        total_length = 0
+        total_length = 0.0
         for i in range(len(path) - 1):
-            edge_data = agent.G.get_edge_data(path[i], path[i+1])
-            # Handle multi-edge case by taking the first edge's length
-            if isinstance(edge_data, dict) and 'length' in edge_data:
-                total_length += edge_data['length']
+            u, v = path[i], path[i+1]
+            # prefer base length if available
+            if (u, v) in edge_base:
+                total_length += edge_base[(u, v)]
             else:
-                # Multi-graph case - take first edge
-                total_length += list(edge_data.values())[0]['length']
+                edge_data = agent.G.get_edge_data(u, v)
+                if edge_data is None:
+                    total_length += 1e6
+                elif isinstance(edge_data, dict) and 'length' in edge_data:
+                    total_length += float(edge_data.get('length', 0.0))
+                else:
+                    try:
+                        lengths = [float(ed.get('length', 0.0)) for ed in edge_data.values()]
+                        total_length += min(lengths) if lengths else 0.0
+                    except Exception:
+                        total_length += 0.0
         path_lengths.append(total_length)
-    
+
     # Convert lengths to probabilities using softmax
-    # Negate lengths because shorter = better, and softmax gives higher prob to larger values
-    logits = [-length / temperature for length in path_lengths]
-    
-    # Apply softmax with numerical stability
+    logits = [-length / max(1e-6, temperature) for length in path_lengths]
     stable_logits = np.array(logits) - np.max(logits)
     probabilities = np.exp(stable_logits)
-    probabilities /= np.sum(probabilities)
-    
-    # Sample a path based on the probabilities
+    probabilities_sum = probabilities.sum()
+    if probabilities_sum <= 0 or not np.isfinite(probabilities_sum):
+        probabilities = np.ones(len(candidate_paths), dtype=float) / len(candidate_paths)
+    else:
+        probabilities /= probabilities_sum
+
     selected_idx = np.random.choice(len(candidate_paths), p=probabilities)
-    
+
     return candidate_paths[selected_idx]
 
+
+def yen_k_shortest_paths(G, source, target, K=5, weight='length'):
+    """
+    Simple implementation of Yen's algorithm for K shortest loopless paths.
+    Returns a list of paths (each path is a list of nodes) up to K paths.
+    This implementation makes a shallow copy of the graph for spur computations
+    and uses Dijkstra (networkx.shortest_path) for spur path finding.
+    """
+    if source == target:
+        return [[source]]
+    try:
+        first_path = nx.shortest_path(G, source=source, target=target, weight=weight)
+    except (nx.NetworkXNoPath, nx.NodeNotFound):
+        return []
+
+    A = [first_path]
+    B = []  # list of tuples (cost, path)
+
+    def path_cost(path):
+        cost = 0.0
+        for u, v in zip(path[:-1], path[1:]):
+            data = G.get_edge_data(u, v)
+            if data is None:
+                cost += 1e6
+            elif isinstance(data, dict) and 'length' in data:
+                cost += float(data.get('length', 0.0))
+            else:
+                try:
+                    lengths = [float(ed.get('length', 0.0)) for ed in data.values()]
+                    cost += min(lengths) if lengths else 0.0
+                except Exception:
+                    cost += 0.0
+        return cost
+
+    import heapq
+
+    for k in range(1, K):
+        for i in range(len(A[-1]) - 1):
+            spur_node = A[-1][i]
+            root_path = A[-1][: i + 1]
+
+            # Make a copy for modifications
+            G_copy = G.copy()
+
+            # Remove the edges that would create previously found paths with same root
+            for p in A:
+                if len(p) > i and p[: i + 1] == root_path:
+                    u = p[i]
+                    v = p[i + 1]
+                    if G_copy.has_edge(u, v):
+                        G_copy.remove_edge(u, v)
+
+            # Remove nodes in root_path except spur_node
+            for n in root_path[:-1]:
+                if G_copy.has_node(n):
+                    G_copy.remove_node(n)
+
+            try:
+                spur_path = nx.shortest_path(G_copy, source=spur_node, target=target, weight=weight)
+                total_path = root_path[:-1] + spur_path
+                total_cost = path_cost(total_path)
+                heapq.heappush(B, (total_cost, total_path))
+            except (nx.NetworkXNoPath, nx.NodeNotFound):
+                # No spur path found for this root, skip
+                continue
+
+        # If no candidates, break
+        if not B:
+            break
+
+        # Pop smallest candidate that's not already in A
+        while B:
+            cost, path_candidate = heapq.heappop(B)
+            if path_candidate not in A:
+                A.append(path_candidate)
+                break
+        else:
+            break
+
+    return A
 
 def _is_node_open(agent, node_id, current_hour):
     """
