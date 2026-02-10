@@ -337,26 +337,10 @@ def main():
     else:
         trajectories = traj_data
     
-    # Get POI nodes
-    poi_nodes = []
-    for n, d in graph.nodes(data=True):
-        is_poi = (
-            d.get('is_poi', False) or
-            d.get('poi_names', None) not in [None, '', '[]', "['None']"] or
-            d.get('Category', 'None') not in ['None', None, '']
-        )
-        if is_poi:
-            poi_nodes.append(n)
-    
-    if len(poi_nodes) == 0:
-        goal_nodes = set()
-        for traj in trajectories:
-            if 'goal_node' in traj:
-                goal_node = traj['goal_node']
-                if isinstance(goal_node, (list, tuple)):
-                    goal_node = goal_node[0]
-                goal_nodes.add(goal_node)
-        poi_nodes = sorted(list(goal_nodes))
+    # Get POI nodes using WorldGraph — same as simple BDI-VAE (230 nodes)
+    from graph_controller.world_graph import WorldGraph
+    world_graph = WorldGraph(graph)
+    poi_nodes = world_graph.poi_nodes
     
     node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
     

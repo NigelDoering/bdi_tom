@@ -335,6 +335,12 @@ def train_epoch(
         agent_id = batch['agent_id'].to(device)
         path_progress = batch['path_progress'].to(device)
         traj_id = batch['traj_id'].to(device)
+
+        # Temporal features (from enriched trajectories)
+        hours = batch['hour'].to(device) if 'hour' in batch else None
+        days = batch['day_of_week'].to(device) if 'day_of_week' in batch else None
+        deltas = batch['history_temporal_deltas'].to(device) if 'history_temporal_deltas' in batch else None
+        velocities = batch['history_velocities'].to(device) if 'history_velocities' in batch else None
         
         # Forward pass - PASS GOAL_IDX FOR INFONCE!
         outputs = model(
@@ -346,6 +352,10 @@ def train_epoch(
             next_node_idx=next_node_idx,
             goal_idx=goal_idx,  # CRITICAL: Enable InfoNCE + direct goal prediction!
             goal_cat_idx=goal_cat_idx,
+            hours=hours,
+            days=days,
+            deltas=deltas,
+            velocities=velocities,
         )
         
         # NaN detection
@@ -492,6 +502,12 @@ def validate(
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         agent_id = batch['agent_id'].to(device)
         path_progress = batch['path_progress'].to(device)
+
+        # Temporal features
+        hours = batch['hour'].to(device) if 'hour' in batch else None
+        days = batch['day_of_week'].to(device) if 'day_of_week' in batch else None
+        deltas = batch['history_temporal_deltas'].to(device) if 'history_temporal_deltas' in batch else None
+        velocities = batch['history_velocities'].to(device) if 'history_velocities' in batch else None
         
         # Forward - PASS GOAL_IDX
         outputs = model(
@@ -503,6 +519,10 @@ def validate(
             next_node_idx=next_node_idx,
             goal_idx=goal_idx,  # Enable InfoNCE
             goal_cat_idx=goal_cat_idx,
+            hours=hours,
+            days=days,
+            deltas=deltas,
+            velocities=velocities,
         )
         
         # Losses
@@ -599,97 +619,107 @@ def load_data_with_splits(
     split_indices_path: str,
     trajectory_filename: str = 'all_trajectories.json',
 ) -> Tuple:
-    """Load data with pre-defined splits.
-    
-    Handles the nested trajectory format:
-    {
-        "agent_000": [traj1, traj2, ...],
-        "agent_001": [traj1, traj2, ...],
-        ...
-    }
-    
-    Flattens to a list and adds agent_id to each trajectory.
+    """Load enriched trajectory data with pre-defined train/val/test splits.
+
+    Supports two trajectory formats:
+
+    1. **Flat list** (run_8_enriched/enriched_trajectories.json):
+       A JSON list of 100 000 trajectory dicts.  Trajectories are ordered
+       by agent (1000 per agent for 100 agents).  ``agent_id`` is inferred
+       from position: ``agent_id = traj_index // 1000``.
+
+    2. **Nested dict** (run_8/trajectories/all_trajectories.json):
+       ``{ "agent_000": [traj, …], "agent_001": [traj, …], … }``
+       ``agent_id`` is derived from the sorted key order.
+
+    In both cases every trajectory gets an integer ``agent_id`` field before
+    it is returned.
     """
     print("\n" + "=" * 100)
     print("📂 LOADING DATA WITH PRE-DEFINED SPLITS")
     print("=" * 100)
-    
+
     import networkx as nx
-    
+    from graph_controller.world_graph import WorldGraph
+
     # Load graph
     print(f"   📊 Loading graph from {graph_path}...")
     graph = nx.read_graphml(graph_path)
     print(f"   ✅ Graph: {graph.number_of_nodes()} nodes, {graph.number_of_edges()} edges")
-    
+
     # Load trajectories
     traj_path = Path(data_dir) / trajectory_filename
     print(f"   📂 Loading trajectories from {traj_path}...")
     with open(traj_path, 'r') as f:
         traj_data = json.load(f)
-    
-    # Handle nested format (dict of agents -> list of trajectories)
+
+    # -----------------------------------------------------------
+    # Handle nested dict format (old style)
+    # -----------------------------------------------------------
     if isinstance(traj_data, dict):
         print(f"   📊 Detected nested trajectory format (by agent)")
         trajectories = []
-        agent_id_map = {}
-        
-        # Sort agent keys for deterministic ordering
         sorted_agents = sorted(traj_data.keys())
-        
+
         for agent_idx, agent_key in enumerate(sorted_agents):
-            agent_trajs = traj_data[agent_key]
-            agent_id_map[agent_key] = agent_idx
-            
-            for traj in agent_trajs:
-                # Add agent_id to each trajectory
+            for traj in traj_data[agent_key]:
                 traj['agent_id'] = agent_idx
                 trajectories.append(traj)
-        
-        print(f"   ✅ Flattened {len(trajectories)} trajectories from {len(sorted_agents)} agents")
-    else:
-        # Already a list
+
+        num_agents = len(sorted_agents)
+        print(f"   ✅ Flattened {len(trajectories)} trajectories from {num_agents} agents")
+
+    # -----------------------------------------------------------
+    # Handle flat list format (enriched / run_8_enriched)
+    # -----------------------------------------------------------
+    elif isinstance(traj_data, list):
         trajectories = traj_data
-        print(f"   ✅ Loaded {len(trajectories)} trajectories")
-    
-    # Get POI nodes - check multiple possible attributes
-    poi_nodes = []
-    for n, d in graph.nodes(data=True):
-        # Check various ways POI might be marked
-        is_poi = (
-            d.get('is_poi', False) or
-            d.get('poi_names', None) not in [None, '', '[]', "['None']"] or
-            d.get('Category', 'None') not in ['None', None, '']
-        )
-        if is_poi:
-            poi_nodes.append(n)
-    
-    print(f"   📍 Found {len(poi_nodes)} POI nodes")
-    
-    # If still 0, get unique goal nodes from trajectories
-    if len(poi_nodes) == 0:
-        print("   ⚠️  No POI nodes found from graph attributes, extracting from trajectories...")
-        goal_nodes = set()
-        for traj in trajectories:
-            if 'goal_node' in traj:
-                goal_node = traj['goal_node']
-                # Handle tuple format
-                if isinstance(goal_node, (list, tuple)):
-                    goal_node = goal_node[0]
-                goal_nodes.add(goal_node)
-        poi_nodes = sorted(list(goal_nodes))
-        print(f"   ✅ Extracted {len(poi_nodes)} unique goal nodes from trajectories")
-    
+        print(f"   📊 Detected flat trajectory list ({len(trajectories)} items)")
+
+        # Load the agent manifest to know how many agents exist
+        agents_path = Path(data_dir).parent / 'agents' / 'all_agents.json'
+        if agents_path.exists():
+            with open(agents_path, 'r') as f:
+                agents_meta = json.load(f)
+            num_agents = len(agents_meta)
+            print(f"   📊 Loaded agent manifest: {num_agents} agents")
+        else:
+            # Infer: 100 agents, 1000 trajs each by default
+            num_agents = max(1, len(trajectories) // 1000)
+            print(f"   ⚠️  No agent manifest found – inferring {num_agents} agents")
+
+        trajs_per_agent = len(trajectories) // num_agents
+
+        # Assign agent_id based on position (block-ordered)
+        for idx, traj in enumerate(trajectories):
+            if 'agent_id' not in traj:
+                traj['agent_id'] = idx // trajs_per_agent
+
+        print(f"   ✅ Assigned agent_id (block size {trajs_per_agent}) to {len(trajectories)} trajectories")
+    else:
+        raise ValueError(f"Unexpected trajectory data type: {type(traj_data)}")
+
+    # Verify temporal enrichment
+    sample_t = trajectories[0]
+    has_temporal = all(k in sample_t for k in ['temporal_deltas', 'velocities', 'hour', 'day_of_week'])
+    print(f"   🕐 Temporal enrichment: {'✅ present' if has_temporal else '❌ absent'}")
+
+    # Get POI nodes using WorldGraph
+    world_graph = WorldGraph(graph)
+    poi_nodes = world_graph.poi_nodes
+    print(f"   📍 Found {len(poi_nodes)} POI nodes (categories: {world_graph.relevant_categories})")
+
     # Load split indices
     print(f"   📊 Loading split indices from {split_indices_path}...")
     with open(split_indices_path, 'r') as f:
         splits = json.load(f)
-    
+
     train_indices = splits['train_indices']
     val_indices = splits['val_indices']
     test_indices = splits.get('test_indices', [])
 
     print(f"   ✅ Splits: {len(train_indices)} train, {len(val_indices)} val, {len(test_indices)} test")
-    
+
     # Validate indices
     max_idx = max(max(train_indices), max(val_indices))
     if max_idx >= len(trajectories):
@@ -699,8 +729,8 @@ def load_data_with_splits(
         val_indices = [i for i in val_indices if i < len(trajectories)]
         test_indices = [i for i in test_indices if i < len(trajectories)]
         print(f"   ✅ Filtered: {len(train_indices)} train, {len(val_indices)} val, {len(test_indices)} test")
-    
-    return graph, trajectories, poi_nodes, train_indices, val_indices, test_indices
+
+    return graph, trajectories, poi_nodes, train_indices, val_indices, test_indices, num_agents
 
 
 # =============================================================================
@@ -712,8 +742,11 @@ def main():
     
     # Data
     parser.add_argument('--data_dir', type=str, 
-                        default='data/simulation_data/run_8/trajectories',
-                        help='Directory with trajectories')
+                        default='data/simulation_data/run_8_enriched',
+                        help='Directory with enriched trajectories')
+    parser.add_argument('--trajectory_filename', type=str,
+                        default='enriched_trajectories.json',
+                        help='Name of the trajectory JSON file inside data_dir')
     parser.add_argument('--graph_path', type=str,
                         default='data/processed/ucsd_walk_full.graphml',
                         help='Path to graph file')
@@ -786,10 +819,11 @@ def main():
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     
     # Load data
-    graph, trajectories, poi_nodes, train_idx, val_idx, test_idx = load_data_with_splits(
+    graph, trajectories, poi_nodes, train_idx, val_idx, test_idx, num_agents = load_data_with_splits(
         config.data_dir,
         config.graph_path,
         config.split_indices_path,
+        trajectory_filename=config.trajectory_filename,
     )
     
     # Create node-to-idx mapping
@@ -806,6 +840,7 @@ def main():
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
         include_progress=True,
+        include_temporal=True,
     )
     
     val_dataset = BDIVAEDatasetV2(
@@ -814,6 +849,7 @@ def main():
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
         include_progress=True,
+        include_temporal=True,
     )
     
     print(f"   ✅ Train samples: {len(train_dataset)}")
@@ -840,7 +876,6 @@ def main():
     
     # Get counts
     num_nodes = graph.number_of_nodes()
-    num_agents = len(set(t.get('agent_id', 0) for t in trajectories))
     num_poi_nodes = len(poi_nodes)
     num_categories = len(train_dataset.CATEGORY_TO_IDX)
     

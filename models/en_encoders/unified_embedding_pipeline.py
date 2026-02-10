@@ -274,7 +274,17 @@ class UnifiedEmbeddingPipeline(nn.Module):
                 device=hours.device
             )
         
-        temp_emb = self.temporal_encoder(hours, days, deltas, velocities)  # (batch, seq_len, temporal_dim)
+        batch_size, seq_len = hours.shape
+        
+        # The underlying AdvancedTemporalEncoder collapses to (batch, temporal_dim)
+        # because it takes the first timestep as representative.
+        # We call it once with the full tensors and then broadcast to all positions.
+        temp_emb = self.temporal_encoder(hours, days, deltas, velocities)  # (batch, temporal_dim)
+        
+        if temp_emb.dim() == 2:
+            # Expand to (batch, seq_len, temporal_dim)
+            temp_emb = temp_emb.unsqueeze(1).expand(-1, seq_len, -1)
+        
         return temp_emb
     
     def encode_agent(

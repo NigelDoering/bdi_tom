@@ -124,17 +124,11 @@ def load_data_with_splits(
     else:
         trajectories = traj_data
     
-    # Get POI nodes
-    poi_nodes = []
-    for n, d in graph.nodes(data=True):
-        is_poi = (
-            d.get('is_poi', False) or
-            d.get('poi_names', None) not in [None, '', '[]', "['None']"] or
-            d.get('clean_categories') not in [None, '']
-        )
-        if is_poi:
-            poi_nodes.append(n)
-    print(f"   ✅ {len(poi_nodes)} POI nodes")
+    # Get POI nodes using WorldGraph — same as simple BDI-VAE (230 nodes)
+    from graph_controller.world_graph import WorldGraph
+    world_graph = WorldGraph(graph)
+    poi_nodes = world_graph.poi_nodes
+    print(f"   ✅ {len(poi_nodes)} POI nodes (categories: {world_graph.relevant_categories})")
     
     # Load splits
     if os.path.exists(split_indices_path):

@@ -635,7 +635,7 @@ class SequentialConditionalBDIVAE(nn.Module):
             fusion_dim=fusion_dim,
             hidden_dim=hidden_dim,
             use_node2vec=True,
-            use_temporal=False,
+            use_temporal=True,   # ENABLED: full multi-modal fusion
             use_agent=True,
         )
         
@@ -754,29 +754,88 @@ class SequentialConditionalBDIVAE(nn.Module):
         self,
         history_node_indices: torch.Tensor,
         history_lengths: torch.Tensor,
+        agent_ids: Optional[torch.Tensor] = None,
+        hours: Optional[torch.Tensor] = None,
+        days: Optional[torch.Tensor] = None,
+        deltas: Optional[torch.Tensor] = None,
+        velocities: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Get unified embedding from trajectory."""
+        """
+        Compute a unified embedding via the full multi-modal pipeline.
+
+        When temporal / agent information is provided, the pipeline fuses
+        node2vec, temporal, and agent modalities.  When they are absent it
+        falls back to node embeddings only (backward-compatible).
+        """
         batch_size = history_node_indices.shape[0]
+        seq_len = history_node_indices.shape[1]
         device = history_node_indices.device
-        
-        node_emb = self.embedding_pipeline.encode_nodes(
-            history_node_indices, spatial_coords=None, categories=None
-        )
-        
-        if torch.isnan(node_emb).any():
-            node_emb = torch.nan_to_num(node_emb, nan=0.0)
-        
-        if node_emb.shape[-1] < self.fusion_dim:
-            padding = torch.zeros(
-                batch_size, node_emb.shape[1], self.fusion_dim - node_emb.shape[-1],
-                device=device
+
+        has_temporal = (hours is not None) and self.embedding_pipeline.use_temporal
+        has_agent = (agent_ids is not None) and self.embedding_pipeline.use_agent
+
+        if has_temporal or has_agent:
+            # ---------- Full multi-modal fusion path ----------
+            # Build a padding mask: 1 for valid positions, 0 for padding
+            positions = torch.arange(seq_len, device=device).unsqueeze(0)  # (1, S)
+            mask = (positions < history_lengths.unsqueeze(1)).float()       # (B, S)
+
+            # Expand scalar hour / day to sequence-level for the temporal encoder
+            if hours is not None and hours.dim() == 1:
+                hours_seq = hours.unsqueeze(1).expand(-1, seq_len)  # (B, S)
+            else:
+                hours_seq = hours if hours is not None else torch.zeros(batch_size, seq_len, dtype=torch.long, device=device)
+
+            if days is not None and days.dim() == 1:
+                days_seq = days.unsqueeze(1).expand(-1, seq_len)
+            else:
+                days_seq = days if days is not None else torch.zeros(batch_size, seq_len, dtype=torch.long, device=device)
+
+            # Deltas / velocities are already (B, S)
+            if deltas is None:
+                deltas = torch.zeros(batch_size, seq_len, device=device)
+            if velocities is None:
+                velocities = torch.zeros(batch_size, seq_len, device=device)
+
+            # Forward through full pipeline → (B, S, fusion_dim) per-node
+            fused_per_node = self.embedding_pipeline(
+                node_ids=history_node_indices,
+                agent_ids=agent_ids,
+                hours=hours_seq,
+                days=days_seq,
+                deltas=deltas,
+                velocities=velocities,
+                mask=mask,
+                return_per_node=True,
             )
-            node_emb = torch.cat([node_emb, padding], dim=-1)
-        
-        batch_indices = torch.arange(batch_size, device=device)
-        last_indices = (history_lengths - 1).clamp(min=0)
-        unified = node_emb[batch_indices, last_indices]
-        
+            # If the pipeline returns a tuple (emb, components), take the emb
+            if isinstance(fused_per_node, tuple):
+                fused_per_node = fused_per_node[0]
+
+            # Pick last-valid-step embedding per sequence
+            batch_indices = torch.arange(batch_size, device=device)
+            last_indices = (history_lengths - 1).clamp(min=0)
+            unified = fused_per_node[batch_indices, last_indices]  # (B, fusion_dim)
+        else:
+            # ---------- Fallback: node embeddings only ----------
+            node_emb = self.embedding_pipeline.encode_nodes(
+                history_node_indices, spatial_coords=None, categories=None
+            )
+
+            if torch.isnan(node_emb).any():
+                node_emb = torch.nan_to_num(node_emb, nan=0.0)
+
+            if node_emb.shape[-1] < self.fusion_dim:
+                padding = torch.zeros(
+                    batch_size, node_emb.shape[1], self.fusion_dim - node_emb.shape[-1],
+                    device=device
+                )
+                node_emb = torch.cat([node_emb, padding], dim=-1)
+
+            batch_indices = torch.arange(batch_size, device=device)
+            last_indices = (history_lengths - 1).clamp(min=0)
+            unified = node_emb[batch_indices, last_indices]
+
         return F.layer_norm(unified, [self.fusion_dim])
     
     def forward(
@@ -789,6 +848,11 @@ class SequentialConditionalBDIVAE(nn.Module):
         next_node_idx: Optional[torch.Tensor] = None,
         goal_idx: Optional[torch.Tensor] = None,  # IMPORTANT: need goal for InfoNCE!
         goal_cat_idx: Optional[torch.Tensor] = None,
+        # --- Temporal features for full unified pipeline ---
+        hours: Optional[torch.Tensor] = None,
+        days: Optional[torch.Tensor] = None,
+        deltas: Optional[torch.Tensor] = None,
+        velocities: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """Forward pass with all losses."""
         
@@ -796,10 +860,15 @@ class SequentialConditionalBDIVAE(nn.Module):
         batch_size = history_node_indices.shape[0]
         
         # ================================================================
-        # EMBEDDING
+        # EMBEDDING (full multi-modal when temporal features are provided)
         # ================================================================
         unified_embedding = self._get_unified_embedding(
-            history_node_indices, history_lengths
+            history_node_indices, history_lengths,
+            agent_ids=agent_ids,
+            hours=hours,
+            days=days,
+            deltas=deltas,
+            velocities=velocities,
         )
         
         spatial_features = self.spatial_projection(unified_embedding)
