@@ -33,6 +33,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from tqdm import tqdm
+from collections import defaultdict
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -55,15 +56,15 @@ except ImportError:
 # ============================================================================
 
 class WandBLogger:
-    """Handles W&B logging during training with proper accuracy averaging."""
+    """W&B logger with progress-stratified metrics matching BDI-VAE V3 format."""
     
-    def __init__(self, project_name: str = "bdi-tom", config: Dict = None, run_name: str = None):
+    def __init__(self, project_name: str = "tom-compare-v1", config: Dict = None, run_name: str = None):
         self.enabled = WANDB_AVAILABLE
         self.global_step = 0
         
         if self.enabled:
             wandb.init(project=project_name, entity="nigeldoering-uc-san-diego", config=config or {}, name=run_name)
-            print(f"✅ W&B initialized{f' (run: {run_name})' if run_name else ''}!")
+            print(f"✅ W&B initialized (project: {project_name}){f' (run: {run_name})' if run_name else ''}!")
         else:
             print("⚠️  W&B disabled")
     
@@ -79,8 +80,6 @@ class WandBLogger:
             'learning_rate': lr,
             'global_step': self.global_step,
         }
-        
-        # Prefix batch metrics with 'batch/'
         for key, value in metrics.items():
             log_dict[f'batch/{key}'] = value
         
@@ -93,19 +92,13 @@ class WandBLogger:
         train_metrics: Dict[str, float], 
         val_metrics: Dict[str, float], 
         lr: float,
-        train_percentile_metrics: Dict[str, Dict[str, float]] = None,
-        val_percentile_metrics: Dict[str, Dict[str, float]] = None
+        progress_metrics: Dict[str, Dict[str, float]] = None,
     ):
         """
-        Log simplified epoch-level metrics: goal accuracy, loss, and percentiles.
+        Log epoch-level metrics with progress-stratified accuracy.
         
-        Args:
-            epoch: Current epoch number
-            train_metrics: Training metrics (already averaged over all batches)
-            val_metrics: Validation metrics (already averaged over all batches)
-            lr: Current learning rate
-            train_percentile_metrics: Training percentile metrics (15%, 50%, 85%)
-            val_percentile_metrics: Validation percentile metrics (15%, 50%, 85%)
+        Matches the BDI-VAE V3 logging format:
+          train/<key>, val/<key>, progress_<bin>/<key>
         """
         if not self.enabled:
             return
@@ -113,25 +106,19 @@ class WandBLogger:
         log_dict = {
             'epoch': epoch,
             'learning_rate': lr,
-            # Train metrics
-            'train/goal_acc': train_metrics.get('goal_acc', 0),
-            'train/loss': train_metrics.get('loss', 0),
-            # Val metrics
-            'val/goal_acc': val_metrics.get('goal_acc', 0),
-            'val/loss': val_metrics.get('loss', 0),
         }
         
-        # Log train percentiles
-        if train_percentile_metrics is not None:
-            for pct in ['15%', '50%', '85%']:
-                if pct in train_percentile_metrics:
-                    log_dict[f'train/goal_acc_{pct}'] = train_percentile_metrics[pct].get('goal_acc', 0)
+        for key, value in train_metrics.items():
+            log_dict[f'train/{key}'] = value
         
-        # Log val percentiles
-        if val_percentile_metrics is not None:
-            for pct in ['15%', '50%', '85%']:
-                if pct in val_percentile_metrics:
-                    log_dict[f'val/goal_acc_{pct}'] = val_percentile_metrics[pct].get('goal_acc', 0)
+        for key, value in val_metrics.items():
+            log_dict[f'val/{key}'] = value
+        
+        # Log progress-stratified metrics (matching BDI-VAE V3 format)
+        if progress_metrics is not None:
+            for progress_bin, metrics in progress_metrics.items():
+                for key, value in metrics.items():
+                    log_dict[f'progress_{progress_bin}/{key}'] = value
         
         wandb.log(log_dict, step=self.global_step)
         self.global_step += 1
@@ -146,11 +133,8 @@ class WandBLogger:
             'model/trainable_parameters': trainable_params,
             'model/parameter_ratio': trainable_params / (total_params + 1e-8),
         }
-        
-        # Log architecture details
         for key, value in model_config.items():
             info_dict[f'model_config/{key}'] = value
-        
         wandb.log(info_dict)
     
     def log_summary(self, best_epoch: int, best_val_acc: float, total_epochs: int, total_time_hours: float):
@@ -158,28 +142,24 @@ class WandBLogger:
         if not self.enabled:
             return
         
-        summary_dict = {
+        wandb.log({
             'summary/best_epoch': best_epoch,
             'summary/best_val_goal_acc': best_val_acc,
             'summary/total_epochs_trained': total_epochs,
             'summary/total_training_time_hours': total_time_hours,
             'summary/avg_time_per_epoch': total_time_hours / (total_epochs + 1e-8),
-        }
-        
-        wandb.log(summary_dict)
+        })
     
     def log_checkpoint(self, epoch: int, checkpoint_path: str, best: bool = False):
         """Log checkpoint information."""
         if not self.enabled:
             return
         
-        checkpoint_dict = {
+        wandb.log({
             'checkpoint/epoch': epoch,
             'checkpoint/path': checkpoint_path,
             'checkpoint/is_best': best,
-        }
-        
-        wandb.log(checkpoint_dict)
+        })
     
     def finish(self):
         """Finish logging."""
@@ -283,8 +263,15 @@ def validate(
     val_loader: DataLoader,
     criterion: Dict[str, nn.Module],
     device: torch.device,
-) -> Dict[str, float]:
-    """Validate the model."""
+) -> tuple:
+    """
+    Validate the model with progress-stratified metrics.
+    
+    Returns:
+        Tuple of (overall_metrics, progress_metrics)
+        - overall_metrics: Dict with averaged metrics
+        - progress_metrics: Dict with metrics at 0-25%, 25-50%, 50-75%, 75-100% progress bins
+    """
     model.eval()
     metrics = {
         'loss': AverageMeter(),
@@ -294,6 +281,12 @@ def validate(
         'goal_acc': AverageMeter(),
         'nextstep_acc': AverageMeter(),
         'category_acc': AverageMeter(),
+    }
+    
+    # Progress-stratified tracking (matching BDI-VAE V3 format)
+    progress_bins = ['0-25', '25-50', '50-75', '75-100']
+    progress_meters = {
+        bin_name: defaultdict(AverageMeter) for bin_name in progress_bins
     }
     
     pbar = tqdm(val_loader, desc="Validating")
@@ -307,6 +300,7 @@ def validate(
         next_node_idx = batch['next_node_idx'].to(device)
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        path_progress = batch['path_progress']  # keep on CPU for binning
         
         # Forward pass
         predictions = model(history_node_indices, history_lengths)
@@ -324,7 +318,7 @@ def validate(
         nextstep_acc = compute_accuracy(predictions['nextstep'], next_node_idx)
         category_acc = compute_accuracy(predictions['category'], goal_cat_idx)
         
-        # Update metrics
+        # Update overall metrics
         metrics['loss'].update(loss.item(), batch_size)
         metrics['loss_goal'].update(loss_goal.item(), batch_size)
         metrics['loss_nextstep'].update(loss_nextstep.item(), batch_size)
@@ -333,9 +327,39 @@ def validate(
         metrics['nextstep_acc'].update(nextstep_acc, batch_size)
         metrics['category_acc'].update(category_acc, batch_size)
         
+        # Progress-stratified per-sample metrics
+        goal_preds = predictions['goal'].argmax(dim=1)
+        nextstep_preds = predictions['nextstep'].argmax(dim=1)
+        goal_correct = (goal_preds == goal_idx)
+        nextstep_correct = (nextstep_preds == next_node_idx)
+        
+        for i in range(batch_size):
+            prog = path_progress[i].item()
+            if prog < 0.25:
+                bin_name = '0-25'
+            elif prog < 0.5:
+                bin_name = '25-50'
+            elif prog < 0.75:
+                bin_name = '50-75'
+            else:
+                bin_name = '75-100'
+            
+            progress_meters[bin_name]['goal_acc'].update(
+                goal_correct[i].float().item() * 100, 1
+            )
+            progress_meters[bin_name]['nextstep_acc'].update(
+                nextstep_correct[i].float().item() * 100, 1
+            )
+        
         pbar.set_postfix({'loss': f"{metrics['loss'].avg:.4f}"})
     
-    return {k: v.avg for k, v in metrics.items()}
+    overall = {k: v.avg for k, v in metrics.items()}
+    progress = {
+        bin_name: {k: v.avg for k, v in bin_meters.items()}
+        for bin_name, bin_meters in progress_meters.items()
+    }
+    
+    return overall, progress
 
 
 # ============================================================================
@@ -590,7 +614,7 @@ def main(args):
     # STEP 5: INITIALIZE W&B LOGGING
     # ================================================================
     logger = WandBLogger(
-        project_name="bdi-tom",
+        project_name="tom-compare-v1",
         run_name=args.wandb_run_name,
         config={
             'model': 'PerNodeToMPredictor',
@@ -631,16 +655,21 @@ def main(args):
     
     for epoch in range(args.num_epochs):
         train_metrics = train_epoch(model, train_loader, optimizer, criterion, device, epoch, logger)
-        val_metrics = validate(model, val_loader, criterion, device)
+        val_metrics, progress_metrics = validate(model, val_loader, criterion, device)
         scheduler.step()
         
         lr = optimizer.param_groups[0]['lr']
-        logger.log_epoch(epoch, train_metrics, val_metrics, lr)
+        logger.log_epoch(epoch, train_metrics, val_metrics, lr, progress_metrics)
         
         print(f"\n📊 Epoch {epoch+1}/{args.num_epochs}")
         print(f"   Train Loss: {train_metrics['loss']:.4f} | Val Loss: {val_metrics['loss']:.4f}")
         print(f"   Train Goal Acc: {train_metrics['goal_acc']:.3f} | Val Goal Acc: {val_metrics['goal_acc']:.3f}")
         print(f"   Train Cat Acc: {train_metrics['category_acc']:.3f} | Val Cat Acc: {val_metrics['category_acc']:.3f}")
+        
+        # Print progress-stratified results
+        print(f"\n   📈 Goal Accuracy by Path Progress:")
+        for bin_name, metrics in progress_metrics.items():
+            print(f"      {bin_name}%: goal={metrics.get('goal_acc', 0):.1f}%")
         
         # Save checkpoint
         if val_metrics['goal_acc'] > best_val_acc:

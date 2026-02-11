@@ -128,11 +128,16 @@ class PerNodeTrajectoryDataset(Dataset):
                     cat_name = self.graph.nodes[goal_node].get('Category', 'other')
                     goal_cat_idx = self.CATEGORY_TO_IDX.get(cat_name, 0)
                 
+                # Compute path progress (how far through the trajectory)
+                total_steps = len(path) - 1  # -1 because last node is goal
+                path_progress = step_idx / total_steps if total_steps > 0 else 0.0
+                
                 self.samples.append({
                     'history_node_indices': history_indices,
                     'next_node_idx': next_node_idx,
                     'goal_cat_idx': goal_cat_idx,
                     'goal_idx': goal_idx,
+                    'path_progress': path_progress,
                 })
                 
                 sample_count += 1
@@ -193,4 +198,5 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
         'next_node_idx': torch.tensor([s['next_node_idx'] for s in batch], dtype=torch.long),
         'goal_cat_idx': torch.tensor([s['goal_cat_idx'] for s in batch], dtype=torch.long),
         'goal_idx': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
+        'path_progress': torch.tensor([s.get('path_progress', 0.0) for s in batch], dtype=torch.float),
     }

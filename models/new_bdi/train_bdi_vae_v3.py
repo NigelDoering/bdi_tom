@@ -139,7 +139,7 @@ class EnhancedWandBLogger:
     
     def __init__(
         self, 
-        project_name: str = "bdi-tom-v3",
+        project_name: str = "tom-compare-v1",
         config: Dict = None,
         run_name: str = None,
     ):
@@ -799,7 +799,7 @@ def main():
     
     # Logging
     parser.add_argument('--use_wandb', action='store_true')
-    parser.add_argument('--wandb_project', type=str, default='bdi-tom-v3')
+    parser.add_argument('--wandb_project', type=str, default='tom-compare-v1')
     parser.add_argument('--run_name', type=str, default=None)
     
     # Visualization
