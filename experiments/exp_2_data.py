@@ -82,12 +82,64 @@ def generate_prefix_samples(
     episodes: Sequence[DistractorEpisode],
     fractions: Sequence[float],
 ) -> List[PrefixSample]:
-    """Generate truncated trajectory samples for all observation fractions."""
+    """Generate truncated trajectory samples for all observation fractions.
+    
+    Per the paper methodology, fractions are computed relative to the prefix
+    trajectory v_{1:t*} where t* is closest_index (point of closest approach
+    to distractor), NOT relative to the full path length.
+    """
 
     samples: List[PrefixSample] = []
     for idx, episode in enumerate(episodes):
+        # Use closest_index as the reference length per paper methodology
+        # closest_index is the point of minimum distance to distractor (t*)
+        reference_length = episode.closest_index
+        
+        # Skip episodes where closest_index is too small for meaningful prefixes
+        if reference_length < 2:
+            continue
+            
         for fraction in fractions:
-            steps = prefix_length(fraction, episode.path_length)
+            steps = prefix_length(fraction, reference_length)
+            #steps = prefix_length(fraction, episode.path_length)
+            truncated_path = episode.path[:steps]
+            samples.append(
+                PrefixSample(
+                    episode_idx=idx,
+                    fraction=fraction,
+                    path=truncated_path,
+                    observation_hour=episode.observation_hour,
+                    preferred_goal=episode.preferred_goal,
+                    distractor_goal=episode.distractor_goal,
+                    closest_index=episode.closest_index,
+                )
+            )
+    return samples
+
+
+def generate_prefix_samples_full_trajectory(
+    episodes: Sequence[DistractorEpisode],
+    fractions: Sequence[float],
+) -> List[PrefixSample]:
+    """Generate truncated trajectory samples relative to FULL trajectory length.
+    
+    Unlike generate_prefix_samples which uses t* (closest approach to distractor),
+    this function computes fractions relative to the entire path from start to goal.
+    
+    f=0.5 means: see floor(0.5 × path_length) steps of the full trajectory.
+    """
+
+    samples: List[PrefixSample] = []
+    for idx, episode in enumerate(episodes):
+        # Use full path length as reference
+        reference_length = episode.path_length
+        
+        # Skip episodes that are too short
+        if reference_length < 2:
+            continue
+            
+        for fraction in fractions:
+            steps = prefix_length(fraction, reference_length)
             truncated_path = episode.path[:steps]
             samples.append(
                 PrefixSample(
