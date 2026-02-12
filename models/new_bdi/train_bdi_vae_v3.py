@@ -139,7 +139,7 @@ class EnhancedWandBLogger:
     
     def __init__(
         self, 
-        project_name: str = "bdi-tom-v3",
+        project_name: str = "tom-compare-v1",
         config: Dict = None,
         run_name: str = None,
     ):
@@ -619,7 +619,7 @@ def load_data_with_splits(
     split_indices_path: str,
     trajectory_filename: str = 'all_trajectories.json',
 ) -> Tuple:
-    """Load enriched trajectory data with pre-defined train/val/test splits.
+    """Load trajectory data with pre-defined train/val/test splits.
 
     Supports two trajectory formats:
 
@@ -742,10 +742,10 @@ def main():
     
     # Data
     parser.add_argument('--data_dir', type=str, 
-                        default='data/simulation_data/run_8_enriched',
-                        help='Directory with enriched trajectories')
+                        default='data/simulation_data/run_8/trajectories',
+                        help='Directory with all trajectories')
     parser.add_argument('--trajectory_filename', type=str,
-                        default='enriched_trajectories.json',
+                        default='all_trajectories.json',
                         help='Name of the trajectory JSON file inside data_dir')
     parser.add_argument('--graph_path', type=str,
                         default='data/processed/ucsd_walk_full.graphml',
@@ -799,7 +799,7 @@ def main():
     
     # Logging
     parser.add_argument('--use_wandb', action='store_true')
-    parser.add_argument('--wandb_project', type=str, default='bdi-tom-v3')
+    parser.add_argument('--wandb_project', type=str, default='tom-compare-v1')
     parser.add_argument('--run_name', type=str, default=None)
     
     # Visualization
