@@ -21,6 +21,7 @@ checkpoints/*
 
 # Ignore everything in data by default
 /data/**
+/experiments/results/**
 
 # But keep the raw folder and its contents
 !/data/raw/
