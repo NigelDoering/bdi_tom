@@ -43,8 +43,8 @@ from models.baseline_transformer.baseline_transformer_model import PerNodeTransf
 from models.baseline_transformer.baseline_transformer_dataset import TransformerTrajectoryDataset, collate_transformer_trajectories
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
 from models.baseline_lstm.baseline_lstm_dataset import PerNodeTrajectoryDataset, collate_per_node_samples
-from models.new_bdi.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
-from models.new_bdi.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.vae_bdi_simple.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
+from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
 from models.utils.data_loader import load_simulation_data
 from models.utils.utils import get_device
 from torch.utils.data import DataLoader, Subset
@@ -386,10 +386,9 @@ def load_sc_bdi_vae_model(
     """Load SC-BDI-VAE V3 model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
-    # Check if checkpoint has temporal encoder (by looking at state dict keys)
-    has_temporal = any('temporal_encoder' in k for k in checkpoint['model_state_dict'].keys())
-    
     # Create model with same config as training
+    # Note: vae_bdi_simple model has use_temporal=True by default,
+    # matching the architecture used during training
     model = create_sc_bdi_vae_v3(
         num_nodes=num_nodes,
         num_agents=num_agents,
@@ -410,26 +409,8 @@ def load_sc_bdi_vae_model(
         use_progress=True,
     )
     
-    # If checkpoint has temporal encoder but model doesn't, we need to handle this
-    # Try loading with strict=False first, then check if it works
-    if has_temporal:
-        # The checkpoint was trained with temporal features
-        # We need to recreate the model with use_temporal=True
-        # But the current model architecture may not support this directly
-        # Try loading with strict=False to skip the temporal encoder keys
-        try:
-            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-            print("  ⚠️  Loaded SC-BDI-VAE with strict=False (some temporal encoder keys ignored)")
-        except Exception as e:
-            # If that fails, try to load only matching keys
-            model_dict = model.state_dict()
-            pretrained_dict = {k: v for k, v in checkpoint['model_state_dict'].items() 
-                              if k in model_dict and model_dict[k].shape == v.shape}
-            model_dict.update(pretrained_dict)
-            model.load_state_dict(model_dict)
-            print(f"  ⚠️  Loaded {len(pretrained_dict)}/{len(checkpoint['model_state_dict'])} matching keys")
-    else:
-        model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint['model_state_dict'])
+    print("  ✅ Loaded SC-BDI-VAE checkpoint (all keys matched)")
     
     model = model.to(device)
     model.eval()
@@ -494,6 +475,7 @@ def evaluate_sc_bdi_vae_at_proportion(
         poi_nodes=poi_nodes,
         min_traj_length=1,
         include_progress=True,
+        include_temporal=True,
     )
     
     if len(dataset) == 0:
@@ -531,12 +513,22 @@ def evaluate_sc_bdi_vae_at_proportion(
         agent_ids = batch['agent_id'].to(device)
         path_progress = batch['path_progress'].to(device)
         
+        # Temporal features (from enriched trajectories)
+        hours = batch['hour'].to(device) if 'hour' in batch else None
+        days = batch['day_of_week'].to(device) if 'day_of_week' in batch else None
+        deltas = batch['history_temporal_deltas'].to(device) if 'history_temporal_deltas' in batch else None
+        velocities = batch['history_velocities'].to(device) if 'history_velocities' in batch else None
+        
         # Forward pass (inference only, no loss computation)
         outputs = model(
             history_node_indices=history_node_indices,
             history_lengths=history_lengths,
             agent_ids=agent_ids,
             path_progress=path_progress,
+            hours=hours,
+            days=days,
+            deltas=deltas,
+            velocities=velocities,
             compute_loss=False,
         )
         
