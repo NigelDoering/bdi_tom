@@ -23,6 +23,7 @@ checkpoints/*
 /data/**
 /experiments/results/**
 /experiments/data/**
+/latex/**
 
 # But keep the raw folder and its contents
 !/data/raw/
