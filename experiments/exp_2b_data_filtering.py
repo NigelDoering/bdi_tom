@@ -1,8 +1,13 @@
-"""Experiment 2 data filtering: find distractor-proximity episodes in real trajectories.
+"""Experiment 2b data filtering: cross-category distractor episodes.
 
-Instead of synthesizing new paths, this script scans the **test split** of
-run_8 trajectories and identifies episodes where an agent's path passes
-within a configurable distance of a low-preference distractor POI.
+Scans the **test split** of run_8 trajectories and identifies episodes where
+an agent's path passes within a configurable distance of a low-preference
+POI from a **different (bottom-ranked) category** than the agent's
+high-preference goal category.
+
+This tests whether models assign low probability to distractors from
+entirely different semantic categories — the easier, category-level version
+of the distractor test.
 
 Selection criteria (matching the original generator in ``archive/exp_2.py``):
 
@@ -16,18 +21,14 @@ Selection criteria (matching the original generator in ``archive/exp_2.py``):
    within c⁻.
 5. The path must pass within ``distance_threshold_m`` metres of g̃.
 
-The output format matches the ``DistractorEpisode`` schema used by
-``exp_2_data.py`` and ``exp_2_eval.py`` so that downstream evaluation and
-plotting scripts work without modification.
-
 Usage:
-    python experiments/exp_2_data_filtering.py [OPTIONS]
+    python experiments/exp_2b_data_filtering.py [OPTIONS]
 
     # With defaults (run_8, 100m threshold, test split):
-    python experiments/exp_2_data_filtering.py
+    python experiments/exp_2b_data_filtering.py
 
     # Custom threshold:
-    python experiments/exp_2_data_filtering.py --distance_threshold 150
+    python experiments/exp_2b_data_filtering.py --distance_threshold 150
 """
 
 from __future__ import annotations
@@ -81,7 +82,6 @@ def path_total_meters(graph: nx.Graph, path_nodes: Sequence[str]) -> float:
         edge_data = graph.get_edge_data(u, v)
         if edge_data is None:
             continue
-        # Handle multigraph edge dicts
         if isinstance(edge_data, dict) and any(isinstance(val, dict) for val in edge_data.values()):
             first_edge = next(iter(edge_data.values()))
             total += float(first_edge.get("length", 0.0))
@@ -118,8 +118,6 @@ def find_distractor_episodes(
 ) -> List[Dict]:
     """Scan real test trajectories for cross-category distractor proximity.
 
-    Matching the original generator criteria (``archive/exp_2.py``):
-
     1. Goal category c⁺ ∈ top-k(category_preferences).
     2. Goal node g* ∈ top-k(POI preferences within c⁺).
     3. Distractor category c⁻ ∈ bottom-k(category_preferences), c⁻ ≠ c⁺.
@@ -144,7 +142,6 @@ def find_distractor_episodes(
             skipped["too_short"] += 1
             continue
 
-        # Map integer agent_id → string key used in all_agents.json
         agent_key = f"agent_{agent_id_int:03d}"
         agent_data = agent_preferences.get(agent_key)
         if agent_data is None:
@@ -197,8 +194,7 @@ def find_distractor_episodes(
         goal_pref_value = goal_cat_poi_prefs.get(goal_node, 0.0)
 
         # ── criterion 3 & 4: find distractor from bottom-k category, bottom-k POI ──
-        # Exclude the goal category from bottom candidates to ensure c⁻ ≠ c⁺
-        distractor_candidates_by_cat: List[Tuple[str, str, float]] = []  # (cat, node, pref)
+        distractor_candidates_by_cat: List[Tuple[str, str, float]] = []
 
         for dist_cat in bottom_categories:
             if dist_cat == goal_category:
@@ -209,11 +205,9 @@ def find_distractor_episodes(
             if not dist_poi_prefs:
                 continue
 
-            # Cache POIs for this category
             if dist_cat not in category_poi_cache:
                 category_poi_cache[dist_cat] = get_category_pois(world_graph, dist_cat)
 
-            # Bottom-k POIs by preference (ascending sort → take first k)
             sorted_dist_pois = sorted(dist_poi_prefs.items(), key=lambda kv: kv[1])
             bottom_k_pois = sorted_dist_pois[: min(preference_top_k, len(sorted_dist_pois))]
 
@@ -228,7 +222,6 @@ def find_distractor_episodes(
             continue
 
         # ── extract path node IDs ──
-        # Path format: list of [node_id, current_goal] pairs
         path_nodes = []
         for step in path:
             if isinstance(step, (list, tuple)) and len(step) >= 1:
@@ -241,7 +234,6 @@ def find_distractor_episodes(
         best_distance = float("inf")
 
         for dist_cat, distractor_node, distractor_pref_val in distractor_candidates_by_cat:
-            # Compute graph distance from each path node to distractor
             distances = []
             for node in path_nodes:
                 if node not in simple_graph:
@@ -259,7 +251,6 @@ def find_distractor_episodes(
             if min_distance > distance_threshold_m:
                 continue
 
-            # Keep the closest distractor across all bottom categories
             if min_distance < best_distance:
                 best_distance = min_distance
                 closest_index = int(np.argmin(distances))
@@ -278,7 +269,6 @@ def find_distractor_episodes(
                     "path_meters": round(path_meters, 3),
                     "min_distance_to_distractor": round(min_distance, 3),
                     "closest_index": closest_index,
-                    # Extra metadata for analysis
                     "goal_preference_value": round(goal_pref_value, 6),
                     "distractor_preference_value": round(distractor_pref_val, 6),
                 }
@@ -300,49 +290,36 @@ def find_distractor_episodes(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Filter real test trajectories for distractor-proximity edge cases."
+        description="Exp 2b: Filter test trajectories for cross-category distractor proximity."
     )
     parser.add_argument(
-        "--run_dir",
-        type=str,
-        default="data/simulation_data/run_8",
+        "--run_dir", type=str, default="data/simulation_data/run_8",
         help="Path to simulation run directory",
     )
     parser.add_argument(
-        "--graph_path",
-        type=str,
-        default="data/processed/ucsd_walk_full.graphml",
+        "--graph_path", type=str, default="data/processed/ucsd_walk_full.graphml",
         help="Path to graph file",
     )
     parser.add_argument(
-        "--split_file",
-        type=str,
+        "--split_file", type=str,
         default="data/simulation_data/run_8/split_data/split_indices_seed42.json",
         help="Path to split indices JSON",
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        default="experiments/data/exp_2_test_set.json",
+        "--output", type=str, default="experiments/data/exp_2b_test_set.json",
         help="Output path for filtered episodes",
     )
     parser.add_argument(
-        "--distance_threshold",
-        type=float,
-        default=100.0,
+        "--distance_threshold", type=float, default=100.0,
         help="Maximum graph distance (metres) from path to distractor POI",
     )
     parser.add_argument(
-        "--preference_top_k",
-        type=int,
-        default=3,
+        "--preference_top_k", type=int, default=3,
         help="Top-k / bottom-k slice for category and POI preferences",
     )
     parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Random seed (for reproducibility if sampling is added later)",
+        "--seed", type=int, default=42,
+        help="Random seed",
     )
     args = parser.parse_args()
 
@@ -352,7 +329,7 @@ def main() -> None:
     output_path = Path(args.output)
 
     print("=" * 80)
-    print("EXPERIMENT 2 — CROSS-CATEGORY DISTRACTOR FILTERING (REAL TRAJECTORIES)")
+    print("EXPERIMENT 2b — CROSS-CATEGORY DISTRACTOR FILTERING (REAL TRAJECTORIES)")
     print("=" * 80)
 
     # ── load graph ──
@@ -375,7 +352,6 @@ def main() -> None:
     with traj_path.open("r", encoding="utf-8") as fh:
         raw_data = json.load(fh)
 
-    # Flatten (same logic as load_simulation_data)
     all_trajectories: List[Dict] = []
     agent_keys = sorted(raw_data.keys())
     for agent_idx, agent_key in enumerate(agent_keys):
@@ -384,7 +360,6 @@ def main() -> None:
             all_trajectories.append(traj)
     print(f"   {len(all_trajectories):,} total trajectories")
 
-    # Load test indices
     print(f"\n📂 Loading split indices from {split_file} ...")
     with split_file.open("r", encoding="utf-8") as fh:
         split_indices = json.load(fh)
@@ -394,7 +369,8 @@ def main() -> None:
     print(f"   {len(test_trajectories):,} test trajectories")
 
     # ── filter ──
-    print(f"\n🔍 Filtering for distractor proximity (threshold={args.distance_threshold}m, top_k={args.preference_top_k}) ...")
+    print(f"\n🔍 Filtering for cross-category distractor proximity "
+          f"(threshold={args.distance_threshold}m, top_k={args.preference_top_k}) ...")
     episodes = find_distractor_episodes(
         test_trajectories=test_trajectories,
         agent_preferences=agent_preferences,
@@ -406,7 +382,8 @@ def main() -> None:
 
     # ── summary stats ──
     print(f"\n{'=' * 80}")
-    print(f"✅ Found {len(episodes):,} qualifying episodes from {len(test_trajectories):,} test trajectories")
+    print(f"✅ Found {len(episodes):,} qualifying episodes from "
+          f"{len(test_trajectories):,} test trajectories")
     print(f"   Hit rate: {len(episodes) / max(len(test_trajectories), 1) * 100:.1f}%")
 
     if episodes:
@@ -415,13 +392,16 @@ def main() -> None:
         closest_fracs = [ep["closest_index"] / max(ep["path_length"], 1) for ep in episodes]
 
         print(f"\n   Distance to distractor (m):")
-        print(f"     min={min(distances):.1f}  median={np.median(distances):.1f}  max={max(distances):.1f}")
+        print(f"     min={min(distances):.1f}  median={np.median(distances):.1f}  "
+              f"max={max(distances):.1f}")
         print(f"   Path length (steps):")
-        print(f"     min={min(path_lengths)}  median={np.median(path_lengths):.0f}  max={max(path_lengths)}")
+        print(f"     min={min(path_lengths)}  median={np.median(path_lengths):.0f}  "
+              f"max={max(path_lengths)}")
         print(f"   Closest approach (fraction of path):")
-        print(f"     min={min(closest_fracs):.2f}  median={np.median(closest_fracs):.2f}  max={max(closest_fracs):.2f}")
+        print(f"     min={min(closest_fracs):.2f}  median={np.median(closest_fracs):.2f}  "
+              f"max={max(closest_fracs):.2f}")
 
-        # Goal category breakdown (top-k preferred)
+        # Goal category breakdown
         goal_cat_counts = defaultdict(int)
         for ep in episodes:
             goal_cat_counts[ep["preferred_category"]] += 1
@@ -429,7 +409,7 @@ def main() -> None:
         for cat, count in sorted(goal_cat_counts.items(), key=lambda kv: -kv[1]):
             print(f"     {cat}: {count}")
 
-        # Distractor category breakdown (bottom-k preferred)
+        # Distractor category breakdown
         dist_cat_counts = defaultdict(int)
         for ep in episodes:
             dist_cat_counts[ep["distractor_category"]] += 1
@@ -439,7 +419,8 @@ def main() -> None:
 
         # Verify cross-category invariant
         same_cat = sum(
-            1 for ep in episodes if ep["preferred_category"] == ep["distractor_category"]
+            1 for ep in episodes
+            if ep["preferred_category"] == ep["distractor_category"]
         )
         if same_cat > 0:
             print(f"\n   ⚠️  {same_cat} episodes share goal/distractor category (unexpected)")
@@ -461,11 +442,14 @@ def main() -> None:
             "preference_top_k": args.preference_top_k,
             "seed": args.seed,
             "source": "filtered_test_trajectories",
+            "variant": "2b_cross_category",
         },
         "summary": {
             "total_test_trajectories": len(test_trajectories),
             "total_episodes": len(episodes),
-            "hit_rate_pct": round(len(episodes) / max(len(test_trajectories), 1) * 100, 2),
+            "hit_rate_pct": round(
+                len(episodes) / max(len(test_trajectories), 1) * 100, 2
+            ),
         },
         "episodes": episodes,
     }

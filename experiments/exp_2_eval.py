@@ -1,13 +1,21 @@
 """Experiment 2: Preference-Proximity Dissociation Test
 
 Evaluates whether models maintain low distractor probability despite spatial
-proximity.  Uses the **filtered test-set episodes** produced by
-``exp_2_data_filtering.py`` (saved to ``experiments/data/exp_2_test_set.json``).
+proximity.  Supports two variants:
+
+  • **2a (same-category):** Distractor is a low-preference POI in the *same*
+    category as the goal.  Tests within-category preference discrimination.
+    Episodes from ``experiments/data/exp_2a_test_set.json``.
+
+  • **2b (cross-category):** Distractor is from a *different* (bottom-ranked)
+    category.  Tests category-level reasoning.
+    Episodes from ``experiments/data/exp_2b_test_set.json``.
 
 Metrics per observation fraction f ∈ {0.1, 0.2, 0.5, 0.75, 0.9}:
   • Distractor probability  P(distractor | v_{1:t})
   • True-goal probability   P(goal | v_{1:t})
   • Top-1 / Top-5 accuracy, Brier score
+  • Goal-to-distractor probability ratio
   • Peak distractor probability (max across fractions)
   • 95 % bootstrap CIs
 
@@ -17,13 +25,19 @@ Supported models (same loading logic as exp_1):
   • sc_bdi_vae  — SequentialConditionalBDIVAE  (vae_bdi_simple, use_temporal=True)
 
 Usage:
-    # Run all three models:
-    python experiments/exp_2_eval.py --run_all
+    # Run all three models on both variants:
+    python experiments/exp_2_eval.py --run_all --variant both
 
-    # Single model:
+    # Run only same-category variant:
+    python experiments/exp_2_eval.py --run_all --variant a
+
+    # Run only cross-category variant:
+    python experiments/exp_2_eval.py --run_all --variant b
+
+    # Single model, specific variant:
     python experiments/exp_2_eval.py \\
         --model_path checkpoints/keepers/best_model-OURS.pt \\
-        --model_type sc_bdi_vae
+        --model_type sc_bdi_vae --variant a
 """
 
 from __future__ import annotations
@@ -520,9 +534,11 @@ def compute_metrics(
     results_by_frac: Dict[float, Dict[str, List[float]]],
     fractions: List[float],
     seed: int,
+    num_pois: int = 230,
 ) -> Dict:
     metrics: Dict = {"fractions": {}}
     all_d, all_g, all_t1, all_t5, all_b = [], [], [], [], []
+    all_ratios: List[float] = []
     peak_per_ep: Dict[int, float] = defaultdict(lambda: 0.0)
 
     for frac in fractions:
@@ -535,9 +551,20 @@ def compute_metrics(
         t5_m, t5_lo, t5_hi = bootstrap_ci(r["top5_correct"], seed=seed)
         b_m, b_lo, b_hi = bootstrap_ci(r["brier_scores"], seed=seed)
 
+        # Goal-to-distractor probability ratio (per episode, then bootstrap)
+        # Floor distractor prob at uniform baseline (1/num_pois) to avoid
+        # division-by-near-zero inflating ratios to millions.
+        dp_floor = 1.0 / num_pois
+        ratios = [
+            gp / max(dp, dp_floor)
+            for gp, dp in zip(r["goal_probs"], r["distractor_probs"])
+        ]
+        ratio_m, ratio_lo, ratio_hi = bootstrap_ci(ratios, seed=seed)
+
         metrics["fractions"][frac] = {
             "distractor_prob": {"mean": d_m, "ci_lo": d_lo, "ci_hi": d_hi, "n": len(r["distractor_probs"])},
             "goal_prob": {"mean": g_m, "ci_lo": g_lo, "ci_hi": g_hi, "n": len(r["goal_probs"])},
+            "goal_dist_ratio": {"mean": ratio_m, "ci_lo": ratio_lo, "ci_hi": ratio_hi},
             "top1_accuracy": {"mean": t1_m * 100, "ci_lo": t1_lo * 100, "ci_hi": t1_hi * 100},
             "top5_accuracy": {"mean": t5_m * 100, "ci_lo": t5_lo * 100, "ci_hi": t5_hi * 100},
             "brier_score": {"mean": b_m, "ci_lo": b_lo, "ci_hi": b_hi},
@@ -547,6 +574,7 @@ def compute_metrics(
         all_t1.extend(r["top1_correct"])
         all_t5.extend(r["top5_correct"])
         all_b.extend(r["brier_scores"])
+        all_ratios.extend(ratios)
         for i, p in enumerate(r["distractor_probs"]):
             peak_per_ep[i] = max(peak_per_ep[i], p)
 
@@ -561,11 +589,23 @@ def compute_metrics(
     t5o = bootstrap_ci(all_t5, seed=seed)
     bo = bootstrap_ci(all_b, seed=seed)
     go = bootstrap_ci(all_g, seed=seed)
+    ro = bootstrap_ci(all_ratios, seed=seed)
 
     metrics["overall_top1_accuracy"] = {"mean": t1o[0] * 100, "ci_lo": t1o[1] * 100, "ci_hi": t1o[2] * 100}
     metrics["overall_top5_accuracy"] = {"mean": t5o[0] * 100, "ci_lo": t5o[1] * 100, "ci_hi": t5o[2] * 100}
     metrics["overall_brier_score"] = {"mean": bo[0], "ci_lo": bo[1], "ci_hi": bo[2]}
     metrics["overall_goal_prob"] = {"mean": go[0], "ci_lo": go[1], "ci_hi": go[2]}
+    metrics["overall_goal_dist_ratio"] = {"mean": ro[0], "ci_lo": ro[1], "ci_hi": ro[2]}
+
+    # Uniform baseline reference values (1/N predictor)
+    metrics["uniform_baseline"] = {
+        "prob_per_poi": 1.0 / num_pois,
+        "top1_accuracy": 100.0 / num_pois,
+        "top5_accuracy": min(500.0 / num_pois, 100.0),
+        "brier_score": (num_pois - 1) * (1.0 / num_pois) ** 2 + (1.0 - 1.0 / num_pois) ** 2,
+        "goal_dist_ratio": 1.0,  # uniform assigns equal prob to goal and distractor
+        "num_pois": num_pois,
+    }
     return metrics
 
 
@@ -607,11 +647,18 @@ def print_results(
     ot1 = metrics["overall_top1_accuracy"]
     ot5 = metrics["overall_top5_accuracy"]
     ob = metrics["overall_brier_score"]
+    ogr = metrics.get("overall_goal_dist_ratio", {})
+    ub = metrics.get("uniform_baseline", {})
     print(f"Peak Distractor Prob:    {pk['mean']:.4f}  [{pk['ci_lo']:.4f}, {pk['ci_hi']:.4f}]")
     print(f"Overall Distractor Prob: {od['mean']:.4f}  [{od['ci_lo']:.4f}, {od['ci_hi']:.4f}]")
     print(f"Overall Top-1 Accuracy:  {ot1['mean']:.2f}%  [{ot1['ci_lo']:.2f}, {ot1['ci_hi']:.2f}]")
     print(f"Overall Top-5 Accuracy:  {ot5['mean']:.2f}%  [{ot5['ci_lo']:.2f}, {ot5['ci_hi']:.2f}]")
     print(f"Overall Brier Score:     {ob['mean']:.4f}  [{ob['ci_lo']:.4f}, {ob['ci_hi']:.4f}]")
+    if ogr:
+        print(f"Overall Goal/Dist Ratio: {ogr['mean']:.1f}x  [{ogr['ci_lo']:.1f}, {ogr['ci_hi']:.1f}]")
+    if ub:
+        print(f"{'-' * 115}")
+        print(f"Uniform baseline (1/{ub['num_pois']}): Top-1={ub['top1_accuracy']:.2f}%  Top-5={ub['top5_accuracy']:.2f}%  Brier={ub['brier_score']:.4f}  Ratio=1.0")
     print(f"{'=' * 115}")
 
 
@@ -662,7 +709,7 @@ def run_single_model(
         else:
             raw = _evaluate_sc_bdi_vae(model, episodes, graph, poi_nodes, device, fractions, ref, batch_size)
 
-        metrics = compute_metrics(raw, fractions, seed)
+        metrics = compute_metrics(raw, fractions, seed, num_pois=len(poi_nodes))
         metrics["model"] = model_name
         metrics["model_type"] = model_type
         metrics["n_episodes"] = len(episodes)
@@ -705,14 +752,20 @@ def main() -> None:
                         choices=["transformer", "lstm", "sc_bdi_vae"])
     parser.add_argument("--model_name", type=str, default=None, help="Display name")
     parser.add_argument("--run_all", action="store_true", help="Run all three models")
-    parser.add_argument("--episodes", type=str,
-                        default="experiments/data/exp_2_test_set.json",
-                        help="Path to filtered distractor episodes JSON")
+    parser.add_argument("--variant", type=str, default="both",
+                        choices=["a", "b", "both"],
+                        help="Which variant to run: a (same-category), b (cross-category), or both")
+    parser.add_argument("--episodes_a", type=str,
+                        default="experiments/data/exp_2a_test_set.json",
+                        help="Path to same-category distractor episodes (variant a)")
+    parser.add_argument("--episodes_b", type=str,
+                        default="experiments/data/exp_2b_test_set.json",
+                        help="Path to cross-category distractor episodes (variant b)")
     parser.add_argument("--graph_path", type=str,
                         default="data/processed/ucsd_walk_full.graphml")
     parser.add_argument("--output_dir", type=str,
-                        default="experiments/results/exp_2",
-                        help="Directory for result JSON files and plots")
+                        default="experiments/results",
+                        help="Base directory for results (will create exp_2a/ and exp_2b/ subdirs)")
     parser.add_argument("--fractions", type=str, default="0.1,0.2,0.5,0.75,0.9")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--seed", type=int, default=42)
@@ -722,8 +775,14 @@ def main() -> None:
         parser.error("Either --run_all or both --model_path and --model_type are required")
 
     fractions = [float(f.strip()) for f in args.fractions.split(",")]
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    base_output_dir = Path(args.output_dir)
+
+    # Build list of (variant_label, episodes_path, output_dir) to run
+    variant_configs: List[Tuple[str, str, Path]] = []
+    if args.variant in ("a", "both"):
+        variant_configs.append(("2a (same-category)", args.episodes_a, base_output_dir / "exp_2a"))
+    if args.variant in ("b", "both"):
+        variant_configs.append(("2b (cross-category)", args.episodes_b, base_output_dir / "exp_2b"))
 
     print("\n" + "=" * 100)
     print("EXPERIMENT 2: PREFERENCE-PROXIMITY DISSOCIATION TEST")
@@ -732,17 +791,13 @@ def main() -> None:
     device = get_device()
     print(f"🖥️  Device: {device}")
 
-    # Load graph
+    # Load graph (shared across variants)
     print(f"\n📂 Loading graph from {args.graph_path} ...")
     graph = nx.read_graphml(args.graph_path)
     world_graph = WorldGraph(graph)
     poi_nodes = world_graph.poi_nodes
     node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
     print(f"   {len(graph.nodes()):,} nodes, {len(poi_nodes)} POIs")
-
-    # Load distractor episodes
-    print(f"\n📂 Loading distractor episodes from {args.episodes} ...")
-    episodes = load_filtered_episodes(Path(args.episodes))
 
     # Determine models
     if args.run_all:
@@ -761,49 +816,70 @@ def main() -> None:
 
     num_agents = 100
 
-    for cfg in models_to_run:
-        print("\n" + "=" * 80)
-        print(f"📊 Evaluating: {cfg['name']}")
-        print("=" * 80)
+    for variant_label, episodes_path, output_dir in variant_configs:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        print("\n" + "#" * 100)
+        print(f"## VARIANT {variant_label}")
+        print("#" * 100)
+
+        # Load distractor episodes for this variant
+        print(f"\n📂 Loading distractor episodes from {episodes_path} ...")
         try:
-            run_single_model(
-                model_path=cfg["path"],
-                model_type=cfg["type"],
-                model_name=cfg["name"],
-                episodes=episodes,
-                graph=graph,
-                poi_nodes=poi_nodes,
-                node_to_idx=node_to_idx,
-                device=device,
-                fractions=fractions,
-                output_dir=output_dir,
-                batch_size=args.batch_size,
-                seed=args.seed,
-                num_agents=num_agents,
-            )
-        except Exception as e:
-            print(f"❌ Error running {cfg['name']}: {e}")
-            import traceback
-            traceback.print_exc()
-
-    # ── generate plots automatically ─────────────────────────────────────
-    print(f"\n📊 Generating visualizations ...")
-    try:
-        from experiments.exp_2_plot import load_results, generate_plots_for_reference
-
-        for ref_type, suffix in [("tstar", "_tstar"), ("full", "_full_traj")]:
-            results = load_results(output_dir, ref_type)
-            if results:
-                print(f"  Plotting {ref_type} reference ({len(results)} models) ...")
-                generate_plots_for_reference(results, output_dir, ref_type, suffix)
+            episodes = load_filtered_episodes(Path(episodes_path))
+        except (FileNotFoundError, ValueError) as e:
+            print(f"❌ Cannot load episodes for {variant_label}: {e}")
+            print(f"   Run the corresponding filtering script first:")
+            if "2a" in variant_label:
+                print(f"   python experiments/exp_2a_data_filtering.py")
             else:
-                print(f"  ⚠️  No {ref_type} results found to plot")
-    except Exception as e:
-        print(f"  ⚠️  Plotting failed: {e}")
-        print(f"  You can run plots manually: python experiments/exp_2_plot.py --results-dir {output_dir}")
+                print(f"   python experiments/exp_2b_data_filtering.py")
+            continue
+
+        for cfg in models_to_run:
+            print("\n" + "=" * 80)
+            print(f"📊 Evaluating: {cfg['name']} [{variant_label}]")
+            print("=" * 80)
+            try:
+                run_single_model(
+                    model_path=cfg["path"],
+                    model_type=cfg["type"],
+                    model_name=cfg["name"],
+                    episodes=episodes,
+                    graph=graph,
+                    poi_nodes=poi_nodes,
+                    node_to_idx=node_to_idx,
+                    device=device,
+                    fractions=fractions,
+                    output_dir=output_dir,
+                    batch_size=args.batch_size,
+                    seed=args.seed,
+                    num_agents=num_agents,
+                )
+            except Exception as e:
+                print(f"❌ Error running {cfg['name']}: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # ── generate plots for this variant ──
+        print(f"\n📊 Generating visualizations for {variant_label} ...")
+        try:
+            from experiments.exp_2_plot import load_results, generate_plots_for_reference
+
+            for ref_type, suffix in [("tstar", "_tstar"), ("full", "_full_traj")]:
+                results = load_results(output_dir, ref_type)
+                if results:
+                    print(f"  Plotting {ref_type} reference ({len(results)} models) ...")
+                    generate_plots_for_reference(results, output_dir, ref_type, suffix)
+                else:
+                    print(f"  ⚠️  No {ref_type} results found to plot")
+        except Exception as e:
+            print(f"  ⚠️  Plotting failed: {e}")
+            print(f"  You can run plots manually: python experiments/exp_2_plot.py --results-dir {output_dir}")
 
     print(f"\n✅ Experiment 2 complete!")
-    print(f"   Results saved to: {output_dir}")
+    for _, _, od in variant_configs:
+        print(f"   Results saved to: {od}")
     print("=" * 100 + "\n")
 
 
