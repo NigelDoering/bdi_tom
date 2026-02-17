@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from collections import Counter
@@ -20,7 +21,7 @@ from graph_controller.world_graph import WorldGraph
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Identify trajectories with unexpected closures for Experiment 3.")
-    parser.add_argument("--run-id", type=int, default=1, help="Simulation run identifier (data/simulation_data/run_<id>).")
+    parser.add_argument("--run-id", type=int, default=8, help="Simulation run identifier (data/simulation_data/run_<id>).")
     parser.add_argument(
         "--graph",
         type=Path,
@@ -39,6 +40,17 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Output JSON for pivot episodes. Defaults to data/simulation_data/run_<id>/exp_3_pivots.json.",
     )
+    parser.add_argument(
+        "--split-file",
+        type=Path,
+        default=None,
+        help="Path to split_indices JSON. Defaults to data/simulation_data/run_<id>/split_data/split_indices_seed42.json.",
+    )
+    parser.add_argument(
+        "--no-split-filter",
+        action="store_true",
+        help="Disable test-split filtering and use all trajectories.",
+    )
     return parser.parse_args()
 
 
@@ -56,6 +68,36 @@ def main() -> None:
     world_graph = WorldGraph(graph)
 
     trajectories = load_trajectories(trajectories_path)
+
+    # ── Filter to test split only (prevents data leakage) ──
+    if not args.no_split_filter:
+        split_file = args.split_file or (run_dir / "split_data" / "split_indices_seed42.json")
+        if split_file.exists():
+            with split_file.open("r", encoding="utf-8") as fh:
+                split_data = json.load(fh)
+            test_indices = set(split_data["test_indices"])
+
+            # Flatten trajectories to a global index, keep only test indices
+            agent_keys = sorted(trajectories.keys())
+            global_idx = 0
+            filtered_trajectories: dict = {}
+            for agent_key in agent_keys:
+                agent_runs = trajectories[agent_key]
+                kept = []
+                for ep in agent_runs:
+                    if global_idx in test_indices:
+                        kept.append(ep)
+                    global_idx += 1
+                if kept:
+                    filtered_trajectories[agent_key] = kept
+
+            total_before = sum(len(v) for v in trajectories.values())
+            total_after = sum(len(v) for v in filtered_trajectories.values())
+            print(f"Test-split filter: {total_before:,} → {total_after:,} trajectories")
+            trajectories = filtered_trajectories
+        else:
+            print(f"⚠️  Split file not found ({split_file}), using all trajectories.")
+
     episodes = extract_pivot_episodes(trajectories, world_graph)
 
     if not episodes:

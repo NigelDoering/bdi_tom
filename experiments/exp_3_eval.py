@@ -26,7 +26,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, NamedTuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
@@ -170,21 +170,41 @@ def load_model(
             **config.kwargs,
         )
     elif config.model_type == 'lstm':
+        # Determine num_agents from checkpoint (mirrors exp_2_eval logic)
+        agent_key = "embedding_pipeline.agent_encoder.agent_context.agent_emb.agent_embedding.weight"
+        state_dict = checkpoint.get('model_state_dict', {})
+        if agent_key in state_dict:
+            actual_num_agents = state_dict[agent_key].shape[0]
+        elif 'config' in checkpoint:
+            actual_num_agents = checkpoint['config'].get('num_agents', 100)
+        else:
+            actual_num_agents = 100
+        ckpt_config = checkpoint.get('config', {})
         model = PerNodeToMPredictor(
-            num_nodes=num_nodes, num_agents=100, num_poi_nodes=num_poi, num_categories=7,
-            node_embedding_dim=64, temporal_dim=64, agent_dim=64, fusion_dim=128, hidden_dim=256,
-            dropout=0.1, num_heads=4, **config.kwargs,
+            num_nodes=ckpt_config.get('num_nodes', num_nodes),
+            num_agents=actual_num_agents,
+            num_poi_nodes=ckpt_config.get('num_poi_nodes', num_poi),
+            num_categories=ckpt_config.get('num_categories', 7),
+            node_embedding_dim=ckpt_config.get('node_embedding_dim', 64),
+            temporal_dim=ckpt_config.get('temporal_dim', 64),
+            agent_dim=ckpt_config.get('agent_dim', 64),
+            fusion_dim=ckpt_config.get('fusion_dim', 128),
+            hidden_dim=ckpt_config.get('hidden_dim', 256),
+            dropout=ckpt_config.get('dropout', 0.1),
+            num_heads=ckpt_config.get('num_heads', 4),
+            freeze_embedding=ckpt_config.get('freeze_embedding', False),
+            **config.kwargs,
         )
     else:
         raise ValueError(f"Unknown model type: {config.model_type}")
     
     model.load_state_dict(checkpoint['model_state_dict'])
     
-    # Force CPU for transformer on MPS due to known Metal buffer issues with small batch inference
+    # Force CPU on MPS due to known Metal buffer issues with small batch inference
     actual_device = device
-    if device.type == 'mps' and config.model_type == 'transformer':
+    if device.type == 'mps' and config.model_type in ('transformer', 'sc_bdi_vae'):
         actual_device = torch.device('cpu')
-        print(f"  [Using CPU for {config.name} due to MPS transformer issues]")
+        print(f"  [Using CPU for {config.name} due to MPS Metal buffer issues]")
     
     # Try device, fall back to CPU on failure
     try:
@@ -240,6 +260,7 @@ def get_goal_probs(
     hour: int = 12,
     progress: float = 0.5,
     use_temporal: bool = False,
+    agent_id: Optional[int] = None,
 ) -> torch.Tensor:
     """Get goal probability distribution from model."""
     node_indices = node_indices.to(device)
@@ -248,6 +269,11 @@ def get_goal_probs(
     
     with torch.no_grad():
         if model_type == 'sc_bdi_vae':
+            # Build agent_ids tensor
+            agent_ids = None
+            if agent_id is not None:
+                agent_ids = torch.tensor([agent_id], dtype=torch.long, device=device)
+            
             if use_temporal:
                 # Use temporal features (requires matching training distribution)
                 hours = torch.tensor([hour], dtype=torch.long, device=device)
@@ -261,6 +287,7 @@ def get_goal_probs(
             out = model(
                 history_node_indices=node_indices,
                 history_lengths=lengths,
+                agent_ids=agent_ids,
                 path_progress=torch.tensor([progress], device=device),
                 compute_loss=False,
                 hours=hours, days=days, velocities=velocities, deltas=deltas,
@@ -302,6 +329,13 @@ def evaluate_episode(
     final_goal = episode['final_goal']
     hour = episode.get('hour', 12)
     
+    # Parse agent_id integer from string like "agent_042"
+    agent_key = episode.get('agent_id', 'agent_000')
+    try:
+        agent_int: Optional[int] = int(str(agent_key).split('_')[1])
+    except (IndexError, ValueError):
+        agent_int = None
+    
     # Convert path to indices
     try:
         path_indices = [node_to_idx[step[0]] for step in path]
@@ -327,7 +361,7 @@ def evaluate_episode(
         lengths = torch.tensor([end_idx])
         progress = end_idx / total_len
         
-        probs = get_goal_probs(model, model_type, indices, lengths, device, hour, progress, use_temporal)
+        probs = get_goal_probs(model, model_type, indices, lengths, device, hour, progress, use_temporal, agent_id=agent_int)
         pre_phases.append(compute_phase_metrics(probs, first_goal_idx))
         # Also track P(final_goal) for adaptation speed calculation
         pre_final_goal_probs.append(float(probs[final_goal_idx].item()))
@@ -340,7 +374,7 @@ def evaluate_episode(
         lengths = torch.tensor([end_idx])
         progress = end_idx / total_len
         
-        probs = get_goal_probs(model, model_type, indices, lengths, device, hour, progress, use_temporal)
+        probs = get_goal_probs(model, model_type, indices, lengths, device, hour, progress, use_temporal, agent_id=agent_int)
         post_phases.append(compute_phase_metrics(probs, final_goal_idx))
     
     return EpisodeResult(
@@ -394,27 +428,48 @@ def save_results(
     # Comprehensive metrics CSV
     rows = ["model,metric,mean,ci_low,ci_high,std"]
     for r in results:
-        # Belief alignment (P(final_goal) at 50% post-pivot)
-        ba = r.get_belief_alignment(1)
-        rows.append(f"{r.name},belief_alignment,{ba.mean:.6f},{ba.ci_low:.6f},{ba.ci_high:.6f},{ba.std:.6f}")
-        
-        # Adaptation speed
-        asp = r.get_adaptation_speed(1)
-        rows.append(f"{r.name},adaptation_speed,{asp.mean:.6f},{asp.ci_low:.6f},{asp.ci_high:.6f},{asp.std:.6f}")
-        
-        # Top-5 accuracy post-pivot
-        t5 = r.get_top5_accuracy('post', 1)
-        rows.append(f"{r.name},top5_accuracy,{t5.mean:.6f},{t5.ci_low:.6f},{t5.ci_high:.6f},{t5.std:.6f}")
-        
-        # MRR post-pivot  
-        mrr = r.get_mrr('post', 1)
-        rows.append(f"{r.name},mrr,{mrr.mean:.6f},{mrr.ci_low:.6f},{mrr.ci_high:.6f},{mrr.std:.6f}")
-        
-        # Pre-pivot metrics for comparison
-        pre_ba = AggregatedMetrics.from_values([e.pre_phases[1].goal_prob for e in r.episodes])
-        rows.append(f"{r.name},pre_belief_alignment,{pre_ba.mean:.6f},{pre_ba.ci_low:.6f},{pre_ba.ci_high:.6f},{pre_ba.std:.6f}")
+        # Post-pivot P(new goal) at each fraction
+        for i, frac in enumerate(fractions):
+            ba = AggregatedMetrics.from_values([e.post_phases[i].goal_prob for e in r.episodes])
+            rows.append(f"{r.name},post_p_new_goal_{frac},{ba.mean:.6f},{ba.ci_low:.6f},{ba.ci_high:.6f},{ba.std:.6f}")
+
+        # Pre-pivot P(new goal) — baseline before the agent changes direction
+        for i, frac in enumerate(fractions):
+            pre_fg = AggregatedMetrics.from_values([e.pre_final_goal_probs[i] for e in r.episodes])
+            rows.append(f"{r.name},pre_p_new_goal_{frac},{pre_fg.mean:.6f},{pre_fg.ci_low:.6f},{pre_fg.ci_high:.6f},{pre_fg.std:.6f}")
+
+        # Adaptation speed at 75% (primary metric)
+        asp_75 = AggregatedMetrics.from_values([
+            e.post_phases[2].goal_prob - e.pre_final_goal_probs[2] for e in r.episodes
+        ])
+        rows.append(f"{r.name},adaptation_speed_75,{asp_75.mean:.6f},{asp_75.ci_low:.6f},{asp_75.ci_high:.6f},{asp_75.std:.6f}")
+
+        # Adaptation speed at 50% (for comparison)
+        asp_50 = r.get_adaptation_speed(1)
+        rows.append(f"{r.name},adaptation_speed_50,{asp_50.mean:.6f},{asp_50.ci_low:.6f},{asp_50.ci_high:.6f},{asp_50.std:.6f}")
+
+        # Top-5 accuracy post-pivot at 75%
+        t5_75 = AggregatedMetrics.from_values([float(e.post_phases[2].top5_hit) for e in r.episodes])
+        rows.append(f"{r.name},top5_accuracy_75,{t5_75.mean:.6f},{t5_75.ci_low:.6f},{t5_75.ci_high:.6f},{t5_75.std:.6f}")
+
+        # Top-5 accuracy post-pivot at 50%
+        t5_50 = r.get_top5_accuracy('post', 1)
+        rows.append(f"{r.name},top5_accuracy_50,{t5_50.mean:.6f},{t5_50.ci_low:.6f},{t5_50.ci_high:.6f},{t5_50.std:.6f}")
+
+        # MRR post-pivot at 75%
+        mrr_75 = AggregatedMetrics.from_values([1.0 / e.post_phases[2].rank for e in r.episodes])
+        rows.append(f"{r.name},mrr_75,{mrr_75.mean:.6f},{mrr_75.ci_low:.6f},{mrr_75.ci_high:.6f},{mrr_75.std:.6f}")
+
+        # MRR post-pivot at 50%
+        mrr_50 = r.get_mrr('post', 1)
+        rows.append(f"{r.name},mrr_50,{mrr_50.mean:.6f},{mrr_50.ci_low:.6f},{mrr_50.ci_high:.6f},{mrr_50.std:.6f}")
+
+        # Pre-pivot P(original goal)
+        for i, frac in enumerate(fractions):
+            pre_ba = AggregatedMetrics.from_values([e.pre_phases[i].goal_prob for e in r.episodes])
+            rows.append(f"{r.name},pre_p_orig_goal_{frac},{pre_ba.mean:.6f},{pre_ba.ci_low:.6f},{pre_ba.ci_high:.6f},{pre_ba.std:.6f}")
     
-    (output_dir / 'exp_3_metrics.csv').write_text("\n".join(rows))
+    (output_dir / 'exp3_metrics.csv').write_text("\n".join(rows))
     
     # Phase metrics
     phase_rows = ["model,phase,fraction,goal_prob,top5_acc,mrr,entropy,max_prob"]
@@ -436,26 +491,53 @@ def save_results(
             post_max = np.mean([e.post_phases[i].max_prob for e in r.episodes])
             phase_rows.append(f"{r.name},post,{frac},{post_prob:.6f},{post_t5:.6f},{post_mrr:.6f},{post_ent:.6f},{post_max:.6f}")
     
-    (output_dir / 'exp_3_phase_metrics.csv').write_text("\n".join(phase_rows))
+    (output_dir / 'exp3_phase_metrics.csv').write_text("\n".join(phase_rows))
     
-    # JSON summary
+    # JSON summary — include both 50% and 75% metrics
     summary = {
         'num_episodes': len(results[0].episodes) if results else 0,
         'fractions': list(fractions),
+        'primary_metric_fraction': 0.75,
         'models': {}
     }
     for r in results:
-        summary['models'][r.name] = {
-            'belief_alignment': r.get_belief_alignment(1).mean,
-            'adaptation_speed': r.get_adaptation_speed(1).mean,
-            'top5_accuracy': r.get_top5_accuracy('post', 1).mean,
-            'mrr': r.get_mrr('post', 1).mean,
-            'pre_belief_alignment': AggregatedMetrics.from_values(
-                [e.pre_phases[1].goal_prob for e in r.episodes]
-            ).mean,
-        }
+        model_summary: Dict[str, Any] = {}
+
+        # 75% post-pivot (primary)
+        model_summary['post_p_new_goal_75'] = np.mean(
+            [e.post_phases[2].goal_prob for e in r.episodes]
+        )
+        model_summary['top5_accuracy_75'] = np.mean(
+            [float(e.post_phases[2].top5_hit) for e in r.episodes]
+        )
+        model_summary['mrr_75'] = np.mean(
+            [1.0 / e.post_phases[2].rank for e in r.episodes]
+        )
+        model_summary['adaptation_speed_75'] = np.mean(
+            [e.post_phases[2].goal_prob - e.pre_final_goal_probs[2] for e in r.episodes]
+        )
+
+        # 50% post-pivot (secondary, for comparison)
+        model_summary['post_p_new_goal_50'] = r.get_belief_alignment(1).mean
+        model_summary['top5_accuracy_50'] = r.get_top5_accuracy('post', 1).mean
+        model_summary['mrr_50'] = r.get_mrr('post', 1).mean
+        model_summary['adaptation_speed_50'] = r.get_adaptation_speed(1).mean
+
+        # Pre-pivot baselines (P(new goal) before pivot)
+        for i, frac in enumerate(fractions):
+            model_summary[f'pre_p_new_goal_{frac}'] = np.mean(
+                [e.pre_final_goal_probs[i] for e in r.episodes]
+            )
+
+        # Pre-pivot P(original goal)
+        for i, frac in enumerate(fractions):
+            model_summary[f'pre_p_orig_goal_{frac}'] = np.mean(
+                [e.pre_phases[i].goal_prob for e in r.episodes]
+            )
+
+        summary['models'][r.name] = model_summary
     
-    (output_dir / 'exp_3_summary.json').write_text(json.dumps(summary, indent=2))
+    (output_dir / 'exp3_summary.json').write_text(json.dumps(summary, indent=2))
     print(f"\nResults saved to {output_dir}")
 
 
@@ -463,112 +545,357 @@ def save_results(
 # VISUALIZATION
 # ============================================================================
 
+def _bootstrap_ci(values: List[float], n_boot: int = 5000, alpha: float = 0.05) -> Tuple[float, float, float]:
+    """Compute mean and bootstrap 95% CI."""
+    arr = np.array(values)
+    mean = float(np.mean(arr))
+    if len(arr) < 3:
+        return mean, mean, mean
+    rng = np.random.default_rng(42)
+    boot_means = [float(np.mean(rng.choice(arr, size=len(arr), replace=True))) for _ in range(n_boot)]
+    lo = float(np.percentile(boot_means, 100 * alpha / 2))
+    hi = float(np.percentile(boot_means, 100 * (1 - alpha / 2)))
+    return mean, lo, hi
+
+
 def generate_visualizations(results: List[ModelResults], output_dir: Path) -> None:
-    """Generate visualization plots."""
+    """Generate publication-ready visualization plots (300 DPI, CI bands)."""
     try:
         import matplotlib.pyplot as plt
-        import matplotlib.patches as mpatches
+        import matplotlib.ticker as mticker
     except ImportError:
         print("matplotlib not available, skipping visualizations")
         return
-    
+
     plt.style.use('seaborn-v0_8-whitegrid')
-    colors = {'SC-BDI-VAE': '#27ae60', 'Transformer': '#3498db', 'LSTM': '#e74c3c'}
+    plt.rcParams.update({
+        'font.size': 11,
+        'axes.titlesize': 13,
+        'axes.labelsize': 12,
+        'legend.fontsize': 10,
+        'xtick.labelsize': 10,
+        'ytick.labelsize': 10,
+        'figure.dpi': 300,
+    })
+
+    # Consistent colour scheme matching exp_2_plot.py
+    COLORS = {
+        'SC-BDI-VAE': '#467821',   # Green (Ours)
+        'Transformer': '#E24A33',  # Red
+        'LSTM': '#348ABD',         # Blue
+    }
+    MARKERS = {'SC-BDI-VAE': 'o', 'Transformer': 's', 'LSTM': '^'}
+    MODEL_LABELS = {'SC-BDI-VAE': 'SC-BDI (Ours)', 'Transformer': 'Transformer', 'LSTM': 'LSTM'}
     fractions = [0.25, 0.5, 0.75]
-    
-    # 1. Goal probability trajectory
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    
-    for ax, phase, title, target in [
-        (axes[0], 'pre', 'Pre-Pivot: P(Original Goal)', 'pre_phases'),
-        (axes[1], 'post', 'Post-Pivot: P(New Goal)', 'post_phases'),
-    ]:
-        for r in results:
-            phases = [getattr(e, target) for e in r.episodes]
-            means = [np.mean([p[i].goal_prob for p in phases]) for i in range(3)]
-            stds = [np.std([p[i].goal_prob for p in phases]) / np.sqrt(len(phases)) for i in range(3)]
-            
-            color = colors.get(r.name, 'gray')
-            ax.errorbar(fractions, means, yerr=stds, marker='o', linewidth=2, 
-                       markersize=8, label=r.name, color=color, capsize=4)
-        
-        ax.set_xlabel('Trajectory Fraction', fontsize=12)
-        ax.set_ylabel('Goal Probability', fontsize=12)
-        ax.set_title(title, fontsize=14)
-        ax.legend(fontsize=10)
-        ax.set_ylim(0, max(0.5, ax.get_ylim()[1]))
-        ax.set_xlim(0.2, 0.8)
-    
-    plt.tight_layout()
-    plt.savefig(output_dir / 'exp_3_goal_trajectory.png', dpi=150, bbox_inches='tight')
-    plt.close()
-    
-    # 2. Metric comparison bar chart
+    frac_pct = [f * 100 for f in fractions]
+
+    def _color(name: str) -> str:
+        return COLORS.get(name, 'gray')
+
+    def _marker(name: str) -> str:
+        return MARKERS.get(name, 'o')
+
+    def _label(name: str) -> str:
+        return MODEL_LABELS.get(name, name)
+
+    # ------------------------------------------------------------------ #
+    # Helper: compute belief revision curve across pre→post for P(new goal)
+    # x-axis: 6 points representing [pre-25%, pre-50%, pre-75%,
+    #                                  post-25%, post-50%, post-75%]
+    # ------------------------------------------------------------------ #
+    x_full = [-75, -50, -25, 25, 50, 75]  # negative = pre-pivot, positive = post-pivot
+    x_labels_full = ['-75%', '-50%', '-25%', '+25%', '+50%', '+75%']
+
+    def _belief_revision_data(r: ModelResults) -> Tuple[List[float], List[float], List[float]]:
+        """Get P(new goal) across all 6 time-points (3 pre + 3 post)."""
+        means, ci_lo, ci_hi = [], [], []
+        # Pre-pivot P(final_goal)
+        for i in range(3):
+            vals = [e.pre_final_goal_probs[i] for e in r.episodes]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        # Post-pivot P(final_goal)
+        for i in range(3):
+            vals = [e.post_phases[i].goal_prob for e in r.episodes]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        return means, ci_lo, ci_hi
+
+    # ------------------------------------------------------------------ #
+    # 1. Belief revision curve — THE key plot for this experiment
+    #    Shows P(new goal) on a unified pre→post timeline
+    # ------------------------------------------------------------------ #
     fig, ax = plt.subplots(figsize=(10, 6))
-    
-    metrics = ['belief_alignment', 'adaptation_speed', 'top5_accuracy', 'mrr']
-    metric_labels = ['Belief\nAlignment', 'Adaptation\nSpeed', 'Top-5\nAccuracy', 'MRR']
-    x = np.arange(len(metrics))
-    width = 0.25
-    
-    for i, r in enumerate(results):
-        values = [
-            r.get_belief_alignment(1).mean,
-            r.get_adaptation_speed(1).mean,
-            r.get_top5_accuracy('post', 1).mean,
-            r.get_mrr('post', 1).mean,
-        ]
-        color = colors.get(r.name, f'C{i}')
-        ax.bar(x + i * width, values, width, label=r.name, color=color, alpha=0.85)
-    
-    ax.set_ylabel('Value', fontsize=12)
-    ax.set_title('Experiment 3: Belief Updating Metrics', fontsize=14)
-    ax.set_xticks(x + width)
-    ax.set_xticklabels(metric_labels, fontsize=11)
-    ax.legend(fontsize=10)
-    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-    
+
+    for r in results:
+        means, ci_lo, ci_hi = _belief_revision_data(r)
+        c = _color(r.name)
+        ax.plot(x_full, means, marker=_marker(r.name), linewidth=2.5,
+                markersize=8, color=c, label=_label(r.name))
+        ax.fill_between(x_full, ci_lo, ci_hi, alpha=0.18, color=c)
+
+    ax.axvline(x=0, color='black', linestyle='-', linewidth=1.5, alpha=0.6, label='Pivot point')
+    ax.axvspan(-80, 0, alpha=0.04, color='gray')
+    ax.text(-40, ax.get_ylim()[1] * 0.02 if ax.get_ylim()[1] > 0.01 else 0.001, 'Pre-pivot',
+            ha='center', fontsize=10, fontstyle='italic', alpha=0.6)
+    ax.text(50, ax.get_ylim()[1] * 0.02 if ax.get_ylim()[1] > 0.01 else 0.001, 'Post-pivot',
+            ha='center', fontsize=10, fontstyle='italic', alpha=0.6)
+
+    ax.set_xlabel('Trajectory Phase (% of pre-/post-pivot segment)')
+    ax.set_ylabel('P(New Goal)')
+    ax.set_title('Belief Revision: P(New Goal) Across Goal Change', fontweight='bold')
+    ax.set_xticks(x_full)
+    ax.set_xticklabels(x_labels_full)
+    ax.legend()
+    ax.set_ylim(bottom=0)
+
     plt.tight_layout()
-    plt.savefig(output_dir / 'exp_3_metrics_comparison.png', dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / 'exp3_belief_revision.png', dpi=300, bbox_inches='tight')
     plt.close()
-    
-    # 3. Entropy comparison
-    fig, ax = plt.subplots(figsize=(8, 5))
-    
+
+    # ------------------------------------------------------------------ #
+    # 2. Dual-panel: P(original goal) pre-pivot + P(new goal) post-pivot
+    # ------------------------------------------------------------------ #
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    # (a) Pre-pivot: P(original goal) — tests initial prediction quality
+    ax = axes[0]
+    for r in results:
+        phases = [e.pre_phases for e in r.episodes]
+        means, ci_lo, ci_hi = [], [], []
+        for i in range(3):
+            vals = [p[i].goal_prob for p in phases]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        c = _color(r.name)
+        ax.plot(frac_pct, means, marker=_marker(r.name), linewidth=2.5,
+                markersize=8, color=c, label=_label(r.name))
+        ax.fill_between(frac_pct, ci_lo, ci_hi, alpha=0.18, color=c)
+    ax.set_xlabel('Pre-Pivot Fraction (%)')
+    ax.set_ylabel('P(Original Goal)')
+    ax.set_title('(a) Pre-Pivot: P(Original Goal)', fontweight='bold')
+    ax.legend()
+    ax.set_xlim(20, 80)
+    ax.set_ylim(bottom=0)
+    ax.xaxis.set_major_locator(mticker.FixedLocator(frac_pct))
+
+    # (b) Post-pivot: P(new goal) — tests adaptation
+    ax = axes[1]
     for r in results:
         phases = [e.post_phases for e in r.episodes]
-        means = [np.mean([p[i].entropy for p in phases]) for i in range(3)]
-        color = colors.get(r.name, 'gray')
-        ax.plot(fractions, means, 'o-', label=r.name, color=color, linewidth=2, markersize=8)
-    
-    ax.set_xlabel('Post-Pivot Fraction', fontsize=12)
-    ax.set_ylabel('Entropy (nats)', fontsize=12)
-    ax.set_title('Prediction Uncertainty During Rerouting', fontsize=14)
-    ax.legend(fontsize=10)
-    
+        means, ci_lo, ci_hi = [], [], []
+        for i in range(3):
+            vals = [p[i].goal_prob for p in phases]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        c = _color(r.name)
+        ax.plot(frac_pct, means, marker=_marker(r.name), linewidth=2.5,
+                markersize=8, color=c, label=_label(r.name))
+        ax.fill_between(frac_pct, ci_lo, ci_hi, alpha=0.18, color=c)
+    ax.set_xlabel('Post-Pivot Fraction (%)')
+    ax.set_ylabel('P(New Goal)')
+    ax.set_title('(b) Post-Pivot: P(New Goal)', fontweight='bold')
+    ax.legend()
+    ax.set_xlim(20, 80)
+    ax.set_ylim(bottom=0)
+    ax.xaxis.set_major_locator(mticker.FixedLocator(frac_pct))
+
     plt.tight_layout()
-    plt.savefig(output_dir / 'exp_3_entropy.png', dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / 'exp3_goal_trajectory.png', dpi=300, bbox_inches='tight')
     plt.close()
-    
-    # 4. Rank distribution
-    fig, axes = plt.subplots(1, len(results), figsize=(4 * len(results), 4), squeeze=False)
-    
+
+    # ------------------------------------------------------------------ #
+    # 3. Summary bar chart — post-pivot metrics at 75%
+    #    (75% is the most informative: enough post-pivot evidence to judge)
+    # ------------------------------------------------------------------ #
+    metric_fns_75 = [
+        ('P(New Goal)\n@ 75%',     lambda r: [e.post_phases[2].goal_prob for e in r.episodes]),
+        ('Adaptation\nSpeed @ 75%', lambda r: [
+            e.post_phases[2].goal_prob - e.pre_final_goal_probs[2] for e in r.episodes
+        ]),
+        ('Top-5 Acc.\n@ 75%',      lambda r: [float(e.post_phases[2].top5_hit) for e in r.episodes]),
+        ('MRR\n@ 75%',             lambda r: [1.0 / e.post_phases[2].rank for e in r.episodes]),
+    ]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    n_metrics = len(metric_fns_75)
+    n_models = len(results)
+    width = 0.22
+    x = np.arange(n_metrics)
+
+    for i, r in enumerate(results):
+        means, errs_lo, errs_hi = [], [], []
+        for _, fn in metric_fns_75:
+            vals = fn(r)
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m)
+            errs_lo.append(m - lo)
+            errs_hi.append(hi - m)
+        c = _color(r.name)
+        ax.bar(x + i * width, means, width, yerr=[errs_lo, errs_hi],
+               capsize=4, color=c, alpha=0.85, edgecolor='black',
+               label=_label(r.name))
+
+    ax.set_ylabel('Value')
+    ax.set_title('Experiment 3: Post-Pivot Metrics at 75% Observation', fontweight='bold')
+    ax.set_xticks(x + width * (n_models - 1) / 2)
+    ax.set_xticklabels([lbl for lbl, _ in metric_fns_75])
+    ax.legend()
+    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
+
+    plt.tight_layout()
+    plt.savefig(output_dir / 'exp3_metrics_comparison.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # ------------------------------------------------------------------ #
+    # 4. Post-pivot entropy trajectory
+    # ------------------------------------------------------------------ #
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    for r in results:
+        phases = [e.post_phases for e in r.episodes]
+        means, ci_lo, ci_hi = [], [], []
+        for i in range(3):
+            vals = [p[i].entropy for p in phases]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        c = _color(r.name)
+        ax.plot(frac_pct, means, marker=_marker(r.name), linewidth=2.5,
+                markersize=8, color=c, label=_label(r.name))
+        ax.fill_between(frac_pct, ci_lo, ci_hi, alpha=0.18, color=c)
+
+    ax.set_xlabel('Post-Pivot Fraction (%)')
+    ax.set_ylabel('Entropy (nats)')
+    ax.set_title('Prediction Uncertainty During Rerouting', fontweight='bold')
+    ax.legend()
+    ax.set_xlim(20, 80)
+    ax.xaxis.set_major_locator(mticker.FixedLocator(frac_pct))
+
+    plt.tight_layout()
+    plt.savefig(output_dir / 'exp3_entropy.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # ------------------------------------------------------------------ #
+    # 5. Rank distribution histograms (at 75% post-pivot)
+    # ------------------------------------------------------------------ #
+    n = len(results)
+    fig, axes = plt.subplots(1, n, figsize=(4.5 * n, 4), squeeze=False)
+
     for i, r in enumerate(results):
         ax = axes[0, i]
-        ranks = [e.post_phases[1].rank for e in r.episodes]
-        bins = list(range(1, 52, 5)) + [230]  # Bins: 1-5, 6-10, ..., 46-50, 51+
-        ax.hist(ranks, bins=bins, color=colors.get(r.name, 'gray'), alpha=0.7, edgecolor='white')
-        ax.set_xlabel('Rank of Correct Goal', fontsize=10)
-        ax.set_ylabel('Count', fontsize=10)
-        ax.set_title(f'{r.name}', fontsize=12)
-        ax.axvline(x=5, color='green', linestyle='--', alpha=0.7, label='Top-5')
-        ax.axvline(x=10, color='orange', linestyle='--', alpha=0.7, label='Top-10')
+        ranks = [e.post_phases[2].rank for e in r.episodes]  # 75% post-pivot
+        bins = list(range(1, 52, 5)) + [230]
+        ax.hist(ranks, bins=bins, color=_color(r.name), alpha=0.75,
+                edgecolor='white', linewidth=0.8)
+        ax.axvline(x=5.5,  color='#2ca02c', linestyle='--', alpha=0.8, label='Top-5')
+        ax.axvline(x=10.5, color='#ff7f0e', linestyle='--', alpha=0.8, label='Top-10')
+        ax.set_xlabel('Rank of New Goal')
+        ax.set_ylabel('Count')
+        ax.set_title(f'{_label(r.name)} (at 75%)', fontweight='bold')
         ax.legend(fontsize=8)
-    
+
     plt.tight_layout()
-    plt.savefig(output_dir / 'exp_3_rank_distribution.png', dpi=150, bbox_inches='tight')
+    plt.savefig(output_dir / 'exp3_rank_distribution.png', dpi=300, bbox_inches='tight')
     plt.close()
-    
+
+    # ------------------------------------------------------------------ #
+    # 6. Combined publication figure (2×3 grid)
+    # ------------------------------------------------------------------ #
+    fig = plt.figure(figsize=(16, 10))
+    gs = fig.add_gridspec(2, 3, hspace=0.38, wspace=0.32)
+
+    # (a) Belief revision curve — the key plot
+    ax_a = fig.add_subplot(gs[0, :2])  # spans first two columns
+    for r in results:
+        means, ci_lo, ci_hi = _belief_revision_data(r)
+        c = _color(r.name)
+        ax_a.plot(x_full, means, marker=_marker(r.name), linewidth=2.5,
+                  markersize=7, color=c, label=_label(r.name))
+        ax_a.fill_between(x_full, ci_lo, ci_hi, alpha=0.15, color=c)
+    ax_a.axvline(x=0, color='black', linestyle='-', linewidth=1.5, alpha=0.6)
+    ax_a.axvspan(-80, 0, alpha=0.04, color='gray')
+    ax_a.set_xlabel('Trajectory Phase (% of segment)')
+    ax_a.set_ylabel('P(New Goal)')
+    ax_a.set_title('(a) Belief Revision: P(New Goal) Across Goal Change', fontweight='bold')
+    ax_a.set_xticks(x_full)
+    ax_a.set_xticklabels(x_labels_full)
+    ax_a.legend(fontsize=9)
+    ax_a.set_ylim(bottom=0)
+    # Phase annotations
+    ylim_a = ax_a.get_ylim()
+    ax_a.text(-50, ylim_a[1] * 0.92, 'Pre-pivot', ha='center', fontsize=10,
+              fontstyle='italic', alpha=0.5)
+    ax_a.text(50, ylim_a[1] * 0.92, 'Post-pivot', ha='center', fontsize=10,
+              fontstyle='italic', alpha=0.5)
+
+    # (b) Entropy trajectory
+    ax_b = fig.add_subplot(gs[0, 2])
+    for r in results:
+        phases = [e.post_phases for e in r.episodes]
+        means, ci_lo, ci_hi = [], [], []
+        for j in range(3):
+            vals = [p[j].entropy for p in phases]
+            m, lo, hi = _bootstrap_ci(vals)
+            means.append(m); ci_lo.append(lo); ci_hi.append(hi)
+        c = _color(r.name)
+        ax_b.plot(frac_pct, means, marker=_marker(r.name), linewidth=2, markersize=6, color=c)
+        ax_b.fill_between(frac_pct, ci_lo, ci_hi, alpha=0.15, color=c)
+    ax_b.set_xlabel('Post-Pivot Fraction (%)')
+    ax_b.set_ylabel('Entropy (nats)')
+    ax_b.set_title('(b) Prediction Uncertainty', fontweight='bold')
+
+    # (c) P(new goal) at 75% post-pivot
+    ax_c = fig.add_subplot(gs[1, 0])
+    x_bar = np.arange(len(results))
+    m_vals, e_lo, e_hi, bar_colors = [], [], [], []
+    for r in results:
+        vals = [e.post_phases[2].goal_prob for e in r.episodes]
+        m, lo, hi = _bootstrap_ci(vals)
+        m_vals.append(m); e_lo.append(m - lo); e_hi.append(hi - m)
+        bar_colors.append(_color(r.name))
+    ax_c.bar(x_bar, m_vals, yerr=[e_lo, e_hi], capsize=5, color=bar_colors,
+             alpha=0.85, edgecolor='black')
+    ax_c.set_xticks(x_bar)
+    ax_c.set_xticklabels([_label(r.name) for r in results], rotation=15, ha='right', fontsize=9)
+    ax_c.set_ylabel('P(New Goal)')
+    ax_c.set_title('(c) Belief Alignment @ 75% (↑ better)', fontweight='bold')
+    ax_c.set_ylim(bottom=0)
+
+    # (d) Top-5 accuracy at 75% post-pivot
+    ax_d = fig.add_subplot(gs[1, 1])
+    m_vals, e_lo, e_hi = [], [], []
+    for r in results:
+        vals = [float(e.post_phases[2].top5_hit) for e in r.episodes]
+        m, lo, hi = _bootstrap_ci(vals)
+        m_vals.append(m * 100); e_lo.append((m - lo) * 100); e_hi.append((hi - m) * 100)
+    ax_d.bar(x_bar, m_vals, yerr=[e_lo, e_hi], capsize=5, color=bar_colors,
+             alpha=0.85, edgecolor='black')
+    ax_d.set_xticks(x_bar)
+    ax_d.set_xticklabels([_label(r.name) for r in results], rotation=15, ha='right', fontsize=9)
+    ax_d.set_ylabel('Top-5 Accuracy (%)')
+    ax_d.set_title('(d) Top-5 Acc. @ 75% (↑ better)', fontweight='bold')
+    ax_d.set_ylim(bottom=0)
+
+    # (e) MRR at 75% post-pivot
+    ax_e = fig.add_subplot(gs[1, 2])
+    m_vals, e_lo, e_hi = [], [], []
+    for r in results:
+        vals = [1.0 / e.post_phases[2].rank for e in r.episodes]
+        m, lo, hi = _bootstrap_ci(vals)
+        m_vals.append(m); e_lo.append(m - lo); e_hi.append(hi - m)
+    ax_e.bar(x_bar, m_vals, yerr=[e_lo, e_hi], capsize=5, color=bar_colors,
+             alpha=0.85, edgecolor='black')
+    ax_e.set_xticks(x_bar)
+    ax_e.set_xticklabels([_label(r.name) for r in results], rotation=15, ha='right', fontsize=9)
+    ax_e.set_ylabel('MRR')
+    ax_e.set_title('(e) MRR @ 75% (↑ better)', fontweight='bold')
+    ax_e.set_ylim(bottom=0)
+
+    plt.suptitle('Experiment 3: Belief Updating Under Unexpected Closures',
+                 fontsize=16, fontweight='bold', y=1.01)
+    plt.savefig(output_dir / 'exp3_combined.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
     print(f"Visualizations saved to {output_dir}")
 
 
@@ -581,6 +908,8 @@ def main():
     parser.add_argument('--run-id', type=int, default=8)
     parser.add_argument('--checkpoint-dir', type=Path, default=Path('checkpoints/keepers'))
     parser.add_argument('--graph-path', type=Path, default=Path('data/processed/ucsd_walk_full.graphml'))
+    parser.add_argument('--output-dir', type=Path, default=Path('experiments/results/exp_3'),
+                        help='Output directory for results and plots')
     parser.add_argument('--no-viz', action='store_true')
     parser.add_argument('--device', type=str, default=None)
     parser.add_argument('--limit', type=int, default=None, help='Limit number of episodes')
@@ -638,7 +967,7 @@ def main():
         print(f"  MRR:              {mrr.mean:.4f}")
     
     # Save
-    output_dir = data_dir / 'visualizations' / 'exp_3'
+    output_dir = args.output_dir
     save_results(results, output_dir)
     
     if not args.no_viz:
