@@ -204,6 +204,7 @@ def load_sc_bdi_vae_model(
         hidden_dim=256,
         dropout=0.1,
         use_progress=False,
+        use_temporal=True,
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     print("  ✅ Loaded SC-BDI-VAE checkpoint (all keys matched)")

@@ -595,6 +595,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         free_bits: float = 0.5,  # NEW!
         # Options
         use_progress: bool = False,  # Disabled to test training without path progress
+        use_temporal: bool = False,  # Whether to include temporal encoding
         infonce_temperature: float = 0.1,
     ):
         super().__init__()
@@ -635,7 +636,7 @@ class SequentialConditionalBDIVAE(nn.Module):
             fusion_dim=fusion_dim,
             hidden_dim=hidden_dim,
             use_node2vec=True,
-            use_temporal=False,
+            use_temporal=use_temporal,
             use_agent=True,
         )
         

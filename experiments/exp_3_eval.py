@@ -161,6 +161,7 @@ def load_model(
             num_nodes=num_nodes, num_agents=100, num_poi_nodes=num_poi, num_categories=7,
             node_embedding_dim=64, fusion_dim=128, belief_latent_dim=32, desire_latent_dim=16,
             intention_latent_dim=32, vae_hidden_dim=128, hidden_dim=256, dropout=0.1, use_progress=False,
+            use_temporal=True,
             **config.kwargs,
         )
     elif config.model_type == 'transformer':

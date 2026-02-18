@@ -10,7 +10,20 @@ import sys
 # Add project root to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from graph_controller.world_graph import WorldGraph
-from archive.temporal_feature_enricher import TemporalFeatureEnricher, EnrichedTrajectoryDataset as ToMEnrichedDataset
+
+# Lazy import — archive.temporal_feature_enricher may not exist after repo cleanup
+_TemporalFeatureEnricher = None
+_ToMEnrichedDataset = None
+
+def _ensure_temporal_imports():
+    global _TemporalFeatureEnricher, _ToMEnrichedDataset
+    if _TemporalFeatureEnricher is None:
+        from archive.temporal_feature_enricher import (
+            TemporalFeatureEnricher,
+            EnrichedTrajectoryDataset,
+        )
+        _TemporalFeatureEnricher = TemporalFeatureEnricher
+        _ToMEnrichedDataset = EnrichedTrajectoryDataset
 
 
 class TrajectoryDataset(Dataset):
@@ -297,6 +310,7 @@ def create_dataloaders(
         Tuple of (train_loader, val_loader, test_loader)
     """
     if use_enriched:
+        _ensure_temporal_imports()
         # Check if trajectories have temporal features
         has_temporal_features = (
             train_trajectories and 
@@ -310,9 +324,9 @@ def create_dataloaders(
                 "Use enrich_and_load_data() or enrich_trajectories() first."
             )
         
-        train_dataset = ToMEnrichedDataset(train_trajectories, graph, poi_nodes)
-        val_dataset = ToMEnrichedDataset(val_trajectories, graph, poi_nodes)
-        test_dataset = ToMEnrichedDataset(test_trajectories, graph, poi_nodes)
+        train_dataset = _ToMEnrichedDataset(train_trajectories, graph, poi_nodes)
+        val_dataset = _ToMEnrichedDataset(val_trajectories, graph, poi_nodes)
+        test_dataset = _ToMEnrichedDataset(test_trajectories, graph, poi_nodes)
         
         collate_fn = collate_enriched_trajectories
     else:
@@ -406,7 +420,8 @@ def enrich_and_load_data(
     
     # Create enricher
     print("\n🔧 Step 2: Creating temporal feature enricher...")
-    enricher = TemporalFeatureEnricher(graph, simulation_duration_days=14, seed=seed)
+    _ensure_temporal_imports()
+    enricher = _TemporalFeatureEnricher(graph, simulation_duration_days=14, seed=seed)
     print(f"   ✅ Enricher ready (base walking speed: 1.4 m/s)")
     
     # Build agent map for enrichment
