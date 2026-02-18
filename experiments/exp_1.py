@@ -43,8 +43,8 @@ from models.baseline_transformer.baseline_transformer_model import PerNodeTransf
 from models.baseline_transformer.baseline_transformer_dataset import TransformerTrajectoryDataset, collate_transformer_trajectories
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
 from models.baseline_lstm.baseline_lstm_dataset import PerNodeTrajectoryDataset, collate_per_node_samples
-from models.vae_bdi_simple.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.new_bdi.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
+from models.new_bdi.bdi_dataset_v3 import BDIVAEDatasetV3, collate_bdi_samples_v3
 from models.utils.data_loader import load_simulation_data
 from models.utils.utils import get_device
 from torch.utils.data import DataLoader, Subset
@@ -387,8 +387,6 @@ def load_sc_bdi_vae_model(
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
     # Create model with same config as training
-    # Note: vae_bdi_simple model has use_temporal=True by default,
-    # matching the architecture used during training
     model = create_sc_bdi_vae_v3(
         num_nodes=num_nodes,
         num_agents=num_agents,
@@ -406,7 +404,7 @@ def load_sc_bdi_vae_model(
         hidden_dim=256,
         dropout=0.1,
         # Options
-        use_progress=True,
+        use_progress=False,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -431,7 +429,7 @@ def evaluate_sc_bdi_vae_at_proportion(
     """
     Evaluate SC-BDI-VAE V3 model at a specific trajectory proportion.
     
-    Uses BDIVAEDatasetV2 and collate_bdi_samples_v2 for proper data handling.
+    Uses BDIVAEDatasetV3 and collate_bdi_samples_v3 for proper data handling.
     
     Args:
         model: Trained SC-BDI-VAE V3 model
@@ -466,16 +464,15 @@ def evaluate_sc_bdi_vae_at_proportion(
     if len(truncated_trajs) == 0:
         return {'top1': 0.0, 'top5': 0.0, 'brier': 2.0}
     
-    # Create dataset using BDIVAEDatasetV2
+    # Create dataset using BDIVAEDatasetV3
     # This will expand each trajectory into per-node samples
     # We only care about the final sample from each trajectory (last observation point)
-    dataset = BDIVAEDatasetV2(
+    dataset = BDIVAEDatasetV3(
         trajectories=truncated_trajs,
         graph=graph,
         poi_nodes=poi_nodes,
         min_traj_length=1,
         include_progress=True,
-        include_temporal=True,
     )
     
     if len(dataset) == 0:
@@ -498,7 +495,7 @@ def evaluate_sc_bdi_vae_at_proportion(
         eval_dataset,
         batch_size=batch_size,
         shuffle=False,
-        collate_fn=collate_bdi_samples_v2,
+        collate_fn=collate_bdi_samples_v3,
         num_workers=0
     )
     
@@ -513,22 +510,12 @@ def evaluate_sc_bdi_vae_at_proportion(
         agent_ids = batch['agent_id'].to(device)
         path_progress = batch['path_progress'].to(device)
         
-        # Temporal features (from enriched trajectories)
-        hours = batch['hour'].to(device) if 'hour' in batch else None
-        days = batch['day_of_week'].to(device) if 'day_of_week' in batch else None
-        deltas = batch['history_temporal_deltas'].to(device) if 'history_temporal_deltas' in batch else None
-        velocities = batch['history_velocities'].to(device) if 'history_velocities' in batch else None
-        
         # Forward pass (inference only, no loss computation)
         outputs = model(
             history_node_indices=history_node_indices,
             history_lengths=history_lengths,
             agent_ids=agent_ids,
             path_progress=path_progress,
-            hours=hours,
-            days=days,
-            deltas=deltas,
-            velocities=velocities,
             compute_loss=False,
         )
         
@@ -935,7 +922,7 @@ def main():
                 'name': 'LSTM'
             },
             {
-                'path': 'checkpoints/keepers/best_model-OURS.pt',
+                'path': 'checkpoints/keepers/scbdi_no_progress.pt',
                 'type': 'sc_bdi_vae',
                 'name': 'SC-BDI-VAE'
             },

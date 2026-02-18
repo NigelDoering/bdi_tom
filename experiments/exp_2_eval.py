@@ -22,7 +22,7 @@ Metrics per observation fraction f ∈ {0.1, 0.2, 0.5, 0.75, 0.9}:
 Supported models (same loading logic as exp_1):
   • transformer — PerNodeTransformerPredictor
   • lstm        — PerNodeToMPredictor
-  • sc_bdi_vae  — SequentialConditionalBDIVAE  (vae_bdi_simple, use_temporal=True)
+  • sc_bdi_vae  — SequentialConditionalBDIVAE  (new_bdi)
 
 Usage:
     # Run all three models on both variants:
@@ -66,13 +66,13 @@ if PROJECT_ROOT not in sys.path:
 # ── model imports (matching exp_1.py exactly) ────────────────────────────────
 from models.baseline_transformer.baseline_transformer_model import PerNodeTransformerPredictor
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
-from models.vae_bdi_simple.bdi_vae_v3_model import (
+from models.new_bdi.bdi_vae_v3_model import (
     SequentialConditionalBDIVAE,
     create_sc_bdi_vae_v3,
 )
-from models.vae_bdi_simple.bdi_dataset_v2 import (
-    BDIVAEDatasetV2,
-    collate_bdi_samples_v2,
+from models.new_bdi.bdi_dataset_v3 import (
+    BDIVAEDatasetV3,
+    collate_bdi_samples_v3,
 )
 from graph_controller.world_graph import WorldGraph
 from models.utils.utils import get_device
@@ -203,7 +203,7 @@ def load_sc_bdi_vae_model(
         vae_hidden_dim=128,
         hidden_dim=256,
         dropout=0.1,
-        use_progress=True,
+        use_progress=False,
     )
     model.load_state_dict(checkpoint["model_state_dict"])
     print("  ✅ Loaded SC-BDI-VAE checkpoint (all keys matched)")
@@ -402,7 +402,7 @@ def _evaluate_sc_bdi_vae(
 ) -> Dict[float, Dict[str, List[float]]]:
     """Evaluate SC-BDI-VAE on distractor episodes.
 
-    Uses BDIVAEDatasetV2 + collate_bdi_samples_v2 for correct temporal
+    Uses BDIVAEDatasetV3 + collate_bdi_samples_v3 for correct
     feature handling (matching exp_1.py).
     """
     model.eval()
@@ -414,7 +414,7 @@ def _evaluate_sc_bdi_vae(
         d_probs, g_probs, top1, top5, brier = [], [], [], [], []
         print(f"    fraction {frac:.2f} ({frac_i+1}/{n_fracs}) ...")
 
-        # Build pseudo-trajectories for BDIVAEDatasetV2
+        # Build pseudo-trajectories for BDIVAEDatasetV3
         trajs_for_dataset: List[Dict] = []
         episode_meta: List[Tuple[int, int, int]] = []  # (traj_idx, goal_poi_idx, dist_poi_idx)
 
@@ -454,13 +454,12 @@ def _evaluate_sc_bdi_vae(
             continue
 
         # Create dataset — takes the last sample per trajectory for full-prefix prediction
-        dataset = BDIVAEDatasetV2(
+        dataset = BDIVAEDatasetV3(
             trajectories=trajs_for_dataset,
             graph=graph,
             poi_nodes=poi_nodes,
             min_traj_length=1,
             include_progress=True,
-            include_temporal=True,
         )
 
         # Map traj_idx → last sample index (= prediction from the full truncated prefix)
@@ -485,7 +484,7 @@ def _evaluate_sc_bdi_vae(
         eval_dataset = Subset(dataset, sample_indices)
         loader = DataLoader(
             eval_dataset, batch_size=batch_size, shuffle=False,
-            collate_fn=collate_bdi_samples_v2, num_workers=0,
+            collate_fn=collate_bdi_samples_v3, num_workers=0,
         )
 
         all_probs: List[torch.Tensor] = []
@@ -495,20 +494,11 @@ def _evaluate_sc_bdi_vae(
             agents = batch["agent_id"].to(device)
             progress = batch["path_progress"].to(device)
 
-            hours = batch["hour"].to(device) if "hour" in batch else None
-            days = batch["day_of_week"].to(device) if "day_of_week" in batch else None
-            deltas = batch["history_temporal_deltas"].to(device) if "history_temporal_deltas" in batch else None
-            vels = batch["history_velocities"].to(device) if "history_velocities" in batch else None
-
             outputs = model(
                 history_node_indices=history,
                 history_lengths=lengths,
                 agent_ids=agents,
                 path_progress=progress,
-                hours=hours,
-                days=days,
-                deltas=deltas,
-                velocities=vels,
                 compute_loss=False,
             )
             all_probs.append(F.softmax(outputs["goal"], dim=-1).cpu())
@@ -806,7 +796,7 @@ def main() -> None:
              "type": "transformer", "name": "Transformer"},
             {"path": "checkpoints/keepers/lstm_best_model.pt",
              "type": "lstm", "name": "LSTM"},
-            {"path": "checkpoints/keepers/best_model-OURS.pt",
+            {"path": "checkpoints/keepers/scbdi_no_progress.pt",
              "type": "sc_bdi_vae", "name": "SC-BDI-VAE"},
         ]
         print(f"\n🚀 Running all {len(models_to_run)} models ...")

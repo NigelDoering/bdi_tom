@@ -8,7 +8,7 @@ This module provides tools to:
 4. Diagnose posterior collapse and other VAE issues
 
 Usage:
-    from models.vae_bdi_simple.visualize_training import TrainingVisualizer
+    from models.new_bdi.visualize_training import TrainingVisualizer
     
     visualizer = TrainingVisualizer(save_dir='artifacts/diagnostics')
     visualizer.visualize_latent_space(model, val_loader, device, epoch=10)
@@ -658,6 +658,6 @@ def add_visualization_to_training(
 if __name__ == '__main__':
     print("Run this module's functions during training to visualize embeddings.")
     print("Example:")
-    print("  from models.vae_bdi_simple.visualize_training import TrainingVisualizer")
+    print("  from models.new_bdi.visualize_training import TrainingVisualizer")
     print("  visualizer = TrainingVisualizer()")
     print("  visualizer.visualize_latent_space(model, val_loader, device, epoch=10)")

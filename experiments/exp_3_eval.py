@@ -39,7 +39,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from graph_controller.world_graph import WorldGraph
-from models.vae_bdi_simple.bdi_vae_v3_model import create_sc_bdi_vae_v3
+from models.new_bdi.bdi_vae_v3_model import create_sc_bdi_vae_v3
 from models.baseline_transformer.baseline_transformer_model import PerNodeTransformerPredictor
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
 
@@ -160,7 +160,7 @@ def load_model(
         model = create_sc_bdi_vae_v3(
             num_nodes=num_nodes, num_agents=100, num_poi_nodes=num_poi, num_categories=7,
             node_embedding_dim=64, fusion_dim=128, belief_latent_dim=32, desire_latent_dim=16,
-            intention_latent_dim=32, vae_hidden_dim=128, hidden_dim=256, dropout=0.1, use_progress=True,
+            intention_latent_dim=32, vae_hidden_dim=128, hidden_dim=256, dropout=0.1, use_progress=False,
             **config.kwargs,
         )
     elif config.model_type == 'transformer':
@@ -939,7 +939,7 @@ def main():
     
     # Model configs
     model_configs = [
-        ModelConfig('SC-BDI-VAE', args.checkpoint_dir / 'best_model-OURS.pt', 'sc_bdi_vae', 
+        ModelConfig('SC-BDI-VAE', args.checkpoint_dir / 'scbdi_no_progress.pt', 'sc_bdi_vae', 
                     use_temporal=args.use_temporal),
         ModelConfig('Transformer', args.checkpoint_dir / 'baseline_transformer_best_model.pt', 'transformer'),
         ModelConfig('LSTM', args.checkpoint_dir / 'lstm_best_model.pt', 'lstm'),
