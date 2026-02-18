@@ -1,5 +1,5 @@
 """
-ENHANCED BDI VAE DATASET V2 FOR C²D-BDI MODEL
+ENHANCED BDI VAE DATASET V3 FOR C²D-BDI MODEL
 
 This dataset adds critical features for the Causally-Constrained Disentangled BDI VAE:
 
@@ -26,7 +26,7 @@ from tqdm import tqdm
 import networkx as nx
 
 
-class BDIVAEDatasetV2(Dataset):
+class BDIVAEDatasetV3(Dataset):
     """
     Enhanced per-node dataset for C²D-BDI model.
     
@@ -196,12 +196,12 @@ class BDIVAEDatasetV2(Dataset):
         ]
 
 
-def collate_bdi_samples_v2(batch: List[Dict]) -> Dict:
+def collate_bdi_samples_v3(batch: List[Dict]) -> Dict:
     """
     Collate enhanced BDI samples into a batch.
     
     Args:
-        batch: List of samples from BDIVAEDatasetV2
+        batch: List of samples from BDIVAEDatasetV3
     
     Returns:
         Dict with batched tensors including path_progress and traj_id
@@ -249,7 +249,7 @@ class TemporalConsistencyBatchSampler:
     
     def __init__(
         self,
-        dataset: BDIVAEDatasetV2,
+        dataset: BDIVAEDatasetV3,
         batch_size: int,
         samples_per_trajectory: int = 4,
         shuffle: bool = True,
@@ -257,7 +257,7 @@ class TemporalConsistencyBatchSampler:
     ):
         """
         Args:
-            dataset: BDIVAEDatasetV2 instance
+            dataset: BDIVAEDatasetV3 instance
             batch_size: Total batch size
             samples_per_trajectory: How many samples per trajectory in a batch
             shuffle: Whether to shuffle trajectories

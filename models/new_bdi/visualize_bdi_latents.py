@@ -70,7 +70,7 @@ warnings.filterwarnings('ignore')
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.vae_bdi_simple.bdi_dataset_v3 import BDIVAEDatasetV3, collate_bdi_samples_v3
 from models.vae_bdi_simple.bdi_vae_v3_model import create_sc_bdi_vae_v3
 
 
@@ -180,7 +180,7 @@ def load_model_and_data(
     
     # Create dataset
     print("\n📊 Creating dataset...")
-    dataset = BDIVAEDatasetV2(
+    dataset = BDIVAEDatasetV3(
         trajectories=split_trajs,
         graph=graph,
         poi_nodes=poi_nodes,
@@ -252,7 +252,7 @@ def load_model_and_data(
     
     dataloader = DataLoader(
         dataset, batch_size=256, shuffle=False, num_workers=0,
-        collate_fn=collate_bdi_samples_v2,
+        collate_fn=collate_bdi_samples_v3,
     )
     
     all_data = {
