@@ -594,7 +594,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         # Free-bits
         free_bits: float = 0.5,  # NEW!
         # Options
-        use_progress: bool = True,
+        use_progress: bool = False,  # Disabled to test training without path progress
         infonce_temperature: float = 0.1,
     ):
         super().__init__()

@@ -907,7 +907,7 @@ def main():
         infonce_weight=config.infonce_weight,
         desire_goal_weight=config.desire_goal_weight,
         free_bits=config.free_bits,
-        use_progress=True,
+        use_progress=False,  # Disabled to test training without path progress
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
