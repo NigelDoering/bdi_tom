@@ -386,6 +386,10 @@ def load_sc_bdi_vae_model(
     """Load SC-BDI-VAE V3 model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
+    # Detect whether checkpoint was trained with path progress
+    has_progress = any('progress' in k for k in checkpoint['model_state_dict'].keys())
+    print(f"  ℹ️  Checkpoint use_progress={has_progress}")
+    
     # Create model with same config as training
     model = create_sc_bdi_vae_v3(
         num_nodes=num_nodes,
@@ -404,8 +408,7 @@ def load_sc_bdi_vae_model(
         hidden_dim=256,
         dropout=0.1,
         # Options
-        use_progress=False,
-        use_temporal=True,
+        use_progress=has_progress,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
