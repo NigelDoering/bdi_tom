@@ -70,9 +70,9 @@ from models.new_bdi.bdi_vae_v3_model import (
     SequentialConditionalBDIVAE,
     create_sc_bdi_vae_v3,
 )
-from models.new_bdi.bdi_dataset_v3 import (
-    BDIVAEDatasetV3,
-    collate_bdi_samples_v3,
+from models.new_bdi.bdi_dataset_v2 import (
+    BDIVAEDatasetV2,
+    collate_bdi_samples_v2,
 )
 from graph_controller.world_graph import WorldGraph
 from models.utils.utils import get_device

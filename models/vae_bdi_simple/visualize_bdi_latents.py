@@ -180,7 +180,7 @@ def load_model_and_data(
     
     # Create dataset
     print("\n📊 Creating dataset...")
-    dataset = BDIVAEDatasetV3(
+    dataset = BDIVAEDatasetV2(
         trajectories=split_trajs,
         graph=graph,
         poi_nodes=poi_nodes,
@@ -252,7 +252,7 @@ def load_model_and_data(
     
     dataloader = DataLoader(
         dataset, batch_size=256, shuffle=False, num_workers=0,
-        collate_fn=collate_bdi_samples_v3,
+        collate_fn=collate_bdi_samples_v2,
     )
     
     all_data = {
