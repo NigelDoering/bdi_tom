@@ -47,8 +47,8 @@ import networkx as nx
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
-from models.vae_bdi_simple.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
+from models.new_bdi.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.new_bdi.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
 
 # Try to import v2 model for older checkpoints
 try:

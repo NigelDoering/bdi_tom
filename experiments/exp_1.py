@@ -43,8 +43,8 @@ from models.baseline_transformer.baseline_transformer_model import PerNodeTransf
 from models.baseline_transformer.baseline_transformer_dataset import TransformerTrajectoryDataset, collate_transformer_trajectories
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
 from models.baseline_lstm.baseline_lstm_dataset import PerNodeTrajectoryDataset, collate_per_node_samples
-from models.vae_bdi_simple.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.new_bdi.bdi_vae_v3_model import SequentialConditionalBDIVAE, create_sc_bdi_vae_v3
+from models.new_bdi.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
 from models.utils.data_loader import load_simulation_data
 from models.utils.utils import get_device
 from torch.utils.data import DataLoader, Subset

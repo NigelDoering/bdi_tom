@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import torch
 import networkx as nx
 from graph_controller.world_graph import WorldGraph
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
-from models.vae_bdi_simple.bdi_vae_v3_model import create_sc_bdi_vae_v3
+from models.new_bdi.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.new_bdi.bdi_vae_v3_model import create_sc_bdi_vae_v3
 
 print("Loading graph...", flush=True)
 graph = nx.read_graphml('data/processed/ucsd_walk_full.graphml')

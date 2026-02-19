@@ -25,8 +25,8 @@ import numpy as np
 # Add project root
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from models.vae_bdi_simple.bdi_vae_v3_model import create_sc_bdi_vae_v3
-from models.vae_bdi_simple.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
+from models.new_bdi.bdi_vae_v3_model import create_sc_bdi_vae_v3
+from models.new_bdi.bdi_dataset_v2 import BDIVAEDatasetV2, collate_bdi_samples_v2
 from models.utils.utils import get_device
 from torch.utils.data import DataLoader
 

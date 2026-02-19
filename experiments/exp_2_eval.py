@@ -52,11 +52,11 @@ if PROJECT_ROOT not in sys.path:
 # ── model imports (matching exp_1.py exactly) ────────────────────────────────
 from models.baseline_transformer.baseline_transformer_model import PerNodeTransformerPredictor
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
-from models.vae_bdi_simple.bdi_vae_v3_model import (
+from models.new_bdi.bdi_vae_v3_model import (
     SequentialConditionalBDIVAE,
     create_sc_bdi_vae_v3,
 )
-from models.vae_bdi_simple.bdi_dataset_v2 import (
+from models.new_bdi.bdi_dataset_v2 import (
     BDIVAEDatasetV2,
     collate_bdi_samples_v2,
 )

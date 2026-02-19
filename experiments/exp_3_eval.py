@@ -39,7 +39,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from graph_controller.world_graph import WorldGraph
-from models.vae_bdi_simple.bdi_vae_v3_model import create_sc_bdi_vae_v3
+from models.new_bdi.bdi_vae_v3_model import create_sc_bdi_vae_v3
 from models.baseline_transformer.baseline_transformer_model import PerNodeTransformerPredictor
 from models.baseline_lstm.baseline_lstm_model import PerNodeToMPredictor
 
