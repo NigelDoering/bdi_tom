@@ -834,7 +834,7 @@ def main():
     train_trajs = [trajectories[i] for i in train_idx]
     val_trajs = [trajectories[i] for i in val_idx]
     
-    train_dataset = BDIVAEDatasetV2(
+    train_dataset = BDIVAEDatasetV3(
         trajectories=train_trajs,
         graph=graph,
         poi_nodes=poi_nodes,
@@ -843,7 +843,7 @@ def main():
         include_temporal=True,
     )
     
-    val_dataset = BDIVAEDatasetV2(
+    val_dataset = BDIVAEDatasetV3(
         trajectories=val_trajs,
         graph=graph,
         poi_nodes=poi_nodes,
@@ -861,7 +861,7 @@ def main():
         batch_size=config.batch_size,
         shuffle=True,
         num_workers=config.num_workers,
-        collate_fn=collate_bdi_samples_v2,
+        collate_fn=collate_bdi_samples_v3,
         pin_memory=True,
     )
     
@@ -870,7 +870,7 @@ def main():
         batch_size=config.batch_size,
         shuffle=False,
         num_workers=config.num_workers,
-        collate_fn=collate_bdi_samples_v2,
+        collate_fn=collate_bdi_samples_v3,
         pin_memory=True,
     )
     
