@@ -730,7 +730,7 @@ def main():
             'num_pois': len(poi_nodes),
         })
         wandb_logger = WandBLogger(
-            project_name="tom-compare-v1", 
+            project_name="bdi-tom-v3", 
             config=config,
             run_name=args.wandb_run_name
         )
