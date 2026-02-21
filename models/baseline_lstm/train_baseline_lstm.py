@@ -203,9 +203,11 @@ def train_epoch(
         next_node_idx = batch['next_node_idx'].to(device)
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         
         # Forward pass
-        predictions = model(history_node_indices, history_lengths)
+        predictions = model(history_node_indices, history_lengths, agent_ids, hours)
         
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
@@ -300,10 +302,12 @@ def validate(
         next_node_idx = batch['next_node_idx'].to(device)
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         path_progress = batch['path_progress']  # keep on CPU for binning
         
         # Forward pass
-        predictions = model(history_node_indices, history_lengths)
+        predictions = model(history_node_indices, history_lengths, agent_ids, hours)
         
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
