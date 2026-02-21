@@ -105,10 +105,13 @@ class TransformerTrajectoryDataset(Dataset):
             valid_count += 1
             
             # Store the FULL trajectory (no expansion!)
+            # Preserve agent_id and hour so they flow through to __getitem__
             self.trajectories.append({
                 'path': path,
                 'goal_node': goal_node,
                 'traj_idx': traj_idx,
+                'agent_id': traj.get('agent_id', 0),
+                'hour': traj.get('hour', 12),
             })
         
         print(f"✅ Loaded {valid_count} valid trajectories")

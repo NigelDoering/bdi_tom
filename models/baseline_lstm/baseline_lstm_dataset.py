@@ -138,6 +138,8 @@ class PerNodeTrajectoryDataset(Dataset):
                     'goal_cat_idx': goal_cat_idx,
                     'goal_idx': goal_idx,
                     'path_progress': path_progress,
+                    'agent_id': traj.get('agent_id', 0),
+                    'hour': traj.get('hour', 12),
                 })
                 
                 sample_count += 1
@@ -199,4 +201,6 @@ def collate_per_node_samples(batch: List[Dict]) -> Dict:
         'goal_cat_idx': torch.tensor([s['goal_cat_idx'] for s in batch], dtype=torch.long),
         'goal_idx': torch.tensor([s['goal_idx'] for s in batch], dtype=torch.long),
         'path_progress': torch.tensor([s.get('path_progress', 0.0) for s in batch], dtype=torch.float),
+        'agent_id': torch.tensor([s.get('agent_id', 0) for s in batch], dtype=torch.long),  # [batch]
+        'hours': torch.tensor([s.get('hour', 12) for s in batch], dtype=torch.float),  # [batch]
     }

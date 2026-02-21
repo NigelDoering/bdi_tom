@@ -16,7 +16,7 @@ The model takes trajectory history as input and predicts:
 """
 
 import os
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 # Set MPS fallback for Mac compatibility
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1'
@@ -161,6 +161,8 @@ class PerNodeToMPredictor(nn.Module):
         self,
         history_node_indices: torch.Tensor,  # [batch, seq_len]
         history_lengths: torch.Tensor,        # [batch]
+        agent_ids: Optional[torch.Tensor] = None,       # [batch]
+        hours: Optional[torch.Tensor] = None,           # [batch]
     ) -> Dict[str, torch.Tensor]:
         """
         Forward pass: history → embeddings → predictions.
@@ -168,6 +170,8 @@ class PerNodeToMPredictor(nn.Module):
         Args:
             history_node_indices: [batch, seq_len] node indices
             history_lengths: [batch] actual sequence length before padding
+            agent_ids: [batch] agent IDs for agent embedding
+            hours: [batch] hour of day for temporal context
         
         Returns:
             Dict with keys: 'goal', 'nextstep', 'category', 'embeddings'
@@ -176,34 +180,36 @@ class PerNodeToMPredictor(nn.Module):
         device = history_node_indices.device
         
         # ================================================================
-        # STEP 1: COMPUTE TEMPORAL FEATURES FROM HISTORY
-        # ================================================================
-        hours, velocities, temporal_deltas = self._compute_temporal_features(
-            history_node_indices,
-            history_lengths,
-        )
-        
-        # ================================================================
         # STEP 2: ENCODE TRAJECTORY HISTORY WITH UNIFIED PIPELINE
         # ================================================================
-        # Get node embeddings only (simplified for per-node training)
-        # We'll use a simpler approach that avoids the temporal encoder mismatch
-        node_emb = self.embedding_pipeline.encode_nodes(
-            history_node_indices,
-            spatial_coords=None,
-            categories=None,
-        )  # [batch, seq_len, node_embedding_dim]
+        # Build a padding mask: 1 for valid positions, 0 for padding
+        positions = torch.arange(seq_len, device=device).unsqueeze(0)  # (1, S)
+        mask = (positions < history_lengths.unsqueeze(1)).float()       # (B, S)
         
-        # Expand to fusion_dim by simple projection/padding
-        # This ensures compatibility with the LSTM input
-        batch_size, seq_len, node_dim = node_emb.shape
-        if node_dim < self.fusion_dim:
-            # Pad with zeros to reach fusion_dim
-            padding = torch.zeros(batch_size, seq_len, self.fusion_dim - node_dim, device=device)
-            history_embeddings = torch.cat([node_emb, padding], dim=-1)
+        # Expand scalar hour to sequence-level for the temporal encoder
+        if hours is not None:
+            hours_seq = hours.unsqueeze(1).expand(-1, seq_len)  # (B, S)
         else:
-            # If node_dim >= fusion_dim, take only the first fusion_dim channels
-            history_embeddings = node_emb[:, :, :self.fusion_dim]
+            hours_seq = torch.full((batch_size, seq_len), 12.0, device=device)
+        
+        # Default agent_ids to zeros if not provided
+        if agent_ids is None:
+            agent_ids = torch.zeros(batch_size, dtype=torch.long, device=device)
+        
+        velocities = torch.ones(batch_size, seq_len, device=device)
+        
+        # Full unified embedding pipeline (node + temporal + agent fusion)
+        history_embeddings = self.embedding_pipeline(
+            node_ids=history_node_indices,
+            agent_ids=agent_ids,
+            hours=hours_seq,
+            velocities=velocities,
+            mask=mask,
+            return_per_node=True,
+        )  # [batch, seq_len, fusion_dim]
+        # If the pipeline returns a tuple (emb, components), take the emb
+        if isinstance(history_embeddings, tuple):
+            history_embeddings = history_embeddings[0]
         
         # ================================================================
         # STEP 3: AGGREGATE HISTORY WITH LSTM
