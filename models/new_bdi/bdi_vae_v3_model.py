@@ -133,8 +133,17 @@ class GaussianDecoder(nn.Module):
         return self.net(z)
 
 
-def reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-    """Reparameterization trick."""
+def reparameterize(mu: torch.Tensor, logvar: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+    """Reparameterization trick.
+    
+    Args:
+        mu: Mean of the posterior distribution.
+        logvar: Log-variance of the posterior distribution.
+        deterministic: If True, return mu directly (no sampling).
+                       Use True at inference time for reproducible results.
+    """
+    if deterministic:
+        return mu
     logvar = torch.clamp(logvar, min=-10.0, max=10.0)
     std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
@@ -362,7 +371,7 @@ class BeliefVAE(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         mu, logvar = self.encoder(x)
-        z = reparameterize(mu, logvar)
+        z = reparameterize(mu, logvar, deterministic=not self.training)
         recon = self.decoder(z)
         transition_logits = self.transition_head(z)
         
@@ -421,7 +430,7 @@ class DesireVAE(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         mu, logvar = self.encoder(x)
-        z = reparameterize(mu, logvar)
+        z = reparameterize(mu, logvar, deterministic=not self.training)
         recon = self.decoder(z)
         category_logits = self.category_head(z)
         goal_logits = self.goal_head(z)  # NEW!
@@ -493,7 +502,7 @@ class IntentionVAE(nn.Module):
         
         # Posterior: q(z_i | x)
         q_mu, q_logvar = self.encoder(x)
-        z = reparameterize(q_mu, q_logvar)
+        z = reparameterize(q_mu, q_logvar, deterministic=not self.training)
         
         # Conditional prior: p(z_i | z_b, z_d)
         p_mu, p_logvar = self.prior_net(belief_z, desire_z)
