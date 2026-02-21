@@ -840,7 +840,7 @@ def main():
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
         include_progress=True,
-        include_temporal=True,
+        #include_temporal=True,
     )
     
     val_dataset = BDIVAEDatasetV3(
@@ -849,7 +849,7 @@ def main():
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
         include_progress=True,
-        include_temporal=True,
+        #include_temporal=True,
     )
     
     print(f"   ✅ Train samples: {len(train_dataset)}")
@@ -907,7 +907,7 @@ def main():
         infonce_weight=config.infonce_weight,
         desire_goal_weight=config.desire_goal_weight,
         free_bits=config.free_bits,
-        use_progress=True,
+        use_progress=False,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
