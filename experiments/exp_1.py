@@ -270,9 +270,11 @@ def evaluate_lstm_at_proportion(
         history_indices = batch['history_node_indices'].to(device)
         history_lengths = batch['history_lengths'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         
         # Forward pass
-        predictions = model(history_indices, history_lengths)
+        predictions = model(history_indices, history_lengths, agent_ids, hours)
         goal_logits = predictions['goal']  # [batch, num_poi_nodes]
         
         all_logits.append(goal_logits.cpu())
@@ -512,7 +514,16 @@ def evaluate_sc_bdi_vae_at_proportion(
         history_lengths = batch['history_lengths'].to(device)
         goal_idx = batch['goal_idx'].to(device)
         agent_ids = batch['agent_id'].to(device)
-        path_progress = batch['path_progress'].to(device)
+        
+        # FIX: Use actual trajectory proportion as path_progress.
+        # The dataset computes progress relative to the truncated trajectory
+        # length, so the last sample always gets progress ≈ 1.0 regardless
+        # of how much of the original trajectory was observed. Override with
+        # the true proportion value so the model receives the correct signal.
+        path_progress = torch.full(
+            (history_node_indices.shape[0],), proportion,
+            dtype=torch.float, device=device
+        )
         
         # Forward pass (inference only, no loss computation)
         outputs = model(
