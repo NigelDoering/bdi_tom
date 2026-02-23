@@ -640,6 +640,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         use_progress: bool = False,  # Disabled to test training without path progress
         use_temporal: bool = False,  # Whether to include temporal encoding
         infonce_temperature: float = 0.1,
+        use_skip_connection: bool = False,  # Skip connection from unified_embedding to prediction heads
     ):
         super().__init__()
         
@@ -647,6 +648,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
         self.fusion_dim = fusion_dim
+        self.use_skip_connection = use_skip_connection
         
         # Store dimensions
         self.belief_latent_dim = belief_latent_dim
@@ -776,14 +778,17 @@ class SequentialConditionalBDIVAE(nn.Module):
             nn.Dropout(dropout),
         )
         
-        # Final prediction: from intention latent
-        self.goal_head = nn.Linear(hidden_dim, num_poi_nodes)
-        self.nextstep_head = nn.Linear(hidden_dim, num_nodes)
-        self.category_head = nn.Linear(hidden_dim, num_categories)
+        # Skip connection widens the prediction head input
+        pred_head_dim = hidden_dim + fusion_dim if use_skip_connection else hidden_dim
+        
+        # Final prediction: from intention latent (+ skip)
+        self.goal_head = nn.Linear(pred_head_dim, num_poi_nodes)
+        self.nextstep_head = nn.Linear(pred_head_dim, num_nodes)
+        self.category_head = nn.Linear(pred_head_dim, num_categories)
         
         if use_progress:
             self.progress_head = nn.Sequential(
-                nn.Linear(hidden_dim, 64),
+                nn.Linear(pred_head_dim, 64),
                 nn.GELU(),
                 nn.Linear(64, 1),
                 nn.Sigmoid(),
@@ -966,6 +971,10 @@ class SequentialConditionalBDIVAE(nn.Module):
         # PREDICTIONS
         # ================================================================
         pred_features = self.intention_projection(intention_z)
+        
+        # Skip connection: concat raw unified embedding to bypass VAE bottleneck
+        if self.use_skip_connection:
+            pred_features = torch.cat([pred_features, unified_embedding], dim=-1)
         
         goal_logits = self.goal_head(pred_features)
         nextstep_logits = self.nextstep_head(pred_features)

@@ -755,6 +755,8 @@ def main():
                         help='Path to split indices')
     parser.add_argument('--gru_hidden_dim', type=int, default=128,
                     help='Hidden dim of the GRU trajectory sequence encoder')
+    parser.add_argument('--use_skip_connection', action='store_true',
+                    help='Enable skip connection from unified_embedding to prediction heads')
     
     # Model architecture
     parser.add_argument('--node_embedding_dim', type=int, default=64)
@@ -895,6 +897,7 @@ def main():
         num_poi_nodes=num_poi_nodes,
         num_categories=num_categories,
         gru_hidden_dim=config.gru_hidden_dim,
+        use_skip_connection=config.use_skip_connection,
         node_embedding_dim=config.node_embedding_dim,
         fusion_dim=config.fusion_dim,
         belief_latent_dim=config.belief_latent_dim,

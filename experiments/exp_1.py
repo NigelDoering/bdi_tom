@@ -404,6 +404,16 @@ def load_sc_bdi_vae_model(
     print(f"  ℹ️  Checkpoint use_seq_encoder={has_seq_encoder}"
           f"{f' (gru_hidden_dim={gru_hidden_dim})' if has_seq_encoder else ''}")
     
+    # Detect whether checkpoint was trained with skip connection
+    # If skip is enabled, goal_head input dim = hidden_dim + fusion_dim (256+128=384)
+    # Otherwise it's just hidden_dim (256)
+    goal_weight_key = 'goal_head.weight'
+    has_skip_connection = False
+    if goal_weight_key in state_dict:
+        goal_head_input_dim = state_dict[goal_weight_key].shape[1]
+        has_skip_connection = goal_head_input_dim > 256  # wider than hidden_dim alone
+    print(f"  ℹ️  Checkpoint use_skip_connection={has_skip_connection}")
+    
     # Create model with same config as training
     model = create_sc_bdi_vae_v3(
         num_nodes=num_nodes,
@@ -416,6 +426,8 @@ def load_sc_bdi_vae_model(
         # GRU sequence encoder
         use_seq_encoder=has_seq_encoder,
         gru_hidden_dim=gru_hidden_dim,
+        # Skip connection
+        use_skip_connection=has_skip_connection,
         # VAE dimensions
         belief_latent_dim=32,
         desire_latent_dim=16,
