@@ -387,10 +387,22 @@ def load_sc_bdi_vae_model(
 ) -> SequentialConditionalBDIVAE:
     """Load SC-BDI-VAE V3 model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    state_dict = checkpoint['model_state_dict']
     
     # Detect whether checkpoint was trained with path progress
-    has_progress = any('progress' in k for k in checkpoint['model_state_dict'].keys())
+    has_progress = any('progress' in k for k in state_dict.keys())
     print(f"  ℹ️  Checkpoint use_progress={has_progress}")
+    
+    # Detect whether checkpoint was trained with GRU sequence encoder
+    has_seq_encoder = any('seq_encoder' in k for k in state_dict.keys())
+    gru_hidden_dim = 128  # default
+    if has_seq_encoder:
+        # Infer hidden dim from GRU weight shape: weight_ih has shape (3*hidden, input)
+        gru_weight_key = 'seq_encoder.gru.weight_ih_l0'
+        if gru_weight_key in state_dict:
+            gru_hidden_dim = state_dict[gru_weight_key].shape[0] // 3
+    print(f"  ℹ️  Checkpoint use_seq_encoder={has_seq_encoder}"
+          f"{f' (gru_hidden_dim={gru_hidden_dim})' if has_seq_encoder else ''}")
     
     # Create model with same config as training
     model = create_sc_bdi_vae_v3(
@@ -401,6 +413,9 @@ def load_sc_bdi_vae_model(
         # Embedding dimensions
         node_embedding_dim=64,
         fusion_dim=128,
+        # GRU sequence encoder
+        use_seq_encoder=has_seq_encoder,
+        gru_hidden_dim=gru_hidden_dim,
         # VAE dimensions
         belief_latent_dim=32,
         desire_latent_dim=16,
