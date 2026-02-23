@@ -615,6 +615,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         node_embedding_dim: int = 64,
         fusion_dim: int = 128,
         # GRU sequence encoder
+        use_seq_encoder: bool = True,
         gru_hidden_dim: int = 128,
         # VAE dimensions
         belief_latent_dim: int = 32,
@@ -663,6 +664,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         self.category_weight = category_weight
         self.free_bits = free_bits
         self.use_progress = use_progress
+        self.use_seq_encoder = use_seq_encoder
         
         # KL annealing (controlled externally)
         self.kl_weight = 1.0  # Will be annealed during training
@@ -683,14 +685,17 @@ class SequentialConditionalBDIVAE(nn.Module):
         )
 
         # ================================================================
-        # TRAJECTORY SEQUENCE ENCODER (GRU)
+        # TRAJECTORY SEQUENCE ENCODER (GRU) — optional
         # ================================================================
-        self.seq_encoder = TrajectoryGRUEncoder(
-            input_dim=fusion_dim,
-            hidden_dim=gru_hidden_dim,
-            output_dim=fusion_dim,
-            dropout=dropout,
-        )       
+        if use_seq_encoder:
+            self.seq_encoder = TrajectoryGRUEncoder(
+                input_dim=fusion_dim,
+                hidden_dim=gru_hidden_dim,
+                output_dim=fusion_dim,
+                dropout=dropout,
+            )
+        else:
+            self.seq_encoder = None
         
         # ================================================================
         # FEATURE PROJECTIONS
@@ -865,8 +870,14 @@ class SequentialConditionalBDIVAE(nn.Module):
             if isinstance(fused_per_node, tuple):
                 fused_per_node = fused_per_node[0]
 
-            # Summarize the full trajectory with a GRU to get a single embedding
-            unified = self.seq_encoder(fused_per_node, history_lengths) #> (B, fusion_dim)
+            # Aggregate per-node embeddings into a single vector
+            if self.seq_encoder is not None:
+                unified = self.seq_encoder(fused_per_node, history_lengths)
+            else:
+                # Fallback: pick last-valid-step embedding
+                batch_indices = torch.arange(batch_size, device=device)
+                last_indices = (history_lengths - 1).clamp(min=0)
+                unified = fused_per_node[batch_indices, last_indices]
         else:
             # ---------- Fallback: node embeddings only ----------
             node_emb = self.embedding_pipeline.encode_nodes(
@@ -883,8 +894,12 @@ class SequentialConditionalBDIVAE(nn.Module):
                 )
                 node_emb = torch.cat([node_emb, padding], dim=-1)
 
-            unified = self.seq_encoder(node_emb, history_lengths) #> (B, fusion_dim)
-
+            if self.seq_encoder is not None:
+                unified = self.seq_encoder(node_emb, history_lengths)
+            else:
+                batch_indices = torch.arange(batch_size, device=device)
+                last_indices = (history_lengths - 1).clamp(min=0)
+                unified = node_emb[batch_indices, last_indices]
 
         return F.layer_norm(unified, [self.fusion_dim])
     
