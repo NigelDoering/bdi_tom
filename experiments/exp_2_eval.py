@@ -70,9 +70,9 @@ from models.new_bdi.bdi_vae_v3_model import (
     SequentialConditionalBDIVAE,
     create_sc_bdi_vae_v3,
 )
-from models.new_bdi.bdi_dataset_v2 import (
-    BDIVAEDatasetV2,
-    collate_bdi_samples_v2,
+from models.new_bdi.bdi_dataset_v3 import (
+    BDIVAEDatasetV3,
+    collate_bdi_samples_v3,
 )
 from graph_controller.world_graph import WorldGraph
 from models.utils.utils import get_device
@@ -190,6 +190,28 @@ def load_sc_bdi_vae_model(
     checkpoint_path: str, num_nodes: int, num_poi_nodes: int, num_agents: int, device: torch.device
 ) -> SequentialConditionalBDIVAE:
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    state_dict = checkpoint["model_state_dict"]
+
+    # Auto-detect features from checkpoint keys
+    has_progress = any('progress' in k for k in state_dict.keys())
+    print(f"  ℹ️  Checkpoint use_progress={has_progress}")
+
+    has_seq_encoder = any('seq_encoder' in k for k in state_dict.keys())
+    gru_hidden_dim = 128
+    if has_seq_encoder:
+        gru_weight_key = 'seq_encoder.gru.weight_ih_l0'
+        if gru_weight_key in state_dict:
+            gru_hidden_dim = state_dict[gru_weight_key].shape[0] // 3
+    print(f"  ℹ️  Checkpoint use_seq_encoder={has_seq_encoder}"
+          f"{f' (gru_hidden_dim={gru_hidden_dim})' if has_seq_encoder else ''}")
+
+    goal_weight_key = 'goal_head.weight'
+    has_skip_connection = False
+    if goal_weight_key in state_dict:
+        goal_head_input_dim = state_dict[goal_weight_key].shape[1]
+        has_skip_connection = goal_head_input_dim > 256
+    print(f"  ℹ️  Checkpoint use_skip_connection={has_skip_connection}")
+
     model = create_sc_bdi_vae_v3(
         num_nodes=num_nodes,
         num_agents=num_agents,
@@ -197,16 +219,18 @@ def load_sc_bdi_vae_model(
         num_categories=7,
         node_embedding_dim=64,
         fusion_dim=128,
+        use_seq_encoder=has_seq_encoder,
+        gru_hidden_dim=gru_hidden_dim,
+        use_skip_connection=has_skip_connection,
         belief_latent_dim=32,
         desire_latent_dim=16,
         intention_latent_dim=32,
         vae_hidden_dim=128,
         hidden_dim=256,
         dropout=0.1,
-        use_progress=False,
-        use_temporal=True,
+        use_progress=has_progress,
     )
-    model.load_state_dict(checkpoint["model_state_dict"])
+    model.load_state_dict(state_dict)
     print("  ✅ Loaded SC-BDI-VAE checkpoint (all keys matched)")
     model = model.to(device)
     model.eval()
@@ -248,7 +272,7 @@ def _record(
     top5.append(1.0 if goal_idx in top5_preds else 0.0)
     one_hot = np.zeros(num_pois)
     one_hot[goal_idx] = 1.0
-    brier.append(float(np.sum((probs.cpu().numpy() - one_hot) ** 2)))
+    brier.append(float(np.mean((probs.cpu().numpy() - one_hot) ** 2)))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -291,7 +315,13 @@ def _evaluate_transformer(
             dist = ep["distractor_goal"]
             if goal not in poi_to_idx or dist not in poi_to_idx:
                 continue
-            items.append((indices, poi_to_idx[goal], poi_to_idx[dist]))
+            agent_str = ep.get("agent_id", "agent_000")
+            try:
+                agent_int = int(agent_str.split("_")[-1])
+            except (ValueError, AttributeError):
+                agent_int = 0
+            hour = int(ep.get("observation_hour", 12))
+            items.append((indices, poi_to_idx[goal], poi_to_idx[dist], agent_int, hour))
 
         # Batch inference
         n_batches = (len(items) + batch_size - 1) // batch_size
@@ -303,15 +333,20 @@ def _evaluate_transformer(
             pad_mask = torch.ones(len(batch), max_len, dtype=torch.bool, device=device)
             seq_lens = []
             goal_idxs, dist_idxs = [], []
+            agent_ids_list, hours_list = [], []
 
-            for j, (ids, gi, di) in enumerate(batch):
+            for j, (ids, gi, di, ag, hr) in enumerate(batch):
                 node_tensor[j, : len(ids)] = torch.tensor(ids, dtype=torch.long)
                 pad_mask[j, : len(ids)] = False
                 seq_lens.append(len(ids))
                 goal_idxs.append(gi)
                 dist_idxs.append(di)
+                agent_ids_list.append(ag)
+                hours_list.append(hr)
 
-            outputs = model(node_tensor, padding_mask=pad_mask)
+            agent_ids_t = torch.tensor(agent_ids_list, dtype=torch.long, device=device)
+            hours_t = torch.tensor(hours_list, dtype=torch.long, device=device)
+            outputs = model(node_tensor, agent_ids=agent_ids_t, hours=hours_t, padding_mask=pad_mask)
             goal_logits = outputs["goal"]  # [B, seq, n_poi]
 
             for j in range(len(batch)):
@@ -359,7 +394,13 @@ def _evaluate_lstm(
             dist = ep["distractor_goal"]
             if goal not in poi_to_idx or dist not in poi_to_idx:
                 continue
-            items.append((indices, poi_to_idx[goal], poi_to_idx[dist]))
+            agent_str = ep.get("agent_id", "agent_000")
+            try:
+                agent_int = int(agent_str.split("_")[-1])
+            except (ValueError, AttributeError):
+                agent_int = 0
+            hour = int(ep.get("observation_hour", 12))
+            items.append((indices, poi_to_idx[goal], poi_to_idx[dist], agent_int, hour))
 
         n_batches = (len(items) + batch_size - 1) // batch_size
         batch_iter = range(0, len(items), batch_size)
@@ -369,15 +410,20 @@ def _evaluate_lstm(
             node_tensor = torch.zeros(len(batch), max_len, dtype=torch.long, device=device)
             lengths = []
             goal_idxs, dist_idxs = [], []
+            agent_ids_list, hours_list = [], []
 
-            for j, (ids, gi, di) in enumerate(batch):
+            for j, (ids, gi, di, ag, hr) in enumerate(batch):
                 node_tensor[j, : len(ids)] = torch.tensor(ids, dtype=torch.long)
                 lengths.append(len(ids))
                 goal_idxs.append(gi)
                 dist_idxs.append(di)
+                agent_ids_list.append(ag)
+                hours_list.append(hr)
 
             history_lengths = torch.tensor(lengths, dtype=torch.long, device=device)
-            outputs = model(node_tensor, history_lengths)
+            agent_ids_t = torch.tensor(agent_ids_list, dtype=torch.long, device=device)
+            hours_t = torch.tensor(hours_list, dtype=torch.long, device=device)
+            outputs = model(node_tensor, history_lengths, agent_ids=agent_ids_t, hours=hours_t)
             goal_logits = outputs["goal"]  # [B, n_poi]
 
             for j in range(len(batch)):
@@ -493,7 +539,13 @@ def _evaluate_sc_bdi_vae(
             history = batch["history_node_indices"].to(device)
             lengths = batch["history_lengths"].to(device)
             agents = batch["agent_id"].to(device)
-            progress = batch["path_progress"].to(device)
+            # Override dataset-computed progress with the true observation
+            # fraction. BDIVAEDatasetV3 computes progress relative to the
+            # truncated trajectory length, so the last sample always gets ≈1.0
+            # regardless of how much of the original path was observed.
+            progress = torch.full(
+                (history.shape[0],), frac, dtype=torch.float, device=device
+            )
 
             outputs = model(
                 history_node_indices=history,
@@ -513,6 +565,49 @@ def _evaluate_sc_bdi_vae(
 
         results[frac] = dict(distractor_probs=d_probs, goal_probs=g_probs,
                              top1_correct=top1, top5_correct=top5, brier_scores=brier)
+    return results
+
+
+def _evaluate_naive_baseline(
+    episodes: List[Dict],
+    poi_nodes: List[str],
+    fractions: List[float],
+    reference: str,
+) -> Dict[float, Dict[str, List[float]]]:
+    """Naive baseline: uniform distribution over all POI nodes."""
+    poi_to_idx = {n: i for i, n in enumerate(poi_nodes)}
+    num_pois = len(poi_nodes)
+    uniform_prob = 1.0 / num_pois
+    results: Dict[float, Dict[str, List[float]]] = {}
+
+    for frac in fractions:
+        d_probs, g_probs, top1, top5, brier = [], [], [], [], []
+
+        for ep in episodes:
+            ref_len = ep["closest_index"] if reference == "tstar" else ep["path_length"]
+            if ref_len < 2:
+                continue
+            goal = ep["preferred_goal"]
+            dist = ep["distractor_goal"]
+            if goal not in poi_to_idx or dist not in poi_to_idx:
+                continue
+            gi = poi_to_idx[goal]
+            di = poi_to_idx[dist]
+
+            # Uniform assigns equal probability to all POIs
+            d_probs.append(uniform_prob)
+            g_probs.append(uniform_prob)
+            top1.append(1.0 / num_pois)  # expected accuracy under uniform
+            top5.append(min(5.0 / num_pois, 1.0))
+            one_hot = np.zeros(num_pois)
+            one_hot[gi] = 1.0
+            uniform_vec = np.full(num_pois, uniform_prob)
+            brier.append(float(np.mean((uniform_vec - one_hot) ** 2)))
+
+        results[frac] = dict(
+            distractor_probs=d_probs, goal_probs=g_probs,
+            top1_correct=top1, top5_correct=top5, brier_scores=brier,
+        )
     return results
 
 
@@ -674,18 +769,22 @@ def run_single_model(
     num_agents: int = 100,
 ) -> Optional[Dict]:
     """Load model, evaluate on both reference modes, save results."""
-    print(f"\n📥 Loading {model_type} model from {model_path} ...")
     num_nodes = len(graph.nodes())
     num_poi_nodes = len(poi_nodes)
 
-    if model_type == "transformer":
-        model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device)
-    elif model_type == "lstm":
-        model = load_lstm_model(model_path, num_nodes, num_poi_nodes, device)
-    elif model_type == "sc_bdi_vae":
-        model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device)
+    if model_type == "naive":
+        print(f"\n📥 Using naive baseline (uniform) ...")
+        model = None
     else:
-        raise ValueError(f"Unknown model type: {model_type}")
+        print(f"\n📥 Loading {model_type} model from {model_path} ...")
+        if model_type == "transformer":
+            model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device)
+        elif model_type == "lstm":
+            model = load_lstm_model(model_path, num_nodes, num_poi_nodes, device)
+        elif model_type == "sc_bdi_vae":
+            model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device)
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
     print(f"  ✅ {model_name} loaded")
 
     combined: Dict = {"model": model_name, "model_type": model_type}
@@ -693,7 +792,9 @@ def run_single_model(
     for ref, ref_label in [("tstar", "t*"), ("full", "full trajectory")]:
         print(f"\n  📊 Evaluating {model_name} — fractions relative to {ref_label} ...")
 
-        if model_type == "transformer":
+        if model_type == "naive":
+            raw = _evaluate_naive_baseline(episodes, poi_nodes, fractions, ref)
+        elif model_type == "transformer":
             raw = _evaluate_transformer(model, episodes, poi_nodes, node_to_idx, device, fractions, ref, batch_size)
         elif model_type == "lstm":
             raw = _evaluate_lstm(model, episodes, poi_nodes, node_to_idx, device, fractions, ref, batch_size)
@@ -740,7 +841,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Experiment 2: Preference-Proximity Dissociation Test")
     parser.add_argument("--model_path", type=str, default=None, help="Path to model checkpoint")
     parser.add_argument("--model_type", type=str, default=None,
-                        choices=["transformer", "lstm", "sc_bdi_vae"])
+                        choices=["transformer", "lstm", "sc_bdi_vae", "naive"])
     parser.add_argument("--model_name", type=str, default=None, help="Display name")
     parser.add_argument("--run_all", action="store_true", help="Run all three models")
     parser.add_argument("--variant", type=str, default="both",
@@ -795,10 +896,16 @@ def main() -> None:
         models_to_run = [
             {"path": "checkpoints/keepers/baseline_transformer_best_model.pt",
              "type": "transformer", "name": "Transformer"},
-            {"path": "checkpoints/keepers/lstm_best_model.pt",
+            {"path": "checkpoints/keepers/best_lstm_model.pt",
              "type": "lstm", "name": "LSTM"},
-            {"path": "checkpoints/keepers/scbdi_no_progress.pt",
-             "type": "sc_bdi_vae", "name": "SC-BDI-VAE"},
+            {"path": "checkpoints/keepers/sc_bdi_no_progress.pt",
+             "type": "sc_bdi_vae", "name": "SC-BDI (no progress)"},
+            {"path": "checkpoints/keepers/sc_bdi_progress_v2.pt",
+             "type": "sc_bdi_vae", "name": "SC-BDI (progress)"},
+            {"path": "checkpoints/keepers/sc-bdi-v3-gru.pt",
+             "type": "sc_bdi_vae", "name": "SC-BDI+GRU"},
+            {"path": "naive",
+             "type": "naive", "name": "Naive Baseline"},
         ]
         print(f"\n🚀 Running all {len(models_to_run)} models ...")
     else:

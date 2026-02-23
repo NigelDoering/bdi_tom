@@ -63,7 +63,7 @@ class ModelConfig:
     """Configuration for a model to evaluate."""
     name: str
     path: Path
-    model_type: Literal['sc_bdi_vae', 'transformer', 'lstm']
+    model_type: Literal['sc_bdi_vae', 'transformer', 'lstm', 'naive']
     use_temporal: bool = False  # Whether to use temporal features (SC-BDI-VAE only)
     kwargs: Dict = field(default_factory=dict)
 
@@ -154,14 +154,44 @@ def load_model(
     device: torch.device,
 ) -> Tuple[nn.Module, torch.device]:
     """Load model from checkpoint. Returns (model, actual_device)."""
+    if config.model_type == 'naive':
+        # No actual model needed
+        return None, device  # type: ignore[return-value]
+
     checkpoint = torch.load(config.path, map_location='cpu', weights_only=False)
     
     if config.model_type == 'sc_bdi_vae':
+        state_dict = checkpoint.get('model_state_dict', {})
+
+        # Auto-detect features from checkpoint keys
+        has_progress = any('progress' in k for k in state_dict.keys())
+        print(f"  \u2139\ufe0f  Checkpoint use_progress={has_progress}")
+
+        has_seq_encoder = any('seq_encoder' in k for k in state_dict.keys())
+        gru_hidden_dim = 128
+        if has_seq_encoder:
+            gru_weight_key = 'seq_encoder.gru.weight_ih_l0'
+            if gru_weight_key in state_dict:
+                gru_hidden_dim = state_dict[gru_weight_key].shape[0] // 3
+        print(f"  \u2139\ufe0f  Checkpoint use_seq_encoder={has_seq_encoder}"
+              f"{f' (gru_hidden_dim={gru_hidden_dim})' if has_seq_encoder else ''}")
+
+        goal_weight_key = 'goal_head.weight'
+        has_skip_connection = False
+        if goal_weight_key in state_dict:
+            goal_head_input_dim = state_dict[goal_weight_key].shape[1]
+            has_skip_connection = goal_head_input_dim > 256
+        print(f"  \u2139\ufe0f  Checkpoint use_skip_connection={has_skip_connection}")
+
         model = create_sc_bdi_vae_v3(
             num_nodes=num_nodes, num_agents=100, num_poi_nodes=num_poi, num_categories=7,
-            node_embedding_dim=64, fusion_dim=128, belief_latent_dim=32, desire_latent_dim=16,
-            intention_latent_dim=32, vae_hidden_dim=128, hidden_dim=256, dropout=0.1, use_progress=False,
-            use_temporal=True,
+            node_embedding_dim=64, fusion_dim=128,
+            use_seq_encoder=has_seq_encoder,
+            gru_hidden_dim=gru_hidden_dim,
+            use_skip_connection=has_skip_connection,
+            belief_latent_dim=32, desire_latent_dim=16,
+            intention_latent_dim=32, vae_hidden_dim=128, hidden_dim=256, dropout=0.1,
+            use_progress=has_progress,
             **config.kwargs,
         )
     elif config.model_type == 'transformer':
@@ -203,7 +233,7 @@ def load_model(
     
     # Force CPU on MPS due to known Metal buffer issues with small batch inference
     actual_device = device
-    if device.type == 'mps' and config.model_type in ('transformer', 'sc_bdi_vae'):
+    if device.type == 'mps' and config.model_type in ('transformer', 'lstm', 'sc_bdi_vae'):
         actual_device = torch.device('cpu')
         print(f"  [Using CPU for {config.name} due to MPS Metal buffer issues]")
     
@@ -297,12 +327,24 @@ def get_goal_probs(
             
         elif model_type == 'transformer':
             padding_mask = torch.zeros(1, seq_len, dtype=torch.bool, device=device)
-            out = model(node_indices=node_indices, padding_mask=padding_mask)
+            agent_ids_t = torch.tensor([agent_id if agent_id is not None else 0],
+                                       dtype=torch.long, device=device)
+            hours_t = torch.tensor([hour], dtype=torch.long, device=device)
+            out = model(node_indices=node_indices, agent_ids=agent_ids_t,
+                        hours=hours_t, padding_mask=padding_mask)
             logits = out['goal'][0, lengths[0] - 1].unsqueeze(0)
-            
+
         elif model_type == 'lstm':
-            out = model(history_node_indices=node_indices, history_lengths=lengths)
+            agent_ids_t = torch.tensor([agent_id if agent_id is not None else 0],
+                                       dtype=torch.long, device=device)
+            hours_t = torch.tensor([hour], dtype=torch.long, device=device)
+            out = model(history_node_indices=node_indices, history_lengths=lengths,
+                        agent_ids=agent_ids_t, hours=hours_t)
             logits = out['goal']
+        elif model_type == 'naive':
+            # Naive baseline is handled directly in evaluate_episode, so
+            # this branch should not be reached.
+            raise RuntimeError("Naive baseline should not call get_goal_probs")
         else:
             raise ValueError(f"Unknown model type: {model_type}")
     
@@ -337,6 +379,36 @@ def evaluate_episode(
     except (IndexError, ValueError):
         agent_int = None
     
+    # For naive baseline, skip node index conversion
+    if model_type == 'naive':
+        num_poi = len(poi_to_idx)
+        if first_goal not in poi_to_idx or final_goal not in poi_to_idx:
+            return None
+        first_goal_idx = poi_to_idx[first_goal]
+        final_goal_idx = poi_to_idx[final_goal]
+        total_len = len(path)
+
+        pre_phases: List[PhaseMetrics] = []
+        post_phases: List[PhaseMetrics] = []
+        pre_final_goal_probs: List[float] = []
+        uniform_probs = torch.full((num_poi,), 1.0 / num_poi)
+        for _ in fractions:
+            pre_phases.append(compute_phase_metrics(uniform_probs, first_goal_idx))
+            pre_final_goal_probs.append(float(uniform_probs[final_goal_idx].item()))
+        for _ in fractions:
+            post_phases.append(compute_phase_metrics(uniform_probs, final_goal_idx))
+
+        return EpisodeResult(
+            agent_id=episode['agent_id'],
+            episode_idx=episode['episode_index'],
+            first_goal=first_goal,
+            final_goal=final_goal,
+            category=episode['category'],
+            pre_phases=pre_phases,
+            post_phases=post_phases,
+            pre_final_goal_probs=pre_final_goal_probs,
+        )
+    
     # Convert path to indices
     try:
         path_indices = [node_to_idx[step[0]] for step in path]
@@ -357,7 +429,7 @@ def evaluate_episode(
     # Pre-pivot: measure P(first_goal) and P(final_goal)
     pre_final_goal_probs: List[float] = []
     for frac in fractions:
-        end_idx = max(1, int(pivot_idx * frac))
+        end_idx = max(2, int(pivot_idx * frac))
         indices = torch.tensor([path_indices[:end_idx]], dtype=torch.long)
         lengths = torch.tensor([end_idx])
         progress = end_idx / total_len
@@ -370,7 +442,7 @@ def evaluate_episode(
     # Post-pivot: measure P(final_goal)
     post_len = len(path) - pivot_idx
     for frac in fractions:
-        end_idx = pivot_idx + max(1, int(post_len * frac))
+        end_idx = pivot_idx + max(2, int(post_len * frac))
         indices = torch.tensor([path_indices[:end_idx]], dtype=torch.long)
         lengths = torch.tensor([end_idx])
         progress = end_idx / total_len
@@ -400,7 +472,11 @@ def evaluate_model(
     device: torch.device,
 ) -> ModelResults:
     """Evaluate model on all pivot episodes."""
-    model, actual_device = load_model(config, num_nodes, num_poi, device)
+    if config.model_type == 'naive':
+        actual_device = device
+        model = None
+    else:
+        model, actual_device = load_model(config, num_nodes, num_poi, device)
     
     results = []
     for ep in tqdm(episodes, desc=config.name, leave=False):
@@ -581,12 +657,29 @@ def generate_visualizations(results: List[ModelResults], output_dir: Path) -> No
 
     # Consistent colour scheme matching exp_2_plot.py
     COLORS = {
-        'SC-BDI-VAE': '#467821',   # Green (Ours)
-        'Transformer': '#E24A33',  # Red
-        'LSTM': '#348ABD',         # Blue
+        'SC-BDI (no progress)': '#467821',   # Green
+        'SC-BDI (progress)': '#2ca02c',      # Light green
+        'SC-BDI+GRU': '#006400',             # Dark green
+        'Transformer': '#E24A33',            # Red
+        'LSTM': '#348ABD',                   # Blue
+        'Naive Baseline': '#7f7f7f',         # Gray
     }
-    MARKERS = {'SC-BDI-VAE': 'o', 'Transformer': 's', 'LSTM': '^'}
-    MODEL_LABELS = {'SC-BDI-VAE': 'SC-BDI (Ours)', 'Transformer': 'Transformer', 'LSTM': 'LSTM'}
+    MARKERS = {
+        'SC-BDI (no progress)': 'o',
+        'SC-BDI (progress)': 'D',
+        'SC-BDI+GRU': 'P',
+        'Transformer': 's',
+        'LSTM': '^',
+        'Naive Baseline': 'x',
+    }
+    MODEL_LABELS = {
+        'SC-BDI (no progress)': 'SC-BDI (no prog.)',
+        'SC-BDI (progress)': 'SC-BDI (progress)',
+        'SC-BDI+GRU': 'SC-BDI+GRU',
+        'Transformer': 'Transformer',
+        'LSTM': 'LSTM',
+        'Naive Baseline': 'Naive (uniform)',
+    }
     fractions = [0.25, 0.5, 0.75]
     frac_pct = [f * 100 for f in fractions]
 
@@ -940,12 +1033,17 @@ def main():
     
     # Model configs
     model_configs = [
-        ModelConfig('SC-BDI-VAE', args.checkpoint_dir / 'scbdi_no_progress.pt', 'sc_bdi_vae', 
-                    use_temporal=args.use_temporal),
         ModelConfig('Transformer', args.checkpoint_dir / 'baseline_transformer_best_model.pt', 'transformer'),
-        ModelConfig('LSTM', args.checkpoint_dir / 'lstm_best_model.pt', 'lstm'),
+        ModelConfig('LSTM', args.checkpoint_dir / 'best_lstm_model.pt', 'lstm'),
+        ModelConfig('SC-BDI (no progress)', args.checkpoint_dir / 'sc_bdi_no_progress.pt', 'sc_bdi_vae',
+                    use_temporal=args.use_temporal),
+        ModelConfig('SC-BDI (progress)', args.checkpoint_dir / 'sc_bdi_progress_v2.pt', 'sc_bdi_vae',
+                    use_temporal=args.use_temporal),
+        ModelConfig('SC-BDI+GRU', args.checkpoint_dir / 'sc-bdi-v3-gru.pt', 'sc_bdi_vae',
+                    use_temporal=args.use_temporal),
+        ModelConfig('Naive Baseline', Path('naive'), 'naive'),
     ]
-    model_configs = [c for c in model_configs if c.path.exists()]
+    model_configs = [c for c in model_configs if c.model_type == 'naive' or c.path.exists()]
     
     if not model_configs:
         print("No checkpoints found!")

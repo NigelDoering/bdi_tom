@@ -964,7 +964,7 @@ def main():
                 'name': 'Transformer'
             },
             {
-                'path': 'checkpoints/keepers/lstm_best_model.pt',
+                'path': 'checkpoints/keepers/best_lstm_model.pt',
                 'type': 'lstm',
                 'name': 'LSTM'
             },

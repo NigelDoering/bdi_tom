@@ -39,19 +39,30 @@ plt.rcParams.update({
 })
 
 COLORS = {
-    'transformer': '#E24A33',  # Red
-    'lstm': '#348ABD',         # Blue
-    'bdi_vae': '#467821',      # Green (OURS)
+    'transformer': '#E24A33',      # Red
+    'lstm': '#348ABD',             # Blue
+    'bdi_vae': '#467821',          # Green (default for SC-BDI variants)
+    'bdi_progress': '#2ca02c',     # Light green
+    'bdi_gru': '#006400',          # Dark green
+    'naive': '#7f7f7f',            # Gray
 }
 MARKERS = {
     'transformer': 's',
     'lstm': '^',
     'bdi_vae': 'o',
+    'bdi_progress': 'D',
+    'bdi_gru': 'P',
+    'naive': 'x',
 }
 MODEL_LABELS = {
     'baseline_transformer_best_model': 'Transformer',
     'lstm_best_model': 'LSTM',
+    'best_lstm_model': 'LSTM',
     'best_model-OURS': 'SC-BDI (Ours)',
+    'sc_bdi_no_progress': 'SC-BDI (no progress)',
+    'sc_bdi_progress_v2': 'SC-BDI (progress)',
+    'sc-bdi-v3-gru': 'SC-BDI+GRU',
+    'naive': 'Naive (uniform)',
 }
 UNIFORM_COLOR = '#888888'
 UNIFORM_STYLE = {'color': UNIFORM_COLOR, 'linestyle': '--', 'linewidth': 1.2, 'alpha': 0.7}
@@ -90,6 +101,12 @@ def get_model_color(model_name: str) -> str:
         return COLORS['transformer']
     elif 'lstm' in model_name.lower():
         return COLORS['lstm']
+    elif 'naive' in model_name.lower():
+        return COLORS['naive']
+    elif 'gru' in model_name.lower() or 'v3-gru' in model_name.lower():
+        return COLORS['bdi_gru']
+    elif 'progress_v2' in model_name.lower() or '(progress)' in model_name.lower():
+        return COLORS['bdi_progress']
     return COLORS['bdi_vae']
 
 
@@ -98,6 +115,12 @@ def get_model_marker(model_name: str) -> str:
         return MARKERS['transformer']
     elif 'lstm' in model_name.lower():
         return MARKERS['lstm']
+    elif 'naive' in model_name.lower():
+        return MARKERS['naive']
+    elif 'gru' in model_name.lower() or 'v3-gru' in model_name.lower():
+        return MARKERS['bdi_gru']
+    elif 'progress_v2' in model_name.lower() or '(progress)' in model_name.lower():
+        return MARKERS['bdi_progress']
     return MARKERS['bdi_vae']
 
 
