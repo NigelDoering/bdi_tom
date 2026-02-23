@@ -556,6 +556,37 @@ class MutualInformationEstimator(nn.Module):
         )
         
         return torch.clamp(mi, -10, 10)
+    
+
+# =============================================================================
+# TRAJECTORY GRU SEQUENCE ENCODER
+# =============================================================================
+
+class TrajectoryGRUEncoder(nn.Module):
+    """
+    Summarizes a variable-length sequence of per-node embeddings into a single
+    context vector using a GRU.
+
+    Input:  fused_per_node  (B, S, input_dim)
+            lengths         (B,)  — number of valid steps per sequence
+    Output: context         (B, output_dim)
+    """
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, dropout: float = 0.1):
+        super().__init__()
+        self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
+        self.proj = nn.Sequential(
+            nn.Linear(hidden_dim, output_dim),
+            nn.LayerNorm(output_dim),
+            nn.Dropout(dropout),
+        )
+    
+    def forward(self, x: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        from torch.nn.utils.rnn import pack_padded_sequence
+        lengths_cpu = lengths.clamp(min=1).cpu()
+        packed = pack_padded_sequence(x, lengths_cpu, batch_first=True, enforce_sorted=False)
+        _, h = self.gru(packed)
+        context = self.proj(h.squeeze(0))
+        return context
 
 
 # =============================================================================
@@ -583,6 +614,8 @@ class SequentialConditionalBDIVAE(nn.Module):
         # Embedding dimensions
         node_embedding_dim: int = 64,
         fusion_dim: int = 128,
+        # GRU sequence encoder
+        gru_hidden_dim: int = 128,
         # VAE dimensions
         belief_latent_dim: int = 32,
         desire_latent_dim: int = 16,  # Smaller! Forces abstraction
@@ -648,6 +681,16 @@ class SequentialConditionalBDIVAE(nn.Module):
             use_temporal=True,   # ENABLED: full multi-modal fusion
             use_agent=True,
         )
+
+        # ================================================================
+        # TRAJECTORY SEQUENCE ENCODER (GRU)
+        # ================================================================
+        self.seq_encoder = TrajectoryGRUEncoder(
+            input_dim=fusion_dim,
+            hidden_dim=gru_hidden_dim,
+            output_dim=fusion_dim,
+            dropout=dropout,
+        )       
         
         # ================================================================
         # FEATURE PROJECTIONS
@@ -822,10 +865,8 @@ class SequentialConditionalBDIVAE(nn.Module):
             if isinstance(fused_per_node, tuple):
                 fused_per_node = fused_per_node[0]
 
-            # Pick last-valid-step embedding per sequence
-            batch_indices = torch.arange(batch_size, device=device)
-            last_indices = (history_lengths - 1).clamp(min=0)
-            unified = fused_per_node[batch_indices, last_indices]  # (B, fusion_dim)
+            # Summarize the full trajectory with a GRU to get a single embedding
+            unified = self.seq_encoder(fused_per_node, history_lengths) #> (B, fusion_dim)
         else:
             # ---------- Fallback: node embeddings only ----------
             node_emb = self.embedding_pipeline.encode_nodes(
@@ -842,9 +883,8 @@ class SequentialConditionalBDIVAE(nn.Module):
                 )
                 node_emb = torch.cat([node_emb, padding], dim=-1)
 
-            batch_indices = torch.arange(batch_size, device=device)
-            last_indices = (history_lengths - 1).clamp(min=0)
-            unified = node_emb[batch_indices, last_indices]
+            unified = self.seq_encoder(node_emb, history_lengths) #> (B, fusion_dim)
+
 
         return F.layer_norm(unified, [self.fusion_dim])
     

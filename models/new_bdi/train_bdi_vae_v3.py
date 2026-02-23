@@ -753,6 +753,8 @@ def main():
     parser.add_argument('--split_indices_path', type=str,
                         default='data/simulation_data/run_8/split_data/split_indices_seed42.json',
                         help='Path to split indices')
+    parser.add_argument('--gru_hidden_dim', type=int, default=128,
+                    help='Hidden dim of the GRU trajectory sequence encoder')
     
     # Model architecture
     parser.add_argument('--node_embedding_dim', type=int, default=64)
@@ -892,6 +894,7 @@ def main():
         num_agents=num_agents,
         num_poi_nodes=num_poi_nodes,
         num_categories=num_categories,
+        gru_hidden_dim=config.gru_hidden_dim,
         node_embedding_dim=config.node_embedding_dim,
         fusion_dim=config.fusion_dim,
         belief_latent_dim=config.belief_latent_dim,
