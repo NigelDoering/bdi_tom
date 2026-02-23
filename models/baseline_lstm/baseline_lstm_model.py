@@ -56,9 +56,11 @@ class PerNodeToMPredictor(nn.Module):
         dropout: float = 0.1,
         num_heads: int = 4,
         freeze_embedding: bool = False,
+        use_agent_id: bool = True,
     ):
         super().__init__()
         
+        self.use_agent_id = use_agent_id
         self.num_nodes = num_nodes
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
@@ -193,8 +195,8 @@ class PerNodeToMPredictor(nn.Module):
             hours_seq = torch.full((batch_size, seq_len), 12.0, device=device)
         
         # Default agent_ids to zeros if not provided
-        if agent_ids is None:
-            agent_ids = torch.zeros(batch_size, dtype=torch.long, device=device)
+        if not self.use_agent_id or agent_ids is None:
+            agent_ids = None
         
         velocities = torch.ones(batch_size, seq_len, device=device)
         

@@ -641,9 +641,11 @@ class SequentialConditionalBDIVAE(nn.Module):
         use_temporal: bool = False,  # Whether to include temporal encoding
         infonce_temperature: float = 0.1,
         use_skip_connection: bool = False,  # Skip connection from unified_embedding to prediction heads
+        use_agent_id: bool = True,
     ):
         super().__init__()
         
+        self.use_agent_id = use_agent_id
         self.num_nodes = num_nodes
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
@@ -833,6 +835,10 @@ class SequentialConditionalBDIVAE(nn.Module):
         batch_size = history_node_indices.shape[0]
         seq_len = history_node_indices.shape[1]
         device = history_node_indices.device
+
+        # Disable agent identity if flag is off
+        if not self.use_agent_id:
+            agent_ids = None
 
         has_temporal = (hours is not None) and self.embedding_pipeline.use_temporal
         has_agent = (agent_ids is not None) and self.embedding_pipeline.use_agent
