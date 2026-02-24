@@ -856,7 +856,7 @@ def main():
         graph=graph,
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
-        include_progress=True,
+        include_progress=False,
         #include_temporal=True,
     )
     
