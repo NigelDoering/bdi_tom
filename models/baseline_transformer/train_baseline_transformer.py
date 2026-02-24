@@ -582,8 +582,12 @@ def main():
                        help='Save embedding pipeline separately for transfer learning')
     
     # Logging
+    parser.add_argument('--no_agent_id', action='store_true',
+                       help='Disable agent ID embeddings (node2vec only)')
     parser.add_argument('--no_wandb', action='store_true',
                        help='Disable W&B logging')
+    parser.add_argument('--wandb_project', type=str, default='tom-compare-v1',
+                       help='W&B project name')
     parser.add_argument('--wandb_run_name', type=str, default=None,
                        help='Name for W&B run (default: auto-generated)')
     
@@ -688,6 +692,7 @@ def main():
         num_layers=args.num_layers,
         dim_feedforward=args.dim_feedforward,
         dropout=args.dropout,
+        use_agent_id=not args.no_agent_id,
     ).to(device)
     
     # Count parameters
@@ -730,7 +735,7 @@ def main():
             'num_pois': len(poi_nodes),
         })
         wandb_logger = WandBLogger(
-            project_name="bdi-tom-v3", 
+            project_name=args.wandb_project,
             config=config,
             run_name=args.wandb_run_name
         )

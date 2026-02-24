@@ -802,6 +802,10 @@ def main():
     parser.add_argument('--save_every', type=int, default=10)
     
     # Logging
+    parser.add_argument('--no_agent_id', action='store_true',
+                        help='Disable agent ID embeddings (node2vec only)')
+    parser.add_argument('--no_temporal', action='store_true',
+                        help='Disable temporal (time-of-day) embeddings')
     parser.add_argument('--use_wandb', action='store_true')
     parser.add_argument('--wandb_project', type=str, default='tom-compare-v1')
     parser.add_argument('--run_name', type=str, default=None)
@@ -843,7 +847,7 @@ def main():
         graph=graph,
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
-        include_progress=True,
+        include_progress=False,
         #include_temporal=True,
     )
     
@@ -914,6 +918,8 @@ def main():
         desire_goal_weight=config.desire_goal_weight,
         free_bits=config.free_bits,
         use_progress=False,
+        use_temporal=not config.no_temporal,
+        use_agent_id=not config.no_agent_id,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
