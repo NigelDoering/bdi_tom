@@ -299,7 +299,7 @@ def evaluate_lstm_at_proportion(
     }
 
 
-def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: int, device: torch.device) -> PerNodeTransformerPredictor:
+def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: int, device: torch.device, use_agent_id: bool = True) -> PerNodeTransformerPredictor:
     """Load transformer model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
@@ -315,6 +315,7 @@ def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: 
         num_layers=4,
         dim_feedforward=1024,
         dropout=0.1,
+        use_agent_id=use_agent_id,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -383,7 +384,8 @@ def load_sc_bdi_vae_model(
     num_nodes: int, 
     num_poi_nodes: int, 
     num_agents: int,
-    device: torch.device
+    device: torch.device,
+    use_agent_id: bool = True,
 ) -> SequentialConditionalBDIVAE:
     """Load SC-BDI-VAE V3 model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
@@ -438,6 +440,7 @@ def load_sc_bdi_vae_model(
         dropout=0.1,
         # Options
         use_progress=has_progress,
+        use_agent_id=use_agent_id,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -691,6 +694,8 @@ def plot_comparison(all_results: Dict[str, Dict], output_dir: str):
         'Transformer': {'color': '#2E86AB', 'marker': 'o', 'linestyle': '-'},
         'LSTM': {'color': '#F77F00', 'marker': 's', 'linestyle': '--'},
         'SC-BDI-VAE': {'color': '#06A77D', 'marker': '^', 'linestyle': '-.'},
+        'Transformer (no agent ID)': {'color': '#2E86AB', 'marker': 'D', 'linestyle': ':'},
+        'SC-BDI+GRU (no agent ID)': {'color': '#06A77D', 'marker': 'v', 'linestyle': ':'},
     }
     
     # Default style for unknown models
@@ -819,6 +824,7 @@ def run_single_model(
     output_dir: str,
     batch_size: int = 32,
     num_agents: int = 100,
+    use_agent_id: bool = True,
 ) -> Dict:
     """
     Run experiment 1 for a single model.
@@ -832,11 +838,11 @@ def run_single_model(
     num_poi_nodes = len(poi_nodes)
     
     if model_type == 'transformer':
-        model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device)
+        model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device, use_agent_id=use_agent_id)
     elif model_type == 'lstm':
         model = load_lstm_model(model_path, num_nodes, num_poi_nodes, device)
     elif model_type == 'sc_bdi_vae':
-        model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device)
+        model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device, use_agent_id=use_agent_id)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     
@@ -909,6 +915,8 @@ def main():
                         help='Directory to save results')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for evaluation')
+    parser.add_argument('--no_agent_id', action='store_true',
+                        help='Disable agent ID (for models trained without agent identity)')
     
     args = parser.parse_args()
     
@@ -968,6 +976,18 @@ def main():
                 'type': 'lstm',
                 'name': 'LSTM'
             },
+            {
+                'path': 'checkpoints/keepers/no_agent_ids/transformer-no-agents.pt',
+                'type': 'transformer',
+                'name': 'Transformer (no agent ID)',
+                'use_agent_id': False,
+            },
+            {
+                'path': 'checkpoints/keepers/no_agent_ids/sc-bdi-gru-no-agents.pt',
+                'type': 'sc_bdi_vae',
+                'name': 'SC-BDI+GRU (no agent ID)',
+                'use_agent_id': False,
+            },
         ]
         print(f"\n🚀 Running all {len(models_to_run)} models...")
     else:
@@ -976,7 +996,8 @@ def main():
             {
                 'path': args.model_path,
                 'type': args.model_type,
-                'name': model_name
+                'name': model_name,
+                'use_agent_id': not args.no_agent_id,
             }
         ]
         print(f"\n🚀 Running single model: {model_name} ({args.model_type})")
@@ -1004,6 +1025,7 @@ def main():
                 output_dir=args.output_dir,
                 batch_size=args.batch_size,
                 num_agents=num_agents,
+                use_agent_id=model_config.get('use_agent_id', True),
             )
             all_results[model_config['name']] = results
         except Exception as e:
