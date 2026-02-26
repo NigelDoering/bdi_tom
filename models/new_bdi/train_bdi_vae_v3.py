@@ -753,6 +753,10 @@ def main():
     parser.add_argument('--split_indices_path', type=str,
                         default='data/simulation_data/run_8/split_data/split_indices_seed42.json',
                         help='Path to split indices')
+    parser.add_argument('--gru_hidden_dim', type=int, default=128,
+                    help='Hidden dim of the GRU trajectory sequence encoder')
+    parser.add_argument('--use_skip_connection', action='store_true',
+                    help='Enable skip connection from unified_embedding to prediction heads')
     
     # Model architecture
     parser.add_argument('--node_embedding_dim', type=int, default=64)
@@ -798,6 +802,10 @@ def main():
     parser.add_argument('--save_every', type=int, default=10)
     
     # Logging
+    parser.add_argument('--no_agent_id', action='store_true',
+                        help='Disable agent ID embeddings (node2vec only)')
+    parser.add_argument('--no_temporal', action='store_true',
+                        help='Disable temporal (time-of-day) embeddings')
     parser.add_argument('--use_wandb', action='store_true')
     parser.add_argument('--wandb_project', type=str, default='tom-compare-v1')
     parser.add_argument('--run_name', type=str, default=None)
@@ -839,7 +847,7 @@ def main():
         graph=graph,
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
-        include_progress=True,
+        include_progress=False,
         #include_temporal=True,
     )
     
@@ -848,7 +856,7 @@ def main():
         graph=graph,
         poi_nodes=poi_nodes,
         node_to_idx_map=node_to_idx,
-        include_progress=True,
+        include_progress=False,
         #include_temporal=True,
     )
     
@@ -892,6 +900,8 @@ def main():
         num_agents=num_agents,
         num_poi_nodes=num_poi_nodes,
         num_categories=num_categories,
+        gru_hidden_dim=config.gru_hidden_dim,
+        use_skip_connection=config.use_skip_connection,
         node_embedding_dim=config.node_embedding_dim,
         fusion_dim=config.fusion_dim,
         belief_latent_dim=config.belief_latent_dim,
@@ -908,6 +918,8 @@ def main():
         desire_goal_weight=config.desire_goal_weight,
         free_bits=config.free_bits,
         use_progress=False,
+        use_temporal=not config.no_temporal,
+        use_agent_id=not config.no_agent_id,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())

@@ -203,9 +203,11 @@ def train_epoch(
         next_node_idx = batch['next_node_idx'].to(device)
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         
         # Forward pass
-        predictions = model(history_node_indices, history_lengths)
+        predictions = model(history_node_indices, history_lengths, agent_ids, hours)
         
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
@@ -300,10 +302,12 @@ def validate(
         next_node_idx = batch['next_node_idx'].to(device)
         goal_cat_idx = batch['goal_cat_idx'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         path_progress = batch['path_progress']  # keep on CPU for binning
         
         # Forward pass
-        predictions = model(history_node_indices, history_lengths)
+        predictions = model(history_node_indices, history_lengths, agent_ids, hours)
         
         # Compute losses
         loss_goal = criterion['goal'](predictions['goal'], goal_idx)
@@ -516,6 +520,7 @@ def main(args):
         dropout=args.dropout,
         num_heads=args.num_heads,
         freeze_embedding=args.freeze_embedding,
+        use_agent_id=not args.no_agent_id,
     ).to(device)
     
     total_params = sum(p.numel() for p in model.parameters())
@@ -614,7 +619,7 @@ def main(args):
     # STEP 5: INITIALIZE W&B LOGGING
     # ================================================================
     logger = WandBLogger(
-        project_name="tom-compare-v1",
+        project_name=args.wandb_project,
         run_name=args.wandb_run_name,
         config={
             'model': 'PerNodeToMPredictor',
@@ -789,7 +794,11 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-5, help='Weight decay')
     parser.add_argument('--patience', type=int, default=10, help='Early stopping patience')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
+    parser.add_argument('--wandb_project', type=str, default='tom-compare-v1',
+                        help='W&B project name')
     parser.add_argument('--wandb_run_name', type=str, default=None, help='W&B run name')
+    parser.add_argument('--no_agent_id', action='store_true',
+                        help='Disable agent ID embeddings (node2vec only)')
     
     args = parser.parse_args()
     main(args)

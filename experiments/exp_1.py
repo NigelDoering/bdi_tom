@@ -270,9 +270,11 @@ def evaluate_lstm_at_proportion(
         history_indices = batch['history_node_indices'].to(device)
         history_lengths = batch['history_lengths'].to(device)
         goal_idx = batch['goal_idx'].to(device)
+        agent_ids = batch['agent_id'].to(device)
+        hours = batch['hours'].to(device)
         
         # Forward pass
-        predictions = model(history_indices, history_lengths)
+        predictions = model(history_indices, history_lengths, agent_ids, hours)
         goal_logits = predictions['goal']  # [batch, num_poi_nodes]
         
         all_logits.append(goal_logits.cpu())
@@ -297,7 +299,7 @@ def evaluate_lstm_at_proportion(
     }
 
 
-def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: int, device: torch.device) -> PerNodeTransformerPredictor:
+def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: int, device: torch.device, use_agent_id: bool = True) -> PerNodeTransformerPredictor:
     """Load transformer model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
     
@@ -313,6 +315,7 @@ def load_transformer_model(checkpoint_path: str, num_nodes: int, num_poi_nodes: 
         num_layers=4,
         dim_feedforward=1024,
         dropout=0.1,
+        use_agent_id=use_agent_id,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -381,14 +384,37 @@ def load_sc_bdi_vae_model(
     num_nodes: int, 
     num_poi_nodes: int, 
     num_agents: int,
-    device: torch.device
+    device: torch.device,
+    use_agent_id: bool = True,
 ) -> SequentialConditionalBDIVAE:
     """Load SC-BDI-VAE V3 model from checkpoint."""
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    state_dict = checkpoint['model_state_dict']
     
     # Detect whether checkpoint was trained with path progress
-    has_progress = any('progress' in k for k in checkpoint['model_state_dict'].keys())
+    has_progress = any('progress' in k for k in state_dict.keys())
     print(f"  ℹ️  Checkpoint use_progress={has_progress}")
+    
+    # Detect whether checkpoint was trained with GRU sequence encoder
+    has_seq_encoder = any('seq_encoder' in k for k in state_dict.keys())
+    gru_hidden_dim = 128  # default
+    if has_seq_encoder:
+        # Infer hidden dim from GRU weight shape: weight_ih has shape (3*hidden, input)
+        gru_weight_key = 'seq_encoder.gru.weight_ih_l0'
+        if gru_weight_key in state_dict:
+            gru_hidden_dim = state_dict[gru_weight_key].shape[0] // 3
+    print(f"  ℹ️  Checkpoint use_seq_encoder={has_seq_encoder}"
+          f"{f' (gru_hidden_dim={gru_hidden_dim})' if has_seq_encoder else ''}")
+    
+    # Detect whether checkpoint was trained with skip connection
+    # If skip is enabled, goal_head input dim = hidden_dim + fusion_dim (256+128=384)
+    # Otherwise it's just hidden_dim (256)
+    goal_weight_key = 'goal_head.weight'
+    has_skip_connection = False
+    if goal_weight_key in state_dict:
+        goal_head_input_dim = state_dict[goal_weight_key].shape[1]
+        has_skip_connection = goal_head_input_dim > 256  # wider than hidden_dim alone
+    print(f"  ℹ️  Checkpoint use_skip_connection={has_skip_connection}")
     
     # Create model with same config as training
     model = create_sc_bdi_vae_v3(
@@ -399,6 +425,11 @@ def load_sc_bdi_vae_model(
         # Embedding dimensions
         node_embedding_dim=64,
         fusion_dim=128,
+        # GRU sequence encoder
+        use_seq_encoder=has_seq_encoder,
+        gru_hidden_dim=gru_hidden_dim,
+        # Skip connection
+        use_skip_connection=has_skip_connection,
         # VAE dimensions
         belief_latent_dim=32,
         desire_latent_dim=16,
@@ -409,6 +440,7 @@ def load_sc_bdi_vae_model(
         dropout=0.1,
         # Options
         use_progress=has_progress,
+        use_agent_id=use_agent_id,
     )
     
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -512,7 +544,16 @@ def evaluate_sc_bdi_vae_at_proportion(
         history_lengths = batch['history_lengths'].to(device)
         goal_idx = batch['goal_idx'].to(device)
         agent_ids = batch['agent_id'].to(device)
-        path_progress = batch['path_progress'].to(device)
+        
+        # FIX: Use actual trajectory proportion as path_progress.
+        # The dataset computes progress relative to the truncated trajectory
+        # length, so the last sample always gets progress ≈ 1.0 regardless
+        # of how much of the original trajectory was observed. Override with
+        # the true proportion value so the model receives the correct signal.
+        path_progress = torch.full(
+            (history_node_indices.shape[0],), proportion,
+            dtype=torch.float, device=device
+        )
         
         # Forward pass (inference only, no loss computation)
         outputs = model(
@@ -653,6 +694,8 @@ def plot_comparison(all_results: Dict[str, Dict], output_dir: str):
         'Transformer': {'color': '#2E86AB', 'marker': 'o', 'linestyle': '-'},
         'LSTM': {'color': '#F77F00', 'marker': 's', 'linestyle': '--'},
         'SC-BDI-VAE': {'color': '#06A77D', 'marker': '^', 'linestyle': '-.'},
+        'Transformer (no agent ID)': {'color': '#2E86AB', 'marker': 'D', 'linestyle': ':'},
+        'SC-BDI+GRU (no agent ID)': {'color': '#06A77D', 'marker': 'v', 'linestyle': ':'},
     }
     
     # Default style for unknown models
@@ -781,6 +824,7 @@ def run_single_model(
     output_dir: str,
     batch_size: int = 32,
     num_agents: int = 100,
+    use_agent_id: bool = True,
 ) -> Dict:
     """
     Run experiment 1 for a single model.
@@ -794,11 +838,11 @@ def run_single_model(
     num_poi_nodes = len(poi_nodes)
     
     if model_type == 'transformer':
-        model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device)
+        model = load_transformer_model(model_path, num_nodes, num_poi_nodes, device, use_agent_id=use_agent_id)
     elif model_type == 'lstm':
         model = load_lstm_model(model_path, num_nodes, num_poi_nodes, device)
     elif model_type == 'sc_bdi_vae':
-        model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device)
+        model = load_sc_bdi_vae_model(model_path, num_nodes, num_poi_nodes, num_agents, device, use_agent_id=use_agent_id)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     
@@ -871,6 +915,8 @@ def main():
                         help='Directory to save results')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size for evaluation')
+    parser.add_argument('--no_agent_id', action='store_true',
+                        help='Disable agent ID (for models trained without agent identity)')
     
     args = parser.parse_args()
     
@@ -926,9 +972,21 @@ def main():
                 'name': 'Transformer'
             },
             {
-                'path': 'checkpoints/keepers/lstm_best_model.pt',
+                'path': 'checkpoints/keepers/best_lstm_model.pt',
                 'type': 'lstm',
                 'name': 'LSTM'
+            },
+            {
+                'path': 'checkpoints/keepers/no_agent_ids/transformer-no-agents.pt',
+                'type': 'transformer',
+                'name': 'Transformer (no agent ID)',
+                'use_agent_id': False,
+            },
+            {
+                'path': 'checkpoints/keepers/no_agent_ids/sc-bdi-gru-no-agents.pt',
+                'type': 'sc_bdi_vae',
+                'name': 'SC-BDI+GRU (no agent ID)',
+                'use_agent_id': False,
             },
         ]
         print(f"\n🚀 Running all {len(models_to_run)} models...")
@@ -938,7 +996,8 @@ def main():
             {
                 'path': args.model_path,
                 'type': args.model_type,
-                'name': model_name
+                'name': model_name,
+                'use_agent_id': not args.no_agent_id,
             }
         ]
         print(f"\n🚀 Running single model: {model_name} ({args.model_type})")
@@ -966,6 +1025,7 @@ def main():
                 output_dir=args.output_dir,
                 batch_size=args.batch_size,
                 num_agents=num_agents,
+                use_agent_id=model_config.get('use_agent_id', True),
             )
             all_results[model_config['name']] = results
         except Exception as e:

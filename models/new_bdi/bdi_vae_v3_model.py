@@ -133,8 +133,17 @@ class GaussianDecoder(nn.Module):
         return self.net(z)
 
 
-def reparameterize(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-    """Reparameterization trick."""
+def reparameterize(mu: torch.Tensor, logvar: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
+    """Reparameterization trick.
+    
+    Args:
+        mu: Mean of the posterior distribution.
+        logvar: Log-variance of the posterior distribution.
+        deterministic: If True, return mu directly (no sampling).
+                       Use True at inference time for reproducible results.
+    """
+    if deterministic:
+        return mu
     logvar = torch.clamp(logvar, min=-10.0, max=10.0)
     std = torch.exp(0.5 * logvar)
     eps = torch.randn_like(std)
@@ -362,7 +371,7 @@ class BeliefVAE(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         mu, logvar = self.encoder(x)
-        z = reparameterize(mu, logvar)
+        z = reparameterize(mu, logvar, deterministic=not self.training)
         recon = self.decoder(z)
         transition_logits = self.transition_head(z)
         
@@ -421,7 +430,7 @@ class DesireVAE(nn.Module):
     
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         mu, logvar = self.encoder(x)
-        z = reparameterize(mu, logvar)
+        z = reparameterize(mu, logvar, deterministic=not self.training)
         recon = self.decoder(z)
         category_logits = self.category_head(z)
         goal_logits = self.goal_head(z)  # NEW!
@@ -493,7 +502,7 @@ class IntentionVAE(nn.Module):
         
         # Posterior: q(z_i | x)
         q_mu, q_logvar = self.encoder(x)
-        z = reparameterize(q_mu, q_logvar)
+        z = reparameterize(q_mu, q_logvar, deterministic=not self.training)
         
         # Conditional prior: p(z_i | z_b, z_d)
         p_mu, p_logvar = self.prior_net(belief_z, desire_z)
@@ -547,6 +556,37 @@ class MutualInformationEstimator(nn.Module):
         )
         
         return torch.clamp(mi, -10, 10)
+    
+
+# =============================================================================
+# TRAJECTORY GRU SEQUENCE ENCODER
+# =============================================================================
+
+class TrajectoryGRUEncoder(nn.Module):
+    """
+    Summarizes a variable-length sequence of per-node embeddings into a single
+    context vector using a GRU.
+
+    Input:  fused_per_node  (B, S, input_dim)
+            lengths         (B,)  — number of valid steps per sequence
+    Output: context         (B, output_dim)
+    """
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, dropout: float = 0.1):
+        super().__init__()
+        self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
+        self.proj = nn.Sequential(
+            nn.Linear(hidden_dim, output_dim),
+            nn.LayerNorm(output_dim),
+            nn.Dropout(dropout),
+        )
+    
+    def forward(self, x: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        from torch.nn.utils.rnn import pack_padded_sequence
+        lengths_cpu = lengths.clamp(min=1).cpu()
+        packed = pack_padded_sequence(x, lengths_cpu, batch_first=True, enforce_sorted=False)
+        _, h = self.gru(packed)
+        context = self.proj(h.squeeze(0))
+        return context
 
 
 # =============================================================================
@@ -574,6 +614,9 @@ class SequentialConditionalBDIVAE(nn.Module):
         # Embedding dimensions
         node_embedding_dim: int = 64,
         fusion_dim: int = 128,
+        # GRU sequence encoder
+        use_seq_encoder: bool = True,
+        gru_hidden_dim: int = 128,
         # VAE dimensions
         belief_latent_dim: int = 32,
         desire_latent_dim: int = 16,  # Smaller! Forces abstraction
@@ -597,13 +640,17 @@ class SequentialConditionalBDIVAE(nn.Module):
         use_progress: bool = False,  # Disabled to test training without path progress
         use_temporal: bool = False,  # Whether to include temporal encoding
         infonce_temperature: float = 0.1,
+        use_skip_connection: bool = False,  # Skip connection from unified_embedding to prediction heads
+        use_agent_id: bool = True,
     ):
         super().__init__()
         
+        self.use_agent_id = use_agent_id
         self.num_nodes = num_nodes
         self.num_poi_nodes = num_poi_nodes
         self.num_categories = num_categories
         self.fusion_dim = fusion_dim
+        self.use_skip_connection = use_skip_connection
         
         # Store dimensions
         self.belief_latent_dim = belief_latent_dim
@@ -621,6 +668,7 @@ class SequentialConditionalBDIVAE(nn.Module):
         self.category_weight = category_weight
         self.free_bits = free_bits
         self.use_progress = use_progress
+        self.use_seq_encoder = use_seq_encoder
         
         # KL annealing (controlled externally)
         self.kl_weight = 1.0  # Will be annealed during training
@@ -639,6 +687,19 @@ class SequentialConditionalBDIVAE(nn.Module):
             use_temporal=True,   # ENABLED: full multi-modal fusion
             use_agent=True,
         )
+
+        # ================================================================
+        # TRAJECTORY SEQUENCE ENCODER (GRU) — optional
+        # ================================================================
+        if use_seq_encoder:
+            self.seq_encoder = TrajectoryGRUEncoder(
+                input_dim=fusion_dim,
+                hidden_dim=gru_hidden_dim,
+                output_dim=fusion_dim,
+                dropout=dropout,
+            )
+        else:
+            self.seq_encoder = None
         
         # ================================================================
         # FEATURE PROJECTIONS
@@ -719,14 +780,17 @@ class SequentialConditionalBDIVAE(nn.Module):
             nn.Dropout(dropout),
         )
         
-        # Final prediction: from intention latent
-        self.goal_head = nn.Linear(hidden_dim, num_poi_nodes)
-        self.nextstep_head = nn.Linear(hidden_dim, num_nodes)
-        self.category_head = nn.Linear(hidden_dim, num_categories)
+        # Skip connection widens the prediction head input
+        pred_head_dim = hidden_dim + fusion_dim if use_skip_connection else hidden_dim
+        
+        # Final prediction: from intention latent (+ skip)
+        self.goal_head = nn.Linear(pred_head_dim, num_poi_nodes)
+        self.nextstep_head = nn.Linear(pred_head_dim, num_nodes)
+        self.category_head = nn.Linear(pred_head_dim, num_categories)
         
         if use_progress:
             self.progress_head = nn.Sequential(
-                nn.Linear(hidden_dim, 64),
+                nn.Linear(pred_head_dim, 64),
                 nn.GELU(),
                 nn.Linear(64, 1),
                 nn.Sigmoid(),
@@ -772,6 +836,10 @@ class SequentialConditionalBDIVAE(nn.Module):
         seq_len = history_node_indices.shape[1]
         device = history_node_indices.device
 
+        # Disable agent identity if flag is off
+        if not self.use_agent_id:
+            agent_ids = None
+
         has_temporal = (hours is not None) and self.embedding_pipeline.use_temporal
         has_agent = (agent_ids is not None) and self.embedding_pipeline.use_agent
 
@@ -813,10 +881,14 @@ class SequentialConditionalBDIVAE(nn.Module):
             if isinstance(fused_per_node, tuple):
                 fused_per_node = fused_per_node[0]
 
-            # Pick last-valid-step embedding per sequence
-            batch_indices = torch.arange(batch_size, device=device)
-            last_indices = (history_lengths - 1).clamp(min=0)
-            unified = fused_per_node[batch_indices, last_indices]  # (B, fusion_dim)
+            # Aggregate per-node embeddings into a single vector
+            if self.seq_encoder is not None:
+                unified = self.seq_encoder(fused_per_node, history_lengths)
+            else:
+                # Fallback: pick last-valid-step embedding
+                batch_indices = torch.arange(batch_size, device=device)
+                last_indices = (history_lengths - 1).clamp(min=0)
+                unified = fused_per_node[batch_indices, last_indices]
         else:
             # ---------- Fallback: node embeddings only ----------
             node_emb = self.embedding_pipeline.encode_nodes(
@@ -833,9 +905,12 @@ class SequentialConditionalBDIVAE(nn.Module):
                 )
                 node_emb = torch.cat([node_emb, padding], dim=-1)
 
-            batch_indices = torch.arange(batch_size, device=device)
-            last_indices = (history_lengths - 1).clamp(min=0)
-            unified = node_emb[batch_indices, last_indices]
+            if self.seq_encoder is not None:
+                unified = self.seq_encoder(node_emb, history_lengths)
+            else:
+                batch_indices = torch.arange(batch_size, device=device)
+                last_indices = (history_lengths - 1).clamp(min=0)
+                unified = node_emb[batch_indices, last_indices]
 
         return F.layer_norm(unified, [self.fusion_dim])
     
@@ -902,6 +977,10 @@ class SequentialConditionalBDIVAE(nn.Module):
         # PREDICTIONS
         # ================================================================
         pred_features = self.intention_projection(intention_z)
+        
+        # Skip connection: concat raw unified embedding to bypass VAE bottleneck
+        if self.use_skip_connection:
+            pred_features = torch.cat([pred_features, unified_embedding], dim=-1)
         
         goal_logits = self.goal_head(pred_features)
         nextstep_logits = self.nextstep_head(pred_features)
