@@ -31,7 +31,8 @@ from simulation_controller.belief_store import BeliefStore
 from simulation_controller.simulation_runner import sample_simulation_hour
 
 
-def run(n_agents: int, n_trajs: int, run_id: str, seed: int = 42) -> str:
+def run(n_agents: int, n_trajs: int, run_id: str, seed: int = 42,
+        hours_config: str = None) -> str:
     """Run a small simulation and return the output directory path."""
     np.random.seed(seed)
     random.seed(seed)
@@ -45,7 +46,7 @@ def run(n_agents: int, n_trajs: int, run_id: str, seed: int = 42) -> str:
 
     print(f"Loading graph...")
     G_raw = nx.read_graphml("data/processed/ucsd_walk_full.graphml")
-    world_graph = WorldGraph(G_raw)
+    world_graph = WorldGraph(G_raw, hours_config_path=hours_config)
 
     print(f"Creating {n_agents} agents...")
     agents = []
@@ -87,10 +88,12 @@ def run(n_agents: int, n_trajs: int, run_id: str, seed: int = 42) -> str:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a small simulation for analysis.")
-    parser.add_argument("--n_agents", type=int, default=10)
-    parser.add_argument("--n_trajs",  type=int, default=50)
-    parser.add_argument("--run_id",   type=str, default="analysis_small")
-    parser.add_argument("--seed",     type=int, default=42)
+    parser.add_argument("--n_agents",     type=int, default=10)
+    parser.add_argument("--n_trajs",      type=int, default=50)
+    parser.add_argument("--run_id",       type=str, default="analysis_small")
+    parser.add_argument("--seed",         type=int, default=42)
+    parser.add_argument("--hours_config", type=str, default=None,
+                        help="Path to hours config JSON (e.g. data/processed/hours_config_base.json)")
     args = parser.parse_args()
 
-    run(args.n_agents, args.n_trajs, args.run_id, args.seed)
+    run(args.n_agents, args.n_trajs, args.run_id, args.seed, args.hours_config)

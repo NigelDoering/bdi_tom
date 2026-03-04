@@ -108,10 +108,10 @@ def run_simulation():
     os.makedirs(agents_dir, exist_ok=True)
     os.makedirs(traj_dir, exist_ok=True)
 
-    # Load and wrap the graph
+    # Load and wrap the graph, applying hours config if provided
     graph_path = os.path.join("data", "processed", "ucsd_walk_full.graphml")
     G = nx.read_graphml(graph_path)
-    world_graph = WorldGraph(G)
+    world_graph = WorldGraph(G, hours_config_path=args.hours_config)
 
     # Create agents and collect their save data
     agents = []
@@ -198,6 +198,17 @@ def parse_args():
             "Run a small validation test: 10 agents × 50 trajectories saved to "
             "run_test_beliefs. Overrides -n / -m / -x. Verifies the BeliefStore "
             "output format end-to-end."
+        )
+    )
+    parser.add_argument(
+        "--hours_config", type=str, default=None,
+        metavar="PATH",
+        help=(
+            "Path to a JSON hours config file that overrides the opening hours "
+            "embedded in the graph.  Use data/processed/hours_config_base.json "
+            "for the standard UCSD schedule, or hours_config_dynamic.json for "
+            "the test-set world state with modified popular-node hours.  "
+            "If omitted, graph-embedded hours are used (backward compatible)."
         )
     )
 
