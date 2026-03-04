@@ -1,8 +1,10 @@
 """
 run_small_sim.py
 ----------------
-Quick helper to regenerate the small analysis dataset if run_test_beliefs
-doesn't exist or you want a fresh run with different parameters.
+Quick helper to regenerate the small analysis dataset used for
+development and CI.  Canonical test runs are:
+  run_test_base    — base hours config (hours_config_base.json)
+  run_test_dynamic — dynamic hours config (hours_config_dynamic.json)
 
 Usage:
     uv run python simulation_analysis/run_small_sim.py

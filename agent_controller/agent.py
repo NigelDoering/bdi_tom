@@ -234,7 +234,7 @@ class Agent:
         categories = ["home", "study", "food", "leisure", "errands", "health"]
 
         # Higher concentration on typical frequent activities
-        alpha = np.array([4.0, 3.0, 2.5, 1.5, 1.0, 0.5])  # home > study > food > leisure > errands > health
+        alpha = np.array([1.5, 3.0, 2.5, 1.5, 1.0, 0.5])  # study > food > home/leisure > errands > health
 
         weights = np.random.dirichlet(alpha)
 
