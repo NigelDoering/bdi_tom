@@ -84,15 +84,23 @@ class Agent:
         uninformative Beta(1, 1) prior — a uniform distribution over [0, 1] —
         for every hour of the day (00 to 23).
 
-        Starting from Beta(1,1) is the appropriate prior for an agent that has
-        no prior knowledge of when locations are open or closed.  Beliefs will
-        diverge from this flat prior only through actual observations made
-        during traversal, giving the belief update mechanism a meaningful
-        learning signal.
+        Initialises the agent's belief state using a weakly informative prior
+        derived from each node's known opening hours.
 
-        Also stores the initial prior so that the exponential decay pulls
-        beliefs back toward maximum uncertainty rather than toward an
-        assumed business-hours schedule.
+        Nodes with opening_hours in the graph get:
+          - Beta(3, 1) ≡ belief = 0.75 for hours the node is scheduled open
+          - Beta(1, 3) ≡ belief = 0.25 for hours it is scheduled closed
+        Nodes without opening_hours default to Beta(1, 1) ≡ 0.5 (uninformative).
+
+        A weakly informative prior is preferable to a flat Beta(1,1) everywhere
+        because it immediately provides a meaningful signal to the goal-selection
+        formula: nodes that are scheduled closed at the current hour start with
+        lower belief and receive less selection weight before any observations
+        have been made.  Observations then update these priors in the standard
+        Bayesian way, refining rather than replacing them.
+
+        The decay target is the same weakly informative prior so forgetting
+        pulls beliefs back toward the scheduled pattern, not toward 0.5.
         """
         if not hasattr(self, "goal_nodes"):
             raise ValueError("Agent must have self.goal_nodes defined before initializing beliefs.")
@@ -101,10 +109,28 @@ class Agent:
         self.belief_prior = {}  # Store initial priors for decay
 
         for node_id in self.goal_nodes:
-            alpha = np.ones(24, dtype=np.float64)   # Beta(1,1): uniform prior
-            beta  = np.ones(24, dtype=np.float64)   # temporal_belief = 0.5 everywhere
+            alpha = np.ones(24, dtype=np.float64)
+            beta  = np.ones(24, dtype=np.float64)
 
-            temporal_belief = alpha / (alpha + beta)  # all 0.5
+            # Seed prior from opening hours if available
+            if self.G is not None:
+                hours_info = self.G.nodes[node_id].get('opening_hours')
+                if hours_info and isinstance(hours_info, dict):
+                    open_h  = hours_info.get('open',  0)
+                    close_h = hours_info.get('close', 24)
+                    for h in range(24):
+                        if close_h < open_h:  # wraparound (e.g. 22:00–02:00)
+                            is_open = (h >= open_h or h < close_h)
+                        else:
+                            is_open = (open_h <= h < close_h)
+                        if is_open:
+                            alpha[h] = 3.0  # Beta(3,1) → mean = 0.75
+                            beta[h]  = 1.0
+                        else:
+                            alpha[h] = 1.0  # Beta(1,3) → mean = 0.25
+                            beta[h]  = 3.0
+
+            temporal_belief = alpha / (alpha + beta)
 
             self.belief_state[node_id] = {
                 "alpha": alpha.copy(),
@@ -112,7 +138,7 @@ class Agent:
                 "temporal_belief": temporal_belief,
             }
 
-            # Decay target: uninformative prior, not a business-hours schedule
+            # Decay target: same weakly informative prior
             self.belief_prior[node_id] = {
                 "alpha": alpha.copy(),
                 "beta":  beta.copy(),
@@ -261,61 +287,53 @@ class Agent:
         return self.category_preferences
 
     def set_home_preferences(self):
-        # Mostly one node (e.g., your residence)
+        # One preferred "home" node with mild concentration; all other nodes
+        # get α=1.0 so the top node captures ~8% instead of ~89%.
         def alpha_fn(n): 
-            alpha = np.ones(n) * 0.01
-            # Give one node a large mass so the agent has a strong "home" node
+            alpha = np.ones(n) * 1.0
             alpha[np.random.choice(n)] = 5.0
             return alpha
 
         self._set_preferences("home", alpha_fn)
 
     def set_food_preferences(self):
-        # Mild concentration, maybe 2-3 favorites
+        # Flat α=2.0 across all food nodes — higher concentration parameter
+        # means draws cluster tighter around uniform (top node ~8.5%).
         def alpha_fn(n):
-            alpha = np.ones(n) * 0.3
-            # Boost a few nodes so the distribution has several favorites
-            for _ in range(min(3, n)):
-                alpha[np.random.choice(n)] += 2.0
-            return alpha
+            return np.ones(n) * 2.0
 
         self._set_preferences("food", alpha_fn)
 
     def set_study_preferences(self):
-        # Mild concentration, maybe 2-3 favorites
+        # Flat α=3.0 over all 101 study nodes — draws concentrate tighter
+        # around uniform (top node ~3% vs ~5% at α=1.0).
         def alpha_fn(n):
-            alpha = np.ones(n) * 0.4
-            # Boost a few nodes so the distribution has several favorites
-            for _ in range(min(3, n)):
-                alpha[np.random.choice(n)] += 2.0
-            return alpha
+            return np.ones(n) * 3.0
 
         self._set_preferences("study", alpha_fn)
 
     def set_health_preferences(self):
-        # One primary care node + few alternates
+        # Mild preference for one health node; all others get α=1.0 so the
+        # top node captures ~24% instead of ~73%.
         def alpha_fn(n):
-            alpha = np.ones(n) * 0.1
-            # Make one node noticeably more likely
-            alpha[np.random.choice(n)] = 3.0
+            alpha = np.ones(n) * 1.0
+            alpha[np.random.choice(n)] = 2.0
             return alpha
 
         self._set_preferences("health", alpha_fn)
 
     def set_errands_preferences(self):
-        # Fairly spread, low preference
+        # α=3.0 for all 8 errands nodes — keeps top node ~24% vs ~43% at α=0.5.
         def alpha_fn(n):
-            return np.ones(n) * 0.5
+            return np.ones(n) * 3.0
 
         self._set_preferences("errands", alpha_fn)
 
     def set_leisure_preferences(self):
-        # Slight preference spread, a couple of favorites
+        # α=3.0 for all 8 leisure nodes — draws cluster tighter around
+        # uniform so top node is ~24% instead of ~34% at α=1.0.
         def alpha_fn(n):
-            alpha = np.ones(n) * 0.2
-            for _ in range(min(2, n)):
-                alpha[np.random.choice(n)] += 1.5
-            return alpha
+            return np.ones(n) * 3.0
 
         self._set_preferences("leisure", alpha_fn)
 
