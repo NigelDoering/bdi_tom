@@ -80,12 +80,19 @@ class Agent:
 
     def init_beliefs(self):
         """
-        Initializes the agent's belief state for each goal node as a Beta(2,2)
-        distribution over each hour of the day (00 to 23). Assumes self.goal_nodes
-        has been set and contains all relevant node IDs.
-        
-        Also stores the initial prior for each node so that decay can move beliefs
-        back toward the original prior rather than a uniform distribution.
+        Initializes the agent's belief state for each goal node using an
+        uninformative Beta(1, 1) prior — a uniform distribution over [0, 1] —
+        for every hour of the day (00 to 23).
+
+        Starting from Beta(1,1) is the appropriate prior for an agent that has
+        no prior knowledge of when locations are open or closed.  Beliefs will
+        diverge from this flat prior only through actual observations made
+        during traversal, giving the belief update mechanism a meaningful
+        learning signal.
+
+        Also stores the initial prior so that the exponential decay pulls
+        beliefs back toward maximum uncertainty rather than toward an
+        assumed business-hours schedule.
         """
         if not hasattr(self, "goal_nodes"):
             raise ValueError("Agent must have self.goal_nodes defined before initializing beliefs.")
@@ -94,26 +101,21 @@ class Agent:
         self.belief_prior = {}  # Store initial priors for decay
 
         for node_id in self.goal_nodes:
-            alpha = np.full(24, 2.0)
-            beta = np.full(24, 2.0)
+            alpha = np.ones(24, dtype=np.float64)   # Beta(1,1): uniform prior
+            beta  = np.ones(24, dtype=np.float64)   # temporal_belief = 0.5 everywhere
 
-            # Increase confidence for common open hours (9am to 5pm)
-            for h in range(9, 17):
-                alpha[h] = 4.0
-                beta[h] = 1.0
-
-            temporal_belief = alpha / (alpha + beta)
+            temporal_belief = alpha / (alpha + beta)  # all 0.5
 
             self.belief_state[node_id] = {
-                "alpha": alpha.copy(),  # Current beliefs
-                "beta": beta.copy(),
-                "temporal_belief": temporal_belief
+                "alpha": alpha.copy(),
+                "beta":  beta.copy(),
+                "temporal_belief": temporal_belief,
             }
-            
-            # Store a copy of the initial prior for decay
+
+            # Decay target: uninformative prior, not a business-hours schedule
             self.belief_prior[node_id] = {
                 "alpha": alpha.copy(),
-                "beta": beta.copy()
+                "beta":  beta.copy(),
             }
 
     def update_beliefs(self, current_node, hour, distance=100):
