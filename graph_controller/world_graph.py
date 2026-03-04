@@ -1,8 +1,9 @@
+import json
 import networkx as nx
 import ast
 
 class WorldGraph:
-    def __init__(self, G, relevant_categories=None):
+    def __init__(self, G, hours_config_path=None, relevant_categories=None):
         """
         Args:
             G (networkx.Graph): The full map graph.
@@ -41,6 +42,31 @@ class WorldGraph:
 
         # Precompute list of node IDs that are in any relevant category
         self.poi_nodes = self._extract_relevant_nodes()
+
+        # Override graph-embedded hours with external config if provided.
+        # This allows swapping hour schedules (e.g. for dynamic test sets)
+        # without modifying the graph file itself.
+        if hours_config_path is not None:
+            self._apply_hours_config(hours_config_path)
+
+    def _apply_hours_config(self, path):
+        """Apply a JSON hours config, overriding any hours stored in the graph.
+
+        The config maps node ID strings to either a dict with 'open'/'close'
+        integer keys, or null (always open).  Only nodes present in the config
+        are modified; all other nodes retain their graph-embedded hours.
+
+        Args:
+            path (str): Path to the JSON hours config file.
+        """
+        with open(path) as f:
+            config = json.load(f)
+        applied = 0
+        for node_id, hours in config.items():
+            if self.G.has_node(node_id):
+                self.G.nodes[node_id]['opening_hours'] = hours
+                applied += 1
+        print(f"WorldGraph: applied hours config from '{path}' ({applied} nodes updated)")
 
     def _extract_relevant_nodes(self):
         relevant_nodes = [

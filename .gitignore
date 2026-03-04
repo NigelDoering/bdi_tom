@@ -35,6 +35,10 @@ checkpoints/*
 # Only keep the one processed file we want tracked
 !/data/processed/ucsd_walk_full.graphml
 
+# Track hours config files (lightweight, version-controlled alongside graph)
+!/data/processed/hours_config_base.json
+!/data/processed/hours_config_dynamic.json
+
 docs/
 .legacy/
 .vscode/
