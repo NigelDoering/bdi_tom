@@ -41,4 +41,8 @@ docs/
 
 paper/
 
+# Simulation analysis outputs (generated figures and executed notebooks)
+simulation_analysis/*.png
+simulation_analysis/simulation_dynamics_executed.ipynb
+
 # End of .gitignore
