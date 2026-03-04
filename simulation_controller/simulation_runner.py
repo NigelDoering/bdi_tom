@@ -21,60 +21,63 @@ from simulation_controller.belief_store import BeliefStore
 
 def sample_simulation_hour():
     """
-    Sample an hour for simulation using a bell-curve-like distribution with a flat peak.
+    Sample a trajectory hour from a distribution that covers all 24 hours
+    with a mild preference for daytime.
 
-    Distribution characteristics:
-    - Hours 6-8am: Uncommon (low probability, ramping up)
-    - Hours 11am-3pm: Peak (flat, high probability)
-    - Hours after 8pm: Uncommon (low probability, tapering down)
-    - Supports hours from 6am to 2am (wraps past midnight)
+    The previous distribution concentrated ~85% of trajectories between
+    6am and 8pm, causing agents to almost never observe closed locations
+    and therefore never accumulate the downward (beta) belief updates
+    needed for meaningful belief learning.
+
+    The new distribution spans the full day with a peak-to-trough ratio
+    of ~6x (vs ~24x previously).  Roughly 54% of samples fall in core
+    daytime hours (9am-5pm), 25% in the evening (6pm-midnight), and 12%
+    in the early morning (midnight-6am).  This ensures agents regularly
+    encounter both open and closed locations, generating the bidirectional
+    Bayesian updates that make belief tracking meaningful.
+
+    Distribution rationale (university campus):
+    - Late night / early morning (0-5): students returning late, early gym
+    - Morning ramp (6-8): commuters, early classes
+    - Daytime (9-17): lectures, study, lunch — moderate preference
+    - Evening (18-21): dinner, evening study, social
+    - Late evening (22-23): winding down
 
     Returns:
-        int: Hour in 24-hour format (6-23 or 0-2)
+        int: Hour in 24-hour format (0-23)
     """
-    # Define the hours we want to sample from
-    hours = list(range(6, 24)) + list(range(0, 3))  # 06:00 to 02:00
-
-    # Create a probability distribution
-    # We'll use a piecewise function:
-    # - 6-8am (6,7,8): Ramp up (weights: 0.3, 0.5, 0.7)
-    # - 9-10am (9,10): Transition (weights: 0.9, 1.0)
-    # - 11am-3pm (11,12,13,14,15): Peak plateau (weights: 1.2)
-    # - 4-7pm (16,17,18,19): Transition down (weights: 1.0, 0.9, 0.7, 0.5)
-    # - 8pm-2am (20,21,22,23,0,1,2): Taper off (weights: 0.4, 0.3, 0.2, 0.15, 0.1, 0.08, 0.05)
-
     weights = {
-        6: 0.3,   # 6am - uncommon
-        7: 0.5,   # 7am - ramping up
-        8: 0.7,   # 8am
-        9: 0.9,   # 9am - approaching peak
-        10: 1.0,  # 10am
-        11: 1.2,  # 11am - peak starts
-        12: 1.2,  # 12pm - peak
-        13: 1.2,  # 1pm - peak
-        14: 1.2,  # 2pm - peak
-        15: 1.2,  # 3pm - peak ends
-        16: 1.0,  # 4pm - transition down
-        17: 0.9,  # 5pm
-        18: 0.7,  # 6pm
-        19: 0.5,  # 7pm
-        20: 0.4,  # 8pm - uncommon
-        21: 0.3,  # 9pm
-        22: 0.2,  # 10pm
-        23: 0.15, # 11pm
-        0: 0.1,   # 12am
-        1: 0.08,  # 1am
-        2: 0.05,  # 2am - very uncommon
+        0:  0.50,   # midnight
+        1:  0.30,   # 1am
+        2:  0.20,   # 2am
+        3:  0.20,   # 3am
+        4:  0.20,   # 4am
+        5:  0.30,   # 5am
+        6:  0.50,   # 6am
+        7:  0.70,   # 7am
+        8:  0.90,   # 8am
+        9:  1.10,   # 9am
+        10: 1.20,   # 10am
+        11: 1.20,   # 11am
+        12: 1.30,   # 12pm - mild peak
+        13: 1.20,   # 1pm
+        14: 1.10,   # 2pm
+        15: 1.00,   # 3pm
+        16: 0.90,   # 4pm
+        17: 0.90,   # 5pm
+        18: 1.00,   # 6pm - dinner
+        19: 0.90,   # 7pm
+        20: 0.80,   # 8pm
+        21: 0.70,   # 9pm
+        22: 0.60,   # 10pm
+        23: 0.50,   # 11pm
     }
 
-    # Get weights in the same order as hours
-    probs = [weights[h] for h in hours]
-
-    # Normalize to create a probability distribution
+    hours = list(weights.keys())
+    probs = list(weights.values())
     total = sum(probs)
     probs = [p / total for p in probs]
 
-    # Sample an hour using the weighted distribution
     return random.choices(hours, weights=probs, k=1)[0]
 
 
