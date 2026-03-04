@@ -54,6 +54,19 @@ def sample_goal_node(agent, current_hour, category=None, exclude_nodes=None, ret
         belief = belief_probs[node_id]
         combined_weights[node_id] = pref * belief
 
+    # Hard epistemic threshold: agents won't travel to a goal they believe is
+    # more likely closed than open.  Nodes below 40% belief at the current hour
+    # are excluded so that goal selection reflects the agent's epistemic state.
+    # (Initial Beta(1,1) prior = 0.5, so all nodes are eligible at the start;
+    # a single "closed" observation drops belief to 0.33, making it ineligible.)
+    BELIEF_THRESHOLD = 0.40
+    combined_weights = {
+        nid: w for nid, w in combined_weights.items()
+        if belief_probs[nid] >= BELIEF_THRESHOLD
+    }
+    if not combined_weights:
+        return (None, sampled_category) if return_category else None
+
     # Normalize
     total = sum(combined_weights.values())
     if total == 0:
@@ -388,172 +401,86 @@ def _is_node_open(agent, node_id, current_hour):
         return open_hour <= current_hour < close_hour
 
 
-def plan_path(agent, current_hour, temperature=100.0, max_attempts=4):
+def plan_path(agent, current_hour, temperature=100.0):
     """
-    Plans a path with retry logic for closed goals. If a goal is closed, the agent
-    samples another goal from the same category. After multiple failures, there's
-    an increasing probability of giving up and returning home.
-    
+    Plans a path from a sampled start node to a sampled goal node.
+
+    The agent always travels to its chosen goal.  When it arrives, the
+    trajectory is annotated with whether the goal turned out to be open
+    or closed at the current hour.  The agent does **not** reroute to
+    home when the goal is closed — doing so created a severe home-bias
+    in the dataset because at off-peak hours most non-home POIs are
+    closed, causing a cascade of retries that almost always terminated
+    at a (24 h) home node.
+
+    Instead, "goal was closed" is recorded as a flag so downstream
+    consumers can decide how to treat the trajectory.  Belief updates
+    during traversal still teach the agent about opening hours for
+    future goal selection via the Bayesian belief system.
+
     Args:
         agent (Agent): The agent for whom to plan.
         current_hour (int): The current hour (0-23).
         temperature (float): Temperature for stochastic path selection.
-        max_attempts (int): Maximum number of goal attempts before forcing home.
-        
+
     Returns:
         dict: Contains:
-            - 'path': List of (node_id, goal_node) tuples showing the full journey
-            - 'goal_node': The final goal node
+            - 'path': List of (node_id, goal_node) tuples for the journey
+            - 'goal_node': The destination node
+            - 'goal_category': The category of the sampled goal
             - 'start_node': The starting node
-            - 'attempts': Number of goal attempts made
-            - 'returned_home': Boolean indicating if agent gave up and went home
-            - 'attempted_goals': List of all goal nodes attempted
+            - 'goal_open': True if the goal was open at current_hour
+            - 'attempts': Always 1 (kept for backward compat)
+            - 'returned_home': Always False (kept for backward compat)
+            - 'attempted_goals': Single-element list with the goal
     """
     # Sample initial goal and category
     result = sample_goal_node(agent, current_hour, return_category=True)
-    
+
     if result is None or result[0] is None:
         raise RuntimeError(f"Could not sample initial goal node for agent {agent.id}")
-    
+
     goal_node, sampled_category = result
-    
+
     # Sample start node
     start_node = sample_start_node(agent, goal_node, current_hour=current_hour)
-    
-    # Track state across attempts
-    current_start = start_node
-    attempted_goals = []
-    all_segments = []  # List of (path, goal) tuples
-    
-    for attempt_num in range(1, max_attempts + 1):
-        attempted_goals.append(goal_node)
-        
-        # Plan path to current goal
-        try:
-            path_segment = _sample_stochastic_path(agent, current_start, goal_node, temperature)
-        except RuntimeError as e:
-            # Can't find path to this goal, try another
-            if attempt_num < max_attempts:
-                goal_node = sample_goal_node(agent, current_hour, category=sampled_category, 
-                                            exclude_nodes=set(attempted_goals))
-                if goal_node is None:
-                    break  # No more goals available in this category
-                continue
-            else:
-                break  # Give up after max attempts
-        
-        # Check if goal is open
-        if not _is_node_open(agent, goal_node, current_hour):
-            # Goal is closed! Store this segment but try again
-            all_segments.append((path_segment, goal_node))
-            
-            # Calculate probability of giving up and going home
-            # Exponential increase: 0.2, 0.5, 0.8, 0.95 for attempts 1,2,3,4
-            give_up_prob = 1 - (0.8 ** attempt_num)
-            
-            if attempt_num >= max_attempts or np.random.random() < give_up_prob:
-                # Give up and go home
-                home_node = _sample_home_node(agent)
-                current_start = path_segment[-1]  # Start from where we left off
-                
-                try:
-                    home_path = _sample_stochastic_path(agent, current_start, home_node, temperature)
-                    all_segments.append((home_path, home_node))
-                    
-                    # Combine all segments
-                    full_path = _combine_path_segments(all_segments)
-                    
-                    return {
-                        'path': full_path,
-                        'goal_node': home_node,
-                        'start_node': start_node,
-                        'attempts': attempt_num + 1,  # +1 for home attempt
-                        'returned_home': True,
-                        'attempted_goals': attempted_goals
-                    }
-                except RuntimeError:
-                    # Can't even get home, just return what we have
-                    full_path = _combine_path_segments(all_segments)
-                    return {
-                        'path': full_path,
-                        'goal_node': goal_node,
-                        'start_node': start_node,
-                        'attempts': attempt_num,
-                        'returned_home': False,
-                        'attempted_goals': attempted_goals
-                    }
-            
-            # Try another goal from same category
-            current_start = path_segment[-1]  # Continue from current location
-            new_goal = sample_goal_node(agent, current_hour, category=sampled_category,
-                                       exclude_nodes=set(attempted_goals))
-            
-            if new_goal is None:
-                # No more goals in category, go home
-                home_node = _sample_home_node(agent)
-                try:
-                    home_path = _sample_stochastic_path(agent, current_start, home_node, temperature)
-                    all_segments.append((home_path, home_node))
-                except RuntimeError:
-                    pass
-                
-                full_path = _combine_path_segments(all_segments)
-                return {
-                    'path': full_path,
-                    'goal_node': attempted_goals[-1],
-                    'start_node': start_node,
-                    'attempts': attempt_num,
-                    'returned_home': True,
-                    'attempted_goals': attempted_goals
-                }
-            
-            goal_node = new_goal
-            
-        else:
-            # Goal is open! Success!
-            all_segments.append((path_segment, goal_node))
-            full_path = _combine_path_segments(all_segments)
-            
-            return {
-                'path': full_path,
-                'goal_node': goal_node,
-                'start_node': start_node,
-                'attempts': attempt_num,
-                'returned_home': False,
-                'attempted_goals': attempted_goals
-            }
-    
-    # Fallback: return what we have if we exhausted attempts
-    if all_segments:
-        full_path = _combine_path_segments(all_segments)
-    else:
-        # No segments at all, create trivial path
-        full_path = [(start_node, goal_node)]
-    
+
+    # Plan stochastic path from start to goal
+    path_nodes = _sample_stochastic_path(agent, start_node, goal_node, temperature)
+
+    # Check whether the goal is actually open at this hour
+    goal_open = _is_node_open(agent, goal_node, current_hour)
+
+    # Build annotated path: list of (node_id, goal_node) tuples
+    annotated_path = [(node, goal_node) for node in path_nodes]
+
     return {
-        'path': full_path,
-        'goal_node': attempted_goals[-1] if attempted_goals else goal_node,
+        'path': annotated_path,
+        'goal_node': goal_node,
+        'goal_category': sampled_category,
         'start_node': start_node,
-        'attempts': len(attempted_goals),
+        'goal_open': goal_open,
+        'attempts': 1,
         'returned_home': False,
-        'attempted_goals': attempted_goals
+        'attempted_goals': [goal_node],
     }
 
 
 def _sample_home_node(agent):
     """
     Sample the agent's home node (highest probability node in home category).
-    
+    Used only as a last resort when no other open node can be found.
+
     Args:
         agent (Agent): The agent.
-        
+
     Returns:
         str: The home node ID.
     """
     home_prefs = agent.home_preferences
     if not home_prefs:
         raise RuntimeError(f"Agent {agent.id} has no home preferences")
-    
+
     # Return the node with highest preference
     return max(home_prefs.items(), key=lambda x: x[1])[0]
 

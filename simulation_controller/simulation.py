@@ -73,6 +73,8 @@ class Simulation:
         attempts        = plan_result['attempts']
         returned_home   = plan_result['returned_home']
         attempted_goals = plan_result['attempted_goals']
+        goal_open       = plan_result.get('goal_open', True)
+        goal_category   = plan_result.get('goal_category', None)
 
         # Traverse the path and update beliefs periodically
         for i, (node, _) in enumerate(annotated_path):
@@ -96,9 +98,11 @@ class Simulation:
         trajectory_data = {
             "path":            annotated_path,
             "goal_node":       goal_node,
+            "goal_category":   goal_category,
             "start_node":      start_node,
             "hour":            current_hour,
             "agent_id":        agent_id,
+            "goal_open":       goal_open,
             "attempts":        attempts,
             "returned_home":   returned_home,
             "attempted_goals": attempted_goals,
@@ -108,6 +112,6 @@ class Simulation:
 
         if self.verbose:
             path_len = len(annotated_path)
-            home_str = " (returned home)" if returned_home else ""
+            status_str = "" if goal_open else " (goal closed)"
             print(f"Agent {agent_id}: path length {path_len}, "
-                  f"{attempts} attempt(s){home_str}")
+                  f"goal={goal_category}{status_str}")
