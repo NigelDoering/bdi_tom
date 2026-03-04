@@ -47,23 +47,28 @@ def sample_goal_node(agent, current_hour, category=None, exclude_nodes=None, ret
         for node_id in available_nodes.keys()
     }
 
-    # Combine preferences and beliefs
+    # Combine preferences with the odds-ratio form of the belief.
+    #
+    # Why odds-ratio instead of linear (pref * belief)?
+    #   Linear: belief=0.75 → weight×0.75, belief=0.25 → weight×0.25  →  3× difference
+    #   Odds:   belief=0.75 → weight×3.0,  belief=0.25 → weight×0.33  →  9× difference
+    #
+    # More importantly, when all beliefs sit near 0.5 (uninformative prior), the
+    # linear form multiplies every preference by ~0.5, which cancels in
+    # normalisation — beliefs have zero effect on rankings.  The odds-ratio form
+    # maps 0.5 → 1.0 (neutral), so equal beliefs still cancel, but any divergence
+    # from 0.5 creates a proportional boost or penalty.
+    #
+    # The hard BELIEF_THRESHOLD is removed: the 9× odds-ratio penalty already
+    # strongly discourages closed nodes without hard-blocking entire categories,
+    # which prevented off-peak trajectories from being generated at all.
     combined_weights = {}
     for node_id in available_nodes:
-        pref = available_nodes[node_id]
+        pref   = available_nodes[node_id]
         belief = belief_probs[node_id]
-        combined_weights[node_id] = pref * belief
+        odds   = belief / (1.0 - belief + 1e-9)   # 0.75→3.0, 0.5→1.0, 0.25→0.33
+        combined_weights[node_id] = pref * odds
 
-    # Hard epistemic threshold: agents won't travel to a goal they believe is
-    # more likely closed than open.  Nodes below 40% belief at the current hour
-    # are excluded so that goal selection reflects the agent's epistemic state.
-    # (Initial Beta(1,1) prior = 0.5, so all nodes are eligible at the start;
-    # a single "closed" observation drops belief to 0.33, making it ineligible.)
-    BELIEF_THRESHOLD = 0.40
-    combined_weights = {
-        nid: w for nid, w in combined_weights.items()
-        if belief_probs[nid] >= BELIEF_THRESHOLD
-    }
     if not combined_weights:
         return (None, sampled_category) if return_category else None
 
